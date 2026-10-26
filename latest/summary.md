@@ -1,6 +1,6 @@
 # Contract search — 2026-10-26
 
-Mode: **daily**. New remote contracts: **164 / 50**. Secondary roles: **198**. Published project needs: **1**.
+Mode: **daily**. New remote contracts: **142 / 50**. Secondary roles: **220**. Published project needs: **1**.
 Raw rows: 557; normalized relevant rows: 434; unique new relevant leads: 363; duplicates: 16; stale: 55; rejected: 123.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
@@ -37,6 +37,8 @@ First-seen means new to this collector, not newly published. Unknown original da
 | Staffing firm career feeds | not configured | 0 | Agency postings may appear on boards; no separate firm feeds configured |
 | US SAM.gov project opportunities | not configured | 0 | Requires a separate SAM API key and validated adapter |
 
-Daily actor charge caps total $2; smoke cap $0.15. Actual charges, when provided by Apify, are in summary.json. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
+Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
 Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published UK project notices are separate buying opportunities; delivery eligibility must be checked.
+
+Report revalidated against the existing actor datasets after W2 and original-date parsing corrections. No new actors were started for this correction. First-seen timestamps are preserved.
