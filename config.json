@@ -1,0 +1,92 @@
+{
+  "target": 50,
+  "max_age_days": 7,
+  "daily_cap_usd": 2.0,
+  "actors": [
+    {
+      "name": "LinkedIn",
+      "actor": "curious_coder~linkedin-jobs-scraper",
+      "cap_usd": 0.4,
+      "max_items": 180,
+      "input": {
+        "urls": [
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20software%20architect&location=United%20States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20DevOps%20Kubernetes&location=United%20States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20Python%20AI%20engineer&location=United%20States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20TypeScript%20React&location=United%20States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20data%20engineer&location=United%20States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20Golang%20Java%20Rust&location=United%20States&f_TPR=r604800"
+        ],
+        "datePosted": "pastWeek",
+        "limitPerSource": 30,
+        "scrapeCompany": false,
+        "autoConvertToAiSearch": true
+      }
+    },
+    {
+      "name": "Indeed",
+      "actor": "misceres~indeed-scraper",
+      "cap_usd": 0.6,
+      "max_items": 100,
+      "input": {
+        "startUrls": [
+          {"url": "https://www.indeed.com/jobs?q=software+engineer+contract&l=Remote&fromage=7"},
+          {"url": "https://www.indeed.com/jobs?q=DevOps+contract&l=Remote&fromage=7"},
+          {"url": "https://www.indeed.com/jobs?q=data+engineer+contract&l=Remote&fromage=7"},
+          {"url": "https://www.indeed.com/jobs?q=cloud+architect+contract&l=Remote&fromage=7"}
+        ],
+        "maxItemsPerSearch": 25,
+        "country": "US",
+        "saveOnlyUniqueItems": true,
+        "parseCompanyDetails": true
+      }
+    },
+    {
+      "name": "Dice",
+      "actor": "dami_studio~dice-jobs-scraper",
+      "cap_usd": 0.2,
+      "max_items": 120,
+      "input": {
+        "searchQueries": ["software architect", "DevOps Kubernetes", "Python AI", "React TypeScript", "data engineer", "Golang Java Rust"],
+        "locations": ["Remote"],
+        "postedDate": "7d",
+        "workplaceType": "remote",
+        "employmentTypes": ["CONTRACTS", "THIRD_PARTY"],
+        "includeDetails": true,
+        "maxItems": 120,
+        "maxPagesPerSearch": 2,
+        "maxProxyRetries": 1
+      }
+    },
+    {
+      "name": "Employer ATS discovery",
+      "actor": "fantastic-jobs~career-site-job-listing-api",
+      "cap_usd": 0.8,
+      "max_items": 60,
+      "input": {
+        "timeRange": "7d",
+        "limit": 60,
+        "titleSearch": ["Software", "Architect", "DevOps", "Data Engineer", "Platform Engineer", "AI Engineer"],
+        "locationSearch": ["United States"],
+        "aiEmploymentTypeFilter": ["CONTRACTOR", "TEMPORARY"],
+        "aiWorkArrangementFilter": ["Remote OK", "Remote Solely"],
+        "removeAgency": true,
+        "descriptionType": "text"
+      }
+    }
+  ],
+  "feeds": [
+    {"name": "Remotive", "kind": "remotive", "url": "https://remotive.com/api/remote-jobs"},
+    {"name": "We Work Remotely", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-programming-jobs.rss"},
+    {"name": "We Work Remotely DevOps", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss"},
+    {"name": "UK Find a Tender", "kind": "ocds", "url": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=100"}
+  ],
+  "unconfigured_sources": {
+    "ZipRecruiter": "No validated collector configured",
+    "Glassdoor": "No validated collector configured",
+    "Wellfound": "No validated collector configured",
+    "Built In": "No validated collector configured",
+    "Staffing firm career feeds": "Agency postings may appear on boards; no separate firm feeds configured",
+    "US SAM.gov project opportunities": "Requires a separate SAM API key and validated adapter"
+  }
+}

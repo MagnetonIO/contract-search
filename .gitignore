@@ -1,0 +1,10 @@
+.env*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+output/
+state/
+durable-state/
+contract-search-handoff.txt
+.DS_Store
