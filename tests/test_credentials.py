@@ -42,7 +42,8 @@ class CredentialTests(unittest.TestCase):
     @patch('credentials.secure_backend', side_effect=c.CredentialError('No native vault'))
     def test_original_mac_credential_still_loads(self, backend, command):
         command.return_value = subprocess.CompletedProcess([], 0, stdout='legacy-value\n')
-        self.assertEqual(c.load_token(), 'legacy-value')
+        with patch('credentials.getpass.getuser', return_value='legacy-user'):
+            self.assertEqual(c.load_token(), 'legacy-value')
         self.assertIn('security', command.call_args.args[0])
 
     def test_native_backends_selected_and_plaintext_rejected(self):
