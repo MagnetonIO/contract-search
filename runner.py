@@ -7,11 +7,9 @@ from difflib import SequenceMatcher
 import email.utils
 import html
 import json
-import os
 from pathlib import Path
 import re
 import sqlite3
-import subprocess
 import sys
 import time
 from urllib.error import HTTPError, URLError
@@ -19,6 +17,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, HTTPRedirectHandler, build_opener
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
+from credentials import load_token as token_from_local
 
 UTC = timezone.utc
 API = 'https://api.apify.com/v2'
@@ -96,17 +95,6 @@ def fetch(url, *, token='', payload=None, method=None, raw=False, timeout=30, at
                 time.sleep(2 ** attempt)
                 continue
             raise SourceError('Network timeout, connection failure, or invalid JSON') from None
-
-
-def token_from_local():
-    if os.getenv('APIFY_TOKEN'):
-        return os.environ['APIFY_TOKEN'].strip()
-    if sys.platform == 'darwin':
-        p = subprocess.run(['security', 'find-generic-password', '-s', 'APIFY_TOKEN', '-w'],
-                           capture_output=True, text=True)
-        if p.returncode == 0:
-            return p.stdout.strip()
-    return ''
 
 
 def validate_input(schema, value):
@@ -463,7 +451,7 @@ def csv_cell(value):
 def report(out, jobs, coverage, counts, runs, config, now, mode):
     out.mkdir(parents=True, exist_ok=True)
     def write_csv(name, subset):
-        with (out/name).open('w', newline='') as f:
+        with (out/name).open('w', newline='', encoding='utf-8') as f:
             w = csv.DictWriter(f, fieldnames=FIELDS, extrasaction='ignore')
             w.writeheader()
             w.writerows({k: csv_cell(j.get(k, '')) for k in FIELDS} for j in subset)
@@ -480,7 +468,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
                'published_project_needs': len(projects), 'target': config['target'],
                'shortfall': max(0, config['target']-len(primary)),
                'source_coverage': coverage, 'actor_runs': runs}
-    (out/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
+    (out/'summary.json').write_text(json.dumps(summary, indent=2)+'\n', encoding='utf-8')
     lines = [f'# Contract search — {now.astimezone(ZoneInfo("America/Chicago")).date()}', '',
              f'Mode: **{mode}**. New remote contracts: **{len(primary)} / {config["target"]}**. Secondary roles: **{len(secondary)}**. Published project needs: **{len(projects)}**.',
              f'Raw rows: {counts["raw"]}; normalized relevant rows: {counts["relevant"]}; unique new relevant leads: {counts["new_unique"]}; duplicates: {counts["duplicates"]}; stale: {counts["stale"]}; rejected: {counts["rejected"]}.', '',
@@ -498,7 +486,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
         lines.append(f'| {c["source"]} | {c["status"]} | {c.get("raw", 0)} | {c.get("detail", "")} |')
     lines.extend(['', 'Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.', '',
                   'Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published UK project notices are separate buying opportunities; delivery eligibility must be checked.'])
-    (out/'summary.md').write_text('\n'.join(lines)+'\n')
+    (out/'summary.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
     print(json.dumps({k: summary[k] for k in ('mode', 'raw', 'new_unique', 'new_remote_contracts', 'secondary', 'published_project_needs', 'shortfall')}))
     return summary
 
@@ -506,12 +494,12 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--mode', choices=['smoke', 'daily', 'public'], default='smoke', help='smoke: one LinkedIn actor, <=3 rows, $0.15 cap; daily: configured sources, $2 total caps; public: no paid actors')
-    p.add_argument('--config', default='config.json')
+    p.add_argument('--config', default=str(Path(__file__).resolve().with_name('config.json')))
     p.add_argument('--state', default='state/seen.sqlite3')
     p.add_argument('--output', default='output/latest')
     p.add_argument('--force', action='store_true', help='Allow a second daily run today; can spend another daily budget')
     args = p.parse_args(argv)
-    config = json.loads(Path(args.config).read_text())
+    config = json.loads(Path(args.config).read_text(encoding='utf-8'))
     if sum(s['cap_usd'] for s in config['actors']) > config['daily_cap_usd'] + 1e-9:
         p.error('Actor caps exceed daily budget')
     now = datetime.now(UTC)
@@ -520,6 +508,7 @@ def main(argv=None):
     state.seed()
     if args.mode == 'daily' and not args.force and state.db.execute('SELECT 1 FROM runs WHERE run_date=?', (day,)).fetchone():
         print('Daily collection already completed for Chicago date '+day+'; skipping without spending.')
+        state.db.close()
         return 0
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
@@ -532,7 +521,7 @@ def main(argv=None):
                 break
         else:
             runs.append(dict(record))
-        (out/'actor-runs.json').write_text(json.dumps(runs, indent=2)+'\n')
+        (out/'actor-runs.json').write_text(json.dumps(runs, indent=2)+'\n', encoding='utf-8')
     selected = config['actors'][:1] if args.mode == 'smoke' else config['actors'] if args.mode == 'daily' else []
     for spec in selected:
         try:

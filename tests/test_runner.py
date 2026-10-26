@@ -176,7 +176,7 @@ class ProviderTests(unittest.TestCase):
     @patch('runner.time.sleep')
     @patch('runner.fetch')
     def test_charge_cap_pagination_and_no_start_retry(self, fetch, sleep):
-        spec = json.loads(Path('config.json').read_text())['actors'][0]
+        spec = json.loads(Path('config.json').read_text(encoding='utf-8'))['actors'][0]
         meta = {'data': {'pricingInfos': [{'pricingModel': 'PAY_PER_EVENT', 'startedAt': '2026-01-01'}]}}
         schema = {'properties': {k: {} for k in spec['input']}}
         build = {'data': {'actorDefinition': {'input': schema}, 'buildNumber': '0.1.1'}}
@@ -192,7 +192,7 @@ class ProviderTests(unittest.TestCase):
     @patch('runner.time.sleep')
     @patch('runner.fetch')
     def test_poll_failure_aborts(self, fetch, sleep):
-        spec = json.loads(Path('config.json').read_text())['actors'][0]
+        spec = json.loads(Path('config.json').read_text(encoding='utf-8'))['actors'][0]
         fetch.side_effect = [
             {'data': {'pricingInfos': [{'pricingModel': 'PAY_PER_EVENT', 'startedAt': '2026-01-01'}]}},
             {'data': {'actorDefinition': {'input': {'properties': {k: {} for k in spec['input']}}}, 'buildNumber': '1'}},
@@ -207,12 +207,50 @@ class ProviderTests(unittest.TestCase):
                               dict(raw=0, relevant=0, new_unique=0, duplicates=0, stale=0, rejected=0),
                               [], {'target': 50}, NOW, 'daily')
             self.assertEqual(report['shortfall'], 50)
-            self.assertIn('HTTP 403', Path(tmp, 'summary.md').read_text())
-            self.assertEqual(len(list(csv.reader(io.StringIO(Path(tmp, 'contracts.csv').read_text())))), 1)
+            self.assertIn('HTTP 403', Path(tmp, 'summary.md').read_text(encoding='utf-8'))
+            self.assertEqual(len(list(csv.reader(io.StringIO(Path(tmp, 'contracts.csv').read_text(encoding='utf-8'))))), 1)
 
     def test_csv_formula_escaped(self):
         self.assertEqual(r.csv_cell('=cmd()'), "'=cmd()")
         self.assertEqual(r.csv_cell('normal'), 'normal')
+
+
+class PortableRunnerTests(unittest.TestCase):
+    def test_chicago_daylight_saving(self):
+        chicago = r.ZoneInfo('America/Chicago')
+        self.assertEqual(datetime(2026, 1, 15, 14, tzinfo=timezone.utc).astimezone(chicago).hour, 8)
+        self.assertEqual(datetime(2026, 7, 15, 13, tzinfo=timezone.utc).astimezone(chicago).hour, 8)
+
+    @patch('runner.token_from_local', return_value='')
+    @patch('runner.collect_feed')
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_unicode_reports_restart_dedup_and_repeat_guard(self, stdout, feed, token):
+        feed.return_value = [{'id': 'unicode-1', 'title': 'Senior Python Engineer — 数据',
+                              'companyName': 'Müller – Équipe', 'link': 'https://example.com/jobs/1',
+                              'location': 'Remote United States', 'jobType': 'Contract',
+                              'salary': '$110/hr', 'description': 'Python AWS. C2C accepted.'}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)/'Projects with spaces – 数据'
+            root.mkdir()
+            config = root/'config.json'
+            config.write_text(json.dumps({'actors': [], 'feeds': [{'name': 'Test', 'kind': 'rss'}],
+                                          'target': 50, 'max_age_days': 7, 'daily_cap_usd': 2}), encoding='utf-8')
+            args = ['--config', str(config), '--state', str(root/'state/seen.sqlite3'),
+                    '--output', str(root/'reports')]
+            self.assertEqual(r.main(['--mode', 'daily', *args]), 0)
+            summary = json.loads((root/'reports/summary.json').read_text(encoding='utf-8'))
+            self.assertEqual(summary['new_remote_contracts'], 1)
+            with (root/'reports/contracts.csv').open(encoding='utf-8', newline='') as f:
+                rows = list(csv.DictReader(f))
+            self.assertEqual(rows[0]['title'], 'Senior Python Engineer — 数据')
+            self.assertEqual(rows[0]['company_agency'], 'Müller – Équipe')
+            self.assertIn('Müller – Équipe', (root/'reports/summary.md').read_text(encoding='utf-8'))
+            self.assertEqual(r.main(['--mode', 'daily', *args]), 0)
+            feed.assert_called_once()
+            self.assertEqual(r.main(['--mode', 'public', *args]), 0)
+            summary = json.loads((root/'reports/summary.json').read_text(encoding='utf-8'))
+            self.assertEqual(summary['new_unique'], 0)
+            self.assertEqual(summary['duplicates'], 1)
 
 
 if __name__ == '__main__':
