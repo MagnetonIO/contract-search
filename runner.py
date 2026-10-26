@@ -56,8 +56,8 @@ def canonical(url):
         p = urlsplit(str(url or ''))
         if p.scheme not in ('http', 'https') or not p.hostname or p.username:
             return ''
-        keep = [(k, v) for k, v in parse_qsl(p.query) if k.lower() in
-                {'jk', 'vjk', 'jobid', 'job_id', 'gh_jid', 'id', 'reqid'}]
+        keep = [(k, v) for k, v in parse_qsl(p.query) if not k.lower().startswith('utm_') and k.lower() not in
+                {'trackingid', 'refid', 'trk', 'token', 'access_token', 'api_key', 'apikey', 'authorization', 'signature', 'source', 'ref', 'from', 'referrer', 'campaign'}]
         path = p.path.rstrip('/')
         m = re.search(r'/jobs/view/(?:[^/]*-)?(\d+)', path)
         if 'linkedin.com' in p.hostname and m:
@@ -265,6 +265,8 @@ def normalize(row, source, now, project=False):
     evidence = 'Posting names agency or describes its client; no confidential client inferred' if agency else 'Employer identity not independently verified'
     if project:
         pipeline, tier = 'published_project_need', 'project opportunity'
+        classification = 'published buyer notice'
+        evidence = 'Official procurement feed publishes the named buyer and open tender: '+source_url
     elif contract and arrangement == 'remote' and c2c == 'explicitly accepted' and rate is not None and rate >= 100 and geography in ('US', 'worldwide'):
         pipeline, tier = 'contract', '1 - remote C2C USD100+/hr'
     elif contract and arrangement == 'remote' and not w2 and c2c != 'not accepted' and (rate is None or rate >= 100):
@@ -301,21 +303,22 @@ def collect_feed(spec):
     if spec['kind'] == 'ocds':
         data = json.loads(raw)
         rows = []
-        for package in data.get('releases', []):
+        if not isinstance(data.get('releases'), list):
+            raise SourceError('OCDS schema changed')
+        for package in data['releases']:
             t = package.get('tender', {})
             deadline = t.get('tenderPeriod', {}).get('endDate', '')
-            if t.get('status') not in ('active', 'planned') or not deadline:
-                continue  # Awards and closed notices are not buying opportunities.
-            if deadline < datetime.now(UTC).isoformat():
-                continue
-            if not re.search(SKILLS, plain(t), re.I):
-                continue
+            expired = t.get('status') != 'active' or not deadline
+            parsed_deadline = parse_date(deadline, datetime.now(UTC))
+            expired |= not parsed_deadline or parsed_deadline < datetime.now(UTC).isoformat()
+            notices = [doc.get('url', '') for doc in t.get('documents', [])
+                       if doc.get('documentType') == 'tenderNotice']
             rows.append({'id': package.get('ocid'), 'title': t.get('title'),
                          'company': package.get('buyer', {}).get('name'),
-                         'url': t.get('documents', [{}])[0].get('url', '') if t.get('documents') else '',
+                         'url': notices[0] if notices else '',
                          'description': plain(t.get('description'))+'; response deadline '+deadline,
                          'location': 'United Kingdom; delivery eligibility unverified', 'date': package.get('date'),
-                         'salary': t.get('value', {})})
+                         'salary': t.get('value', {}), 'isExpired': expired})
         return rows
     root = ET.fromstring(raw)
     rows = []

@@ -18,8 +18,10 @@ def main():
             json.load(response)
     except Exception:
         sys.exit('Apify authentication failed; nothing was saved.')
-    subprocess.run(['security', 'add-generic-password', '-U', '-a', getpass.getuser(),
-                    '-s', 'APIFY_TOKEN', '-w', token], check=True, capture_output=True)
+    saved = subprocess.run(['security', 'add-generic-password', '-U', '-a', getpass.getuser(),
+                            '-s', 'APIFY_TOKEN', '-w', token], capture_output=True)
+    if saved.returncode:
+        sys.exit('Keychain save failed; credential was not printed or written to disk.')
     result = subprocess.run(['gh', 'secret', 'set', 'APIFY_TOKEN', '--repo',
                              'MagnetonIO/contract-search'], input=token, text=True,
                             capture_output=True)
