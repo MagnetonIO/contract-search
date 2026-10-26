@@ -5,7 +5,6 @@ import csv
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import email.utils
-import hashlib
 import html
 import json
 import os
@@ -67,7 +66,7 @@ def canonical(url):
         return ''
 
 
-def fetch(url, *, token='', payload=None, method=None, raw=False):
+def fetch(url, *, token='', payload=None, method=None, raw=False, timeout=30, attempts=None):
     headers = {'User-Agent': 'ContractSearch/1.0 (private personal research)',
                'Accept': 'application/json, application/rss+xml, text/html'}
     if token:
@@ -79,20 +78,21 @@ def fetch(url, *, token='', payload=None, method=None, raw=False):
         headers['Content-Type'] = 'application/json'
     req = Request(url, data=data, headers=headers, method=method)
     # POST starts are never retried: a lost response must not start a second paid run.
-    for attempt in range(3 if data is None else 1):
+    tries = attempts if attempts is not None else (3 if data is None else 1)
+    for attempt in range(tries):
         try:
-            with build_opener(SafeRedirect()).open(req, timeout=30) as response:
+            with build_opener(SafeRedirect()).open(req, timeout=timeout) as response:
                 body = response.read(25_000_001)
                 if len(body) > 25_000_000:
                     raise SourceError('Response exceeded 25 MB bound')
                 return body if raw else json.loads(body)
         except HTTPError as exc:
-            if data is None and exc.code in (429, 500, 502, 503, 504) and attempt < 2:
+            if data is None and exc.code in (429, 500, 502, 503, 504) and attempt < tries-1:
                 time.sleep(2 ** attempt)
                 continue
             raise SourceError(f'HTTP {exc.code}') from None
         except (URLError, TimeoutError, json.JSONDecodeError):
-            if data is None and attempt < 2:
+            if data is None and attempt < tries-1:
                 time.sleep(2 ** attempt)
                 continue
             raise SourceError('Network timeout, connection failure, or invalid JSON') from None
@@ -174,6 +174,7 @@ def collect_actor(spec, token, smoke=False, journal=None):
             # A network error or deadline cannot leave a paid actor running indefinitely.
             fetch(f"{API}/actor-runs/{run['id']}/abort", token=token, payload={})
     record.update(status=run['status'], actual_charge_usd=run.get('usageTotalUsd'),
+                  charge_snapshot_at=datetime.now(UTC).isoformat(),
                   charged_event_counts=run.get('chargedEventCounts', {}))
     if journal:
         journal(record)
@@ -240,8 +241,10 @@ def normalize(row, source, now, project=False):
         contract = False
     no_c2c = bool(re.search(r'(?:no|not|without|unable to|cannot|can\x27t|do not).{0,35}(?:c2c|corp.to.corp)|(?:c2c|corp.to.corp).{0,20}(?:not (?:accepted|available|allowed)|prohibited)', low))
     c2c = 'not accepted' if no_c2c else ('explicitly accepted' if re.search(r'\bc2c\b|corp.to.corp', low) else 'unknown')
-    w2 = bool(re.search(r'\bw[ -]?2\s*(?:only|required)\b', low))
-    if w2:
+    w2_only = bool(re.search(r'\bw[ -]?2\s*(?:only|required)\b', low))
+    w2_listed = bool(re.search(r'\bw[ -]?2\b', low))
+    w2 = w2_only or (w2_listed and c2c != 'explicitly accepted')
+    if w2_only:
         c2c = 'not accepted'
     remote = bool(re.search(r'\bremote\b|work from (?:home|anywhere)', location+' '+setting+' '+title+' '+desc, re.I))
     hybrid = bool(re.search(r'\bhybrid\b|\b\d+ days? (?:in.{0,10}office|onsite|on.site)', low))
@@ -251,7 +254,7 @@ def normalize(row, source, now, project=False):
     world = bool(re.search(r'\b(?:worldwide|anywhere|global remote)\b', location+' '+desc, re.I))
     geography = 'US' if us else ('worldwide' if world else 'unconfirmed / non-US')
     restrictions = [s.strip() for s in re.split(r'(?<=[.;])\s+', desc)
-                    if re.search(r'(?:must (?:reside|live|be (?:based|located))|citizenship|work authori|no sponsorship|within the (?:us|united states)|us.only|security clearance|work.{0,15}abroad)', s, re.I)]
+                    if re.search(r'(?:must (?:reside|live|be (?:based|located))|citizen|work authori|no sponsorship|within the (?:us|united states)|us.only|security clearance|work.{0,15}abroad)', s, re.I)]
     rate = None
     pay_text = salary or desc
     match = re.search(r'(?:USD\s*|\$)\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*[-–]\s*\$?\s*\d{2,3}(?:\.\d{1,2})?)?\s*(?:/\s*(?:h(?:ou)?r|hour)|per hour|an hour|hourly)', pay_text, re.I)
@@ -282,7 +285,7 @@ def normalize(row, source, now, project=False):
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
                 source_posted_at=parse_date(source_date, now), source_date_text=plain(source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),
-                hourly_min_usd=rate if rate is not None else '', contract_status='contract' if contract else 'unconfirmed / permanent',
+                hourly_min_usd=rate if rate is not None else '', contract_status=('W2 contract' if w2_listed else 'contract') if contract else 'unconfirmed / permanent',
                 c2c_status=c2c, duration=duration[0] if duration else 'unknown',
                 remote_location=location or 'unknown', work_arrangement=arrangement,
                 work_abroad_restrictions=' | '.join(restrictions)[:2000] or 'not stated; verify before working abroad',
@@ -410,7 +413,7 @@ def enrich(jobs, max_checks=15):
             continue
         checked += 1
         try:
-            page = plain(fetch(url, raw=True).decode('utf-8', errors='replace'))
+            page = plain(fetch(url, raw=True, timeout=8, attempts=1).decode('utf-8', errors='replace'))
             if job['title'].lower() not in page.lower() or job['company_agency'].lower() not in page.lower():
                 continue
             job['official_employer_url'] = url
@@ -473,7 +476,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
     lines.extend(['', '## Source coverage', '', '| Source | Status | Raw rows | Detail |', '|---|---|---:|---|'])
     for c in coverage:
         lines.append(f'| {c["source"]} | {c["status"]} | {c.get("raw", 0)} | {c.get("detail", "")} |')
-    lines.extend(['', 'Daily actor charge caps total $2; smoke cap $0.15. Actual charges, when provided by Apify, are in summary.json. Actor caps are spending limits, not expected costs. No applications or outreach are sent.', '',
+    lines.extend(['', 'Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.', '',
                   'Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published UK project notices are separate buying opportunities; delivery eligibility must be checked.'])
     (out/'summary.md').write_text('\n'.join(lines)+'\n')
     print(json.dumps({k: summary[k] for k in ('mode', 'raw', 'new_unique', 'new_remote_contracts', 'secondary', 'published_project_needs', 'shortfall')}))

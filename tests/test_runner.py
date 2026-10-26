@@ -45,6 +45,14 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(j['pipeline'], 'secondary')
         self.assertTrue(j['fit_tier'].startswith('4 -'))
 
+    def test_w2_listed_is_secondary_without_assuming_exclusion(self):
+        j = job(description='Python remote contract position, W2 engagement.')
+        self.assertEqual(j['pipeline'], 'secondary')
+        self.assertEqual(j['contract_status'], 'W2 contract')
+        self.assertEqual(j['c2c_status'], 'unknown')
+        j = job(description='Python remote contract position, W2 or C2C accepted.')
+        self.assertEqual(j['pipeline'], 'contract')
+
     def test_annual_and_foreign_pay_not_hourly_usd(self):
         for pay in ('$150,000/year', 'CAD $100-120/hr', '£120/hour', '$120k annually'):
             j = job(salaryInfo=pay)
@@ -120,6 +128,25 @@ class DedupTests(unittest.TestCase):
 
 
 class ProviderTests(unittest.TestCase):
+    @patch('runner.fetch')
+    def test_procurement_only_open_notices_and_notice_link(self, fetch):
+        fetch.return_value = json.dumps({'releases': [
+            {'ocid': 'a', 'buyer': {'name': 'Buyer'}, 'tender': {
+                'title': 'Python software platform development', 'status': 'active',
+                'description': 'Seeking external software engineering services.',
+                'tenderPeriod': {'endDate': '2099-01-01T00:00:00Z'},
+                'documents': [{'documentType': 'conflictOfInterest'},
+                              {'documentType': 'tenderNotice', 'url': 'https://www.find-tender.service.gov.uk/Notice/123'}]}},
+            {'ocid': 'b', 'tender': {'title': 'Python project award', 'status': 'complete'}}
+        ]}).encode()
+        rows = r.collect_feed({'url': 'https://example.com', 'kind': 'ocds'})
+        self.assertEqual(len(rows), 2)
+        j = r.normalize(rows[0], 'UK Find a Tender', NOW, True)
+        self.assertEqual(j['pipeline'], 'published_project_need')
+        self.assertEqual(j['source_url'], 'https://www.find-tender.service.gov.uk/Notice/123')
+        self.assertEqual(j['direct_client_classification'], 'published buyer notice')
+        self.assertIsNone(r.normalize(rows[1], 'UK Find a Tender', NOW, True))
+
     def test_schema_drift_refuses_run(self):
         with self.assertRaises(r.SourceError):
             r.validate_input({'properties': {}}, {'removedField': 1})
