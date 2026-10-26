@@ -1,0 +1,49 @@
+[
+  {
+    "source": "LinkedIn",
+    "run_id": "jdgbcnQnZMEokzZUx",
+    "cap_usd": 0.4,
+    "build": "1.7.18",
+    "status": "SUCCEEDED",
+    "actual_charge_usd": 0.35605,
+    "charged_event_counts": {
+      "apify-default-dataset-item": 178,
+      "apify-actor-start": 1
+    }
+  },
+  {
+    "source": "Indeed",
+    "run_id": "K8vBPiVS3jJOgDetl",
+    "cap_usd": 0.6,
+    "build": "0.0.119",
+    "status": "SUCCEEDED",
+    "actual_charge_usd": 0,
+    "charged_event_counts": {
+      "result": 57
+    }
+  },
+  {
+    "source": "Dice",
+    "run_id": "bKt6EBPq9sqs031VU",
+    "cap_usd": 0.2,
+    "build": "0.1.58",
+    "status": "SUCCEEDED",
+    "actual_charge_usd": 0.0181,
+    "charged_event_counts": {
+      "job": 65,
+      "apify-actor-start": 1
+    }
+  },
+  {
+    "source": "Employer ATS discovery",
+    "run_id": "W52p22jW2WRRxnDOu",
+    "cap_usd": 0.8,
+    "build": "0.0.71",
+    "status": "SUCCEEDED",
+    "actual_charge_usd": 0.01,
+    "charged_event_counts": {
+      "apify-default-dataset-item": 0,
+      "apify-actor-start": 1
+    }
+  }
+]
