@@ -217,7 +217,7 @@ def pick(row, *keys):
 
 
 def normalize(row, source, now, project=False):
-    if not isinstance(row, dict) or row.get('error') or row.get('isExpired'):
+    if not isinstance(row, dict) or row.get('error') or row.get('isExpired') or row.get('_sample') or row.get('_diagnostic') or row.get('ok') is False:
         return None
     company = pick(row, 'companyName', 'company_name', 'company', 'organization', 'organization_name', 'employer')
     if isinstance(company, dict):
@@ -229,7 +229,7 @@ def normalize(row, source, now, project=False):
         return None
     desc = plain(pick(row, 'description', 'descriptionText', 'descriptionHtml', 'descriptionHTML', 'description_text', 'jobDescription'))
     location = plain(pick(row, 'location', 'candidate_required_location', 'locations_derived', 'jobLocation', 'locations'))
-    employment = plain(pick(row, 'jobType', 'employmentType', 'employmentTypes', 'job_type', 'ai_employment_type', 'employment_type'))
+    employment = plain(pick(row, 'jobType', 'employmentType', 'employmentTypes', 'job_type', 'employment_type', 'ai_employment_type'))
     setting = plain(pick(row, 'jobSetting', 'workplaceType', 'workplaceTypes', 'work_arrangement', 'ai_work_arrangement'))
     salary = plain(pick(row, 'salaryInfo', 'salary', 'salaryText', 'compensation', 'salary_raw'))
     text = f'{title} {desc} {employment} {setting} {location}'
@@ -255,6 +255,8 @@ def normalize(row, source, now, project=False):
     geography = 'US' if us else ('worldwide' if world else 'unconfirmed / non-US')
     restrictions = [s.strip() for s in re.split(r'(?<=[.;])\s+', desc)
                     if re.search(r'(?:must (?:reside|live|be (?:based|located))|citizen|work authori|no sponsorship|within the (?:us|united states)|us.only|security clearance|work.{0,15}abroad)', s, re.I)]
+    if row.get('location_requirements'):
+        restrictions.append('Source location requirements: '+plain(row['location_requirements']))
     rate = None
     pay_text = salary or desc
     match = re.search(r'(?:USD\s*|\$)\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*[-–]\s*\$?\s*\d{2,3}(?:\.\d{1,2})?)?\s*(?:/\s*(?:h(?:ou)?r|hour)|per hour|an hour|hourly)', pay_text, re.I)
@@ -280,10 +282,10 @@ def normalize(row, source, now, project=False):
                                      '5 - hybrid / on-site / remote unknown' if contract else '6 - permanent / contract unconfirmed')
     duration = re.search(r'\b\d+\s*(?:[-–]\s*\d+\s*)?(?:month|week|year)s?\b', desc, re.I)
     contact = sorted(set(re.findall(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b', desc, re.I)))
-    source_date = pick(row, 'postingDateParsed', 'postedAt', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate')
+    source_date = pick(row, 'postingDateParsed', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate', 'postedAt')
     return dict(title=title, company_agency=plain(company), source=source,
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
-                source_posted_at=parse_date(source_date, now), source_date_text=plain(source_date),
+                source_posted_at=parse_date(source_date, now), source_date_text=plain(row.get('postedAt') or source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),
                 hourly_min_usd=rate if rate is not None else '', contract_status=('W2 contract' if w2_listed else 'contract') if contract else 'unconfirmed / permanent',
                 c2c_status=c2c, duration=duration[0] if duration else 'unknown',

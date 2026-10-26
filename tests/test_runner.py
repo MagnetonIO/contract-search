@@ -64,6 +64,16 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(j['source_posted_at'], '')
         self.assertEqual(j['source_date_text'], '2 days ago')
 
+    def test_dice_iso_date_preferred_to_relative_label(self):
+        j = job(postedAt='5d ago', postedDate='2026-10-20T21:46:56Z')
+        self.assertEqual(j['source_posted_at'], '2026-10-20T21:46:56+00:00')
+        self.assertEqual(j['source_date_text'], '5d ago')
+
+    def test_actor_samples_and_diagnostics_never_count(self):
+        self.assertIsNone(job(_sample=True))
+        self.assertIsNone(job(_diagnostic=True))
+        self.assertIsNone(job(ok=False))
+
     def test_unknown_terms_and_permanent(self):
         j = job(salaryInfo='', description='Python AWS software development. Remote contract position.')
         self.assertEqual(j['c2c_status'], 'unknown')
