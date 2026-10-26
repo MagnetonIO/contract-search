@@ -346,6 +346,19 @@ class State:
         self.db.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, first_seen TEXT, last_seen TEXT, data TEXT)')
         self.db.execute('CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, job_id INTEGER)')
         self.db.execute('CREATE TABLE IF NOT EXISTS runs (run_date TEXT PRIMARY KEY, completed TEXT)')
+        columns = {row[1] for row in self.db.execute('PRAGMA table_info(jobs)')}
+        for column in ('match_key', 'title_key'):
+            if column not in columns:
+                self.db.execute(f'ALTER TABLE jobs ADD COLUMN {column} TEXT')
+        for jid, blob in self.db.execute('SELECT id,data FROM jobs WHERE title_key IS NULL').fetchall():
+            self.db.execute('UPDATE jobs SET match_key=?, title_key=? WHERE id=?', (*self.keys(json.loads(blob)), jid))
+        self.db.execute('CREATE INDEX IF NOT EXISTS jobs_match ON jobs(match_key)')
+        self.db.execute('CREATE INDEX IF NOT EXISTS jobs_title ON jobs(title_key)')
+
+    @staticmethod
+    def keys(job):
+        title = re.sub(r'\W+', '', job['title'].casefold())
+        return json.dumps([job['company_agency'].casefold(), job['title'].casefold(), job['remote_location'].casefold()]), title
 
     @staticmethod
     def aliases(job):
@@ -363,7 +376,7 @@ class State:
                 existing = found[0]
                 break
         if existing is None:
-            for jid, blob in self.db.execute('SELECT id,data FROM jobs'):
+            for jid, blob in self.db.execute('SELECT id,data FROM jobs WHERE match_key=? OR title_key=?', self.keys(job)):
                 old = json.loads(blob)
                 same_employer = plain(old['company_agency']).casefold() == plain(job['company_agency']).casefold()
                 same_title = plain(old['title']).casefold() == plain(job['title']).casefold()
@@ -379,8 +392,8 @@ class State:
                     break
         new = existing is None
         if new:
-            cur = self.db.execute('INSERT INTO jobs(first_seen,last_seen,data) VALUES(?,?,?)',
-                                  (job['first_seen'], job['first_seen'], json.dumps(job)))
+            cur = self.db.execute('INSERT INTO jobs(first_seen,last_seen,data,match_key,title_key) VALUES(?,?,?,?,?)',
+                                  (job['first_seen'], job['first_seen'], json.dumps(job), *self.keys(job)))
             existing = cur.lastrowid
         else:
             job['first_seen'] = self.db.execute('SELECT first_seen FROM jobs WHERE id=?', (existing,)).fetchone()[0]
@@ -425,6 +438,11 @@ def enrich(jobs, max_checks=15):
     official = [j for j in jobs if j['official_employer_url']]
     for job in jobs:
         if not job['direct_client_classification'].startswith('agency'):
+            for target in official:
+                if canonical(job['application_url']) == canonical(target['official_employer_url']) and job['company_agency'].casefold() == target['company_agency'].casefold():
+                    for key in ('official_employer_url', 'direct_client_classification', 'direct_client_evidence'):
+                        job[key] = target[key]
+                    break
             continue
         a = words(job['_description'])
         for target in official:
@@ -534,7 +552,7 @@ def main(argv=None):
                 coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': 'Feed unavailable or schema changed'})
         coverage.extend({'source': k, 'status': 'not configured', 'raw': 0, 'detail': v} for k, v in config.get('unconfigured_sources', {}).items())
     counts = dict(raw=len(rows), relevant=0, new_unique=0, duplicates=0, stale=0, rejected=0)
-    jobs = []
+    jobs, candidates = [], []
     for source, row, project in rows:
         job = normalize(row, source, now, project)
         if not job:
@@ -544,11 +562,13 @@ def main(argv=None):
         if job['source_posted_at'] and datetime.fromisoformat(job['source_posted_at']) < now-timedelta(days=config['max_age_days']):
             counts['stale'] += 1
             continue
+        candidates.append(job)
+    enrich(candidates, max_checks=0 if args.mode == 'smoke' else 15)
+    for job in candidates:
         if state.observe(job):
             jobs.append(job)
         else:
             counts['duplicates'] += 1
-    enrich(jobs, max_checks=0 if args.mode == 'smoke' else 15)
     counts['new_unique'] = len(jobs)
     summary = report(out, jobs, coverage, counts, runs, config, now, args.mode)
     if args.mode == 'daily' and any(c['status'] == 'ok' for c in coverage):

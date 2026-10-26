@@ -84,6 +84,16 @@ class NormalizeTests(unittest.TestCase):
         self.assertEqual(j['direct_client_classification'], 'agency / client unverified')
         self.assertEqual(j['official_employer_url'], '')
 
+    @patch('runner.fetch')
+    def test_official_evidence_survives_cross_board_duplicate(self, fetch):
+        a, b = job(), job()
+        a['application_url'] = b['application_url'] = 'https://boards.greenhouse.io/example/jobs/123'
+        b['source'] = 'Employer ATS discovery'
+        fetch.return_value = b'Example Senior Python Engineer official job posting'
+        r.enrich([a, b])
+        self.assertEqual(a['official_employer_url'], b['application_url'])
+        self.assertIn('verified', a['direct_client_classification'])
+
     def test_canonical_preserves_job_identity(self):
         self.assertEqual(r.canonical('https://www.indeed.com/viewjob?jk=abc&utm_source=x'), 'https://www.indeed.com/viewjob?jk=abc')
         self.assertNotEqual(r.canonical('https://x/jobs?id=1'), r.canonical('https://x/jobs?id=2'))
