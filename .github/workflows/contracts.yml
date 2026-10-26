@@ -58,7 +58,7 @@ jobs:
           fi
       - name: Upload CSVs and run evidence
         id: reports
-        if: always()
+        if: always() && hashFiles('code/output/latest/**') != ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: contracts-${{ github.run_id }}
@@ -66,7 +66,7 @@ jobs:
           if-no-files-found: error
           retention-days: 90
       - name: Save dedup state and latest report
-        if: always() && steps.reports.outcome == 'success' && env.MODE != 'smoke'
+        if: always() && steps.reports.outcome == 'success' && env.MODE != 'smoke' && hashFiles('code/output/latest/summary.json') != ''
         working-directory: durable-state
         run: |
           test -f ../code/output/latest/summary.json
