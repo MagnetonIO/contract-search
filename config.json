@@ -174,53 +174,6 @@
       }
     },
     {
-      "name": "ZipRecruiter",
-      "actor": "parsebird~ziprecruiter-jobs-scraper",
-      "adapter": "ziprecruiter",
-      "cap_usd": 0.45,
-      "max_items": 60,
-      "input": {
-        "searches": [
-          "software architect",
-          "DevOps Kubernetes",
-          "Python AI engineer",
-          "TypeScript React",
-          "data engineer",
-          "Golang Java Rust"
-        ],
-        "location": "United States",
-        "jobType": "contract",
-        "postedWithin": "week",
-        "remoteType": "only_remote",
-        "maxItems": 60,
-        "maxPages": 3,
-        "includeDetails": true,
-        "concurrency": 3
-      },
-      "smoke_input": {
-        "searches": [
-          "software architect"
-        ],
-        "location": "United States",
-        "jobType": "contract",
-        "postedWithin": "week",
-        "remoteType": "only_remote",
-        "maxItems": 3,
-        "maxPages": 1,
-        "includeDetails": true,
-        "concurrency": 3
-      },
-      "enabled": false,
-      "validation": {
-        "status": "provider issue",
-        "raw": 0,
-        "valid_records": 0,
-        "run_id": "fdd5VPuohsIO8DD79",
-        "checked_at": "2026-10-27T22:28:24.580Z",
-        "detail": "Two collectors produced no usable records despite reported matches; direct source returned HTTP 403. Disabled pending a working collector; today's paid allowance is fully reserved."
-      }
-    },
-    {
       "name": "Glassdoor",
       "actor": "valig~glassdoor-jobs-scraper",
       "adapter": "glassdoor",
