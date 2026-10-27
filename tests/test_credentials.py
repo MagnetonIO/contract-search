@@ -11,6 +11,23 @@ from scripts import configure_token as setup
 
 
 class CredentialTests(unittest.TestCase):
+    @patch.dict(os.environ, {'SAM_API_KEY': ' sam-environment-value '})
+    @patch('credentials.secure_backend')
+    def test_sam_environment_override_does_not_open_vault(self, backend):
+        self.assertEqual(c.load_secret('SAM_API_KEY'), 'sam-environment-value')
+        backend.assert_not_called()
+
+    @patch.dict(os.environ, {}, clear=True)
+    @patch('credentials.secure_backend')
+    def test_sam_uses_its_own_native_vault_entry_on_every_platform(self, backend):
+        backend.return_value.get_password.return_value = 'sam-native-value'
+        for platform in ['darwin', 'linux', 'win32']:
+            with self.subTest(platform=platform), patch('credentials.sys.platform', platform):
+                self.assertEqual(c.load_secret('SAM_API_KEY'), 'sam-native-value')
+                c.save_secret('SAM_API_KEY', 'sam-new-value')
+        backend.return_value.get_password.assert_called_with(c.SERVICE, 'SAM_API_KEY')
+        backend.return_value.set_password.assert_called_with(c.SERVICE, 'SAM_API_KEY', 'sam-new-value')
+
     @patch.dict(os.environ, {'APIFY_TOKEN': ' environment-value '})
     @patch('credentials.secure_backend')
     def test_environment_override_does_not_open_vault(self, backend):
@@ -65,6 +82,30 @@ class CredentialTests(unittest.TestCase):
 
 
 class SetupTests(unittest.TestCase):
+    @patch('scripts.configure_token.getpass.getpass', return_value='synthetic-sam-key')
+    @patch('scripts.configure_token.fetch', return_value={'opportunitiesData': []})
+    @patch('scripts.configure_token.save_secret')
+    @patch('scripts.configure_token.subprocess.run')
+    def test_sam_validates_once_and_syncs_secret_over_stdin(self, command, save, fetch, prompt):
+        command.return_value.returncode = 0
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            setup.main(['--provider', 'sam'])
+        save.assert_called_once_with('SAM_API_KEY', 'synthetic-sam-key')
+        fetch.assert_called_once()
+        self.assertEqual(fetch.call_args.kwargs, {'attempts': 1})
+        self.assertTrue(fetch.call_args.args[0].startswith('https://api.sam.gov/opportunities/v2/search?'))
+        self.assertIn('SAM_API_KEY', command.call_args.args[0])
+        self.assertEqual(command.call_args.kwargs['input'], 'synthetic-sam-key')
+        self.assertNotIn('synthetic-sam-key', ' '.join(command.call_args.args[0])+output.getvalue())
+
+    @patch('scripts.configure_token.getpass.getpass', return_value='synthetic-sam-key')
+    @patch('scripts.configure_token.fetch', return_value={'error': 'invalid'})
+    @patch('scripts.configure_token.save_secret')
+    def test_sam_schema_or_auth_failure_saves_nothing(self, save, fetch, prompt):
+        with self.assertRaises(SystemExit):
+            setup.main(['--provider', 'sam'])
+        save.assert_not_called()
+
     @patch('scripts.configure_token.getpass.getpass', return_value='fake-value')
     @patch('scripts.configure_token.fetch')
     @patch('scripts.configure_token.save_token')

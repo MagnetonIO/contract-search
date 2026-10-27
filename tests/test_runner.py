@@ -148,9 +148,16 @@ class DedupTests(unittest.TestCase):
 
 
 class ProviderTests(unittest.TestCase):
-    @patch.dict('os.environ', {'SAM_API_KEY': ''})
+    def test_sam_key_cannot_follow_cross_host_or_insecure_redirects(self):
+        request = r.Request('https://api.sam.gov/opportunities/v2/search?api_key=synthetic-secret')
+        for destination in ['https://other.example/search', 'http://api.sam.gov/search']:
+            with self.subTest(destination=destination), self.assertRaises(r.SourceError) as error:
+                r.SafeRedirect().redirect_request(request, None, 302, 'Moved', {}, destination)
+            self.assertNotIn('synthetic-secret', str(error.exception))
+
+    @patch('runner.load_secret', return_value='')
     @patch('runner.fetch')
-    def test_sam_requires_key_without_making_a_request(self, fetch):
+    def test_sam_requires_key_without_making_a_request(self, fetch, credential):
         with self.assertRaises(r.CredentialMissing):
             r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search'})
         fetch.assert_not_called()
@@ -161,7 +168,7 @@ class ProviderTests(unittest.TestCase):
         notice = {'noticeId': 'abc', 'title': 'Software platform engineering', 'active': 'Yes',
                   'type': 'Solicitation', 'postedDate': '2026-10-26 12:00:00',
                   'responseDeadLine': '2099-01-01T00:00:00Z', 'fullParentPathName': 'US Federal Buyer',
-                  'uiLink': 'https://sam.gov/opp/abc/view',
+                  'uiLink': 'https://sam.gov/opp/abc/view', 'placeOfPerformance': {'country': {'code': 'USA'}},
                   'description': 'https://api.sam.gov/description?api_key=synthetic-sam-test-only',
                   'pointOfContact': [{'fullname': 'Public Buyer', 'email': 'buyer@example.gov'}]}
         fetch.return_value = {'opportunitiesData': [notice, {**notice, 'noticeId': 'award', 'type': 'Award Notice'},
@@ -175,6 +182,9 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(job['pipeline'], 'published_project_need')
         self.assertEqual(job['geography'], 'US')
         self.assertIn('buyer@example.gov', job['public_recruiter_contact'])
+        fetch.return_value = {'opportunitiesData': [{**notice, 'placeOfPerformance': None}]}
+        unknown = r.collect_sam({'url': 'https://api.sam.gov/opportunities/v2/search'})
+        self.assertNotEqual(r.normalize(unknown[0], 'US SAM.gov solicitations', NOW, True)['geography'], 'US')
         with self.assertRaises(r.SourceError):
             r.collect_sam({'url': 'https://other.example/search'})
 

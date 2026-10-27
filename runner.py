@@ -7,7 +7,6 @@ from difflib import SequenceMatcher
 import email.utils
 import html
 import json
-import os
 from pathlib import Path
 import re
 import sqlite3
@@ -19,6 +18,7 @@ from urllib.request import Request, HTTPRedirectHandler, build_opener
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 from credentials import load_token as token_from_local
+from credentials import load_secret
 
 UTC = timezone.utc
 API = 'https://api.apify.com/v2'
@@ -44,8 +44,8 @@ class CredentialMissing(SourceError):
 class SafeRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         sensitive = req.has_header('Authorization') or any(k.lower() == 'api_key' for k, _ in parse_qsl(urlsplit(req.full_url).query))
-        if sensitive and urlsplit(newurl).netloc != urlsplit(req.full_url).netloc:
-            raise SourceError('Refused credential-bearing redirect to another host')
+        if sensitive and (urlsplit(newurl).netloc != urlsplit(req.full_url).netloc or urlsplit(newurl).scheme != 'https'):
+            raise SourceError('Refused credential-bearing redirect to another host or an insecure connection')
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -334,7 +334,7 @@ def collect_feed(spec):
 
 
 def collect_sam(spec):
-    key = os.environ.get('SAM_API_KEY', '').strip()
+    key = load_secret('SAM_API_KEY')
     if not key:
         raise CredentialMissing('SAM_API_KEY is not configured; US federal solicitations have not been searched')
     if spec['url'] != 'https://api.sam.gov/opportunities/v2/search':
@@ -347,7 +347,10 @@ def collect_sam(spec):
             query = urlencode({'api_key': key, 'postedFrom': (now-timedelta(days=7)).strftime('%m/%d/%Y'),
                                'postedTo': now.strftime('%m/%d/%Y'), 'ptype': notice_type,
                                'title': title, 'limit': 100, 'offset': 0})
-            data = fetch(spec['url']+'?'+query)
+            data = fetch(spec['url']+'?'+query, attempts=1)
+            # Query-string authentication is required by SAM; never persist a key
+            # echoed in a provider response or its pagination links.
+            data = json.loads(json.dumps(data).replace(key, '[REDACTED]'))
             if not isinstance(data.get('opportunitiesData'), list):
                 raise SourceError('SAM opportunities schema changed')
             for notice in data['opportunitiesData']:
@@ -362,11 +365,16 @@ def collect_sam(spec):
                     continue
                 contacts = notice.get('pointOfContact') or []
                 contact_text = '; '.join(plain(c.get('fullName') or c.get('fullname'))+' '+plain(c.get('email')) for c in contacts if isinstance(c, dict))
+                performance = notice.get('placeOfPerformance') or {}
+                country = performance.get('country') or {}
+                country_name = plain(country.get('name') or country.get('code')) if isinstance(country, dict) else plain(country)
+                if country_name.upper() in ('USA', 'US'):
+                    country_name = 'United States'
                 # Description is an API link, not source text. Do not fetch or export its credential-bearing URL.
                 rows[identifier] = {'id': identifier, 'title': notice.get('title'),
                     'company': notice.get('fullParentPathName') or notice.get('department') or 'US federal buyer',
                     'url': url, 'date': notice.get('postedDate'),
-                    'location': 'United States; place of performance and vendor eligibility must be verified',
+                    'location': (country_name or 'US federal procurement; place of performance unconfirmed')+'; vendor eligibility must be verified',
                     'description': f"US federal solicitation. Response deadline {deadline}. Set-aside: {plain(notice.get('typeOfSetAsideDescription')) or 'verify in notice'}. Public procurement contacts: {contact_text}",
                     'isExpired': False}
     return list(rows.values())
@@ -532,7 +540,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
     for c in coverage:
         lines.append(f'| {c["source"]} | {c["status"]} | {c.get("raw", 0)} | {c.get("detail", "")} |')
     lines.extend(['', 'Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.', '',
-                  'Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published UK project notices are separate buying opportunities; delivery eligibility must be checked.'])
+                  'Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published procurement notices are separate buying opportunities; delivery and vendor eligibility must be checked.'])
     (out/'summary.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
     print(json.dumps({k: summary[k] for k in ('mode', 'raw', 'new_unique', 'new_remote_contracts', 'secondary', 'published_project_needs', 'shortfall')}))
     return summary
