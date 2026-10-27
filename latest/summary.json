@@ -1,75 +1,261 @@
 {
-  "mode": "public",
-  "created_at": "2026-10-27T17:29:44.409862+00:00",
-  "raw": 73,
-  "relevant": 63,
-  "new_unique": 9,
-  "duplicates": 10,
-  "stale": 44,
-  "rejected": 10,
-  "new_remote_contracts": 0,
-  "secondary": 2,
-  "published_project_needs": 7,
+  "mode": "daily",
+  "created_at": "2026-10-27T22:52:50.883041+00:00",
+  "raw": 610,
+  "relevant": 587,
+  "new_unique": 137,
+  "duplicates": 349,
+  "stale": 101,
+  "rejected": 23,
+  "new_remote_contracts": 29,
+  "secondary": 108,
+  "published_project_needs": 0,
   "target": 50,
-  "shortfall": 50,
+  "shortfall": 21,
   "source_coverage": [
+    {
+      "source": "LinkedIn",
+      "status": "ok",
+      "raw": 176,
+      "detail": "Capped runs nLRbaxlUSfcpbdhT6",
+      "retained": 174
+    },
+    {
+      "source": "Indeed",
+      "status": "ok",
+      "raw": 61,
+      "detail": "Capped runs wSe63utEFS7Nopiah",
+      "retained": 57
+    },
+    {
+      "source": "Dice",
+      "status": "ok",
+      "raw": 120,
+      "detail": "Capped runs u3OAblfQGKLxzW6ut",
+      "retained": 116
+    },
+    {
+      "source": "Employer ATS discovery",
+      "status": "ok",
+      "raw": 10,
+      "detail": "Capped runs 6L1AdaphyLAk27QID",
+      "retained": 10
+    },
+    {
+      "source": "ZipRecruiter",
+      "status": "empty / disabled",
+      "raw": 0,
+      "detail": "Capped runs FntMsO7EO3FcfHreg; zero records on full verification query; daily collection remains disabled",
+      "retained": 0
+    },
+    {
+      "source": "Glassdoor",
+      "status": "ok",
+      "raw": 87,
+      "detail": "Capped runs 2Ry5lYfdB45C82x1h, 0yDCNq6TDCaHVrPPn, zkOqEtf9NOntW1LrV",
+      "retained": 81
+    },
+    {
+      "source": "Wellfound",
+      "status": "ok",
+      "raw": 60,
+      "detail": "Capped runs U5TXuBSfpFmiCmbdt",
+      "retained": 8
+    },
+    {
+      "source": "Built In",
+      "status": "ok",
+      "raw": 31,
+      "detail": "Capped runs tati7BI2U8mUvnsm3",
+      "retained": 28
+    },
+    {
+      "source": "Staffing firm career feeds",
+      "status": "empty / disabled",
+      "raw": 0,
+      "detail": "Capped runs lxfAwIasR43G0u5T8; provider ATS index; end client unverified; zero records on full verification query; daily collection remains disabled",
+      "retained": 0
+    },
     {
       "source": "Remotive",
       "status": "ok",
-      "raw": 10
+      "raw": 10,
+      "retained": 0
     },
     {
       "source": "We Work Remotely",
       "status": "ok",
-      "raw": 25
+      "raw": 25,
+      "retained": 0
     },
     {
       "source": "We Work Remotely DevOps",
       "status": "ok",
-      "raw": 30
-    },
-    {
-      "source": "UK Find a Tender",
-      "status": "disabled",
-      "raw": 0,
-      "detail": "UK procurement is outside the default US search; retained as an optional source"
+      "raw": 30,
+      "retained": 12
     },
     {
       "source": "US SAM.gov solicitations",
-      "status": "ok",
-      "raw": 8,
-      "detail": "Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; federal projects, not individual jobs"
+      "status": "failed",
+      "raw": 0,
+      "detail": "HTTP 429: SAM.gov rate limit reached; bounded retry also returned 429. No further requests made.",
+      "retained": 0
+    }
+  ],
+  "actor_runs": [
+    {
+      "source": "Dice",
+      "run_id": "u3OAblfQGKLxzW6ut",
+      "cap_usd": 0.2,
+      "build": "0.1.58",
+      "status": "SUCCEEDED",
+      "reservation_id": "cb63a0d3344a4d4aa671fb48fe90c97c",
+      "actual_charge_usd": 0.0883,
+      "charge_snapshot_at": "2026-10-27T22:58:08.746418+00:00",
+      "charged_event_counts": {
+        "job": 97,
+        "apify-actor-start": 1
+      }
+    },
+    {
+      "source": "LinkedIn",
+      "run_id": "nLRbaxlUSfcpbdhT6",
+      "cap_usd": 0.4,
+      "build": "1.7.18",
+      "status": "SUCCEEDED",
+      "reservation_id": "06017cba7e7545ef99c99fe74022772b",
+      "actual_charge_usd": 0.34605,
+      "charge_snapshot_at": "2026-10-27T22:55:12.763427+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 173,
+        "apify-actor-start": 1
+      }
+    },
+    {
+      "source": "Indeed",
+      "run_id": "wSe63utEFS7Nopiah",
+      "cap_usd": 0.6,
+      "build": "0.0.119",
+      "status": "SUCCEEDED",
+      "reservation_id": "2ed9a3539740465f996f2caab1034391",
+      "actual_charge_usd": 0,
+      "charge_snapshot_at": "2026-10-27T22:53:07.648942+00:00",
+      "charged_event_counts": {
+        "result": 61
+      }
+    },
+    {
+      "source": "Employer ATS discovery",
+      "run_id": "6L1AdaphyLAk27QID",
+      "cap_usd": 0.2,
+      "build": "0.0.72",
+      "status": "SUCCEEDED",
+      "reservation_id": "ea3f0d4935de4548a65bc0764c608cef",
+      "actual_charge_usd": 0.01,
+      "charge_snapshot_at": "2026-10-27T22:53:16.168962+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 0,
+        "apify-actor-start": 1
+      }
     },
     {
       "source": "ZipRecruiter",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "No validated collector configured"
+      "run_id": "FntMsO7EO3FcfHreg",
+      "cap_usd": 0.05,
+      "build": "1.0.5",
+      "status": "SUCCEEDED",
+      "reservation_id": "be9d3046cff1438e892e0e2f94181131",
+      "actual_charge_usd": 5e-05,
+      "charge_snapshot_at": "2026-10-27T22:53:40.157655+00:00",
+      "charged_event_counts": {
+        "apify-actor-start": 1,
+        "job-scraped": 0,
+        "job-details": 0
+      }
     },
     {
       "source": "Glassdoor",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "No validated collector configured"
+      "run_id": "2Ry5lYfdB45C82x1h",
+      "cap_usd": 0.026666,
+      "build": "0.0.10",
+      "status": "SUCCEEDED",
+      "reservation_id": "38424b6723ec4647bb28f5cab01dc525",
+      "actual_charge_usd": 0.001,
+      "charge_snapshot_at": "2026-10-27T22:53:48.072223+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 0,
+        "apify-actor-start": 1
+      }
+    },
+    {
+      "source": "Glassdoor",
+      "run_id": "0yDCNq6TDCaHVrPPn",
+      "cap_usd": 0.026666,
+      "build": "0.0.10",
+      "status": "SUCCEEDED",
+      "reservation_id": "0fef7bbcec2b40c0a3334d79a873e193",
+      "actual_charge_usd": 0.001,
+      "charge_snapshot_at": "2026-10-27T22:53:56.643363+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 0,
+        "apify-actor-start": 1
+      }
+    },
+    {
+      "source": "Glassdoor",
+      "run_id": "zkOqEtf9NOntW1LrV",
+      "cap_usd": 0.026666,
+      "build": "0.0.10",
+      "status": "SUCCEEDED",
+      "reservation_id": "8215bb6ca50f4e5dbbd7dddfc5a3521b",
+      "actual_charge_usd": 0.001,
+      "charge_snapshot_at": "2026-10-27T22:54:05.381500+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 0,
+        "apify-actor-start": 1
+      }
     },
     {
       "source": "Wellfound",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "No validated collector configured"
+      "run_id": "U5TXuBSfpFmiCmbdt",
+      "cap_usd": 0.1,
+      "build": "0.1.5",
+      "status": "SUCCEEDED",
+      "reservation_id": "88f13fbaacb341b7955b58e10455d6ae",
+      "actual_charge_usd": 0.095606,
+      "charge_snapshot_at": "2026-10-27T22:56:56.795521+00:00",
+      "charged_event_counts": {
+        "start": 1,
+        "item": 60
+      }
     },
     {
       "source": "Built In",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "No validated collector configured"
+      "run_id": "tati7BI2U8mUvnsm3",
+      "cap_usd": 0.17,
+      "build": "1.0.9",
+      "status": "SUCCEEDED",
+      "reservation_id": "692372f0d7ee4e99b1a73164bc0dea57",
+      "actual_charge_usd": 0.03508,
+      "charge_snapshot_at": "2026-10-27T22:57:28.563892+00:00",
+      "charged_event_counts": {
+        "apify-actor-start": 1,
+        "apify-default-dataset-item": 31
+      }
     },
     {
       "source": "Staffing firm career feeds",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "Agency postings may appear on boards; no separate firm feeds configured"
+      "run_id": "lxfAwIasR43G0u5T8",
+      "cap_usd": 0.15,
+      "build": "0.0.72",
+      "status": "SUCCEEDED",
+      "reservation_id": "fa9e43f6ecee4732a98be37a02000eae",
+      "actual_charge_usd": 0.01,
+      "charge_snapshot_at": "2026-10-27T22:57:05.503457+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 0,
+        "apify-actor-start": 1
+      }
     }
-  ],
-  "actor_runs": []
+  ]
 }
