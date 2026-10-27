@@ -15,7 +15,9 @@ const safeKey = (key: string) => {
 export async function readBytes(key: string): Promise<{ value: Buffer; version: string } | null> {
   safeKey(key);
   if (blobMode()) {
-    const result = await get(key, { access: 'private', useCache: false });
+    // Compression changes the response ETag to a weak tag, which Blob rejects
+    // for ifMatch writes. Read the identity representation to retain its version.
+    const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
     if (!result) return null;
     if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable');
     return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
