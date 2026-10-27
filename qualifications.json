@@ -280,5 +280,57 @@
         "url": "https://www.linkedin.com/jobs/view/4482016142"
       }
     ]
+  },
+  {
+    "match": {
+      "company": "US Navy / NAVSUP",
+      "title_contains": "Enterprise Cloud Support Services",
+      "source_url": "https://sam.gov/workspace/contract/opp/47acc0637a3944399b7908548c83e227/view"
+    },
+    "reviewed_at": "2026-10-27",
+    "verdict": "needs_confirmation",
+    "summary": "Potential service fit with Magneton Labs’ cloud and DevOps practice. The official Navy solicitation is a total small-business set-aside. Its description refers readers to the attached scope; staffing, contract access, clearance needs, and past-performance requirements have not been reviewed. Investigate before deciding to bid.",
+    "pay": {
+      "status": "unknown",
+      "detail": "No contract value or labor rates were verified in the API metadata or brief description. This is a procurement opportunity, not a confirmed hourly job.",
+      "source_url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view"
+    },
+    "c2c": {
+      "status": "to_verify",
+      "detail": "Solicitation N0018926RL011 is marked Total Small Business Set-Aside under NAICS 518210. Magneton’s eligibility and any prime-contract or subcontract route must be checked. No individual C2C terms are confirmed.",
+      "source_url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view"
+    },
+    "location": {
+      "status": "to_verify",
+      "detail": "The API lists United States as the place of performance. Remote delivery, on-site staffing, work-abroad permissions, and security requirements are unverified.",
+      "source_url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view"
+    },
+    "client": {
+      "status": "confirmed",
+      "detail": "The published buyer is US Navy NAVSUP Fleet Logistics Center Norfolk. Response deadline in the API: November 12, 2026 at 2:00pm US Eastern. Recheck amendments on the official notice.",
+      "source_url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view"
+    },
+    "contact": {
+      "url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view",
+      "email": "alexandria.e.mccune.civ@us.navy.mil",
+      "email_name": "Published solicitation point of contact",
+      "detail": "This address is published in the official SAM notice metadata. Use it for solicitation questions after reading the notice and its attachments."
+    },
+    "next_steps": [
+      "Read solicitation N0018926RL011 and every scope attachment before considering a bid.",
+      "Check required staffing, past performance, contract vehicles, facilities, and security clearances.",
+      "Confirm small-business eligibility for NAICS 518210 and the bid deadline against the latest amendment.",
+      "Decide whether to bid directly or discuss a defined engineering work package with an eligible prime contractor."
+    ],
+    "sources": [
+      {
+        "title": "Official SAM solicitation",
+        "url": "https://sam.gov/opp/47acc0637a3944399b7908548c83e227/view"
+      },
+      {
+        "title": "Magneton Labs services used for initial fit assessment",
+        "url": "https://www.magnetonlabs.com/services"
+      }
+    ]
   }
 ]

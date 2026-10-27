@@ -1,5 +1,13 @@
 export function safeWebUrl(value) {
-  try { const parsed = new URL(value); return parsed.protocol === 'https:' && !parsed.username && !parsed.password ? parsed.href : ''; }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return '';
+    // SAM's API uiLink points into an authenticated workspace. Display the public
+    // notice URL without changing the stored source URL or its stable lead ID.
+    const notice = parsed.pathname.match(/^\/workspace\/contract\/opp\/([a-f0-9-]{32,36})\/view\/?$/i);
+    if (['sam.gov','www.sam.gov'].includes(parsed.hostname) && notice) parsed.pathname = '/opp/'+notice[1]+'/view';
+    return parsed.href;
+  }
   catch { return ''; }
 }
 export function formatPay(value) {

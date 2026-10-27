@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeAuthConfig, makePasswordHash, verifyPassword, safeWebUrl } from '../lib/auth-core.mjs';
 import { sealData, unsealData } from 'iron-session';
-import { contactEmails, draftEmail, emailHref, formatPay } from '../lib/shared.mjs';
+import { contactEmails, draftEmail, emailHref, formatPay, applicationUrl, safeWebUrl as safePostingUrl } from '../lib/shared.mjs';
 
 test('passwords are salted, verified, and never stored as plaintext', () => {
   const password = 'disposable-test-password-only';
@@ -41,4 +41,13 @@ test('outreach links exclude accommodation contacts and do not claim attachments
 test('source annual pay remains annual rather than becoming an invented hourly rate',()=>{
   assert.equal(formatPay('{"currency":"USD","value":{"minValue":120000,"maxValue":140000,"unitText":"YEAR"}}'),'USD 120,000–140,000 / year');
   assert.equal(formatPay('unknown'),'Rate not published');
+});
+test('SAM links open public notices while stored lead identity stays unchanged',()=>{
+  const id='47acc0637a3944399b7908548c83e227';
+  const source='https://sam.gov/workspace/contract/opp/'+id+'/view';
+  const lead={source_url:source,application_url:source};
+  assert.equal(applicationUrl(lead),'https://sam.gov/opp/'+id+'/view');
+  assert.equal(lead.source_url,source);
+  assert.equal(safePostingUrl('https://other.example/workspace/contract/opp/'+id+'/view'),'https://other.example/workspace/contract/opp/'+id+'/view');
+  assert.equal(safePostingUrl('javascript:alert(1)'),'');
 });
