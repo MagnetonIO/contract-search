@@ -152,5 +152,47 @@
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
     }
+  },
+  {
+    "source": "ZipRecruiter",
+    "run_id": "bSxRaskEUZA3yyfTb",
+    "cap_usd": 0.05,
+    "build": "1.0.23",
+    "status": "SUCCEEDED",
+    "reservation_id": "5fadc119549643ad94381f24ea5c5435",
+    "actual_charge_usd": 0,
+    "charge_snapshot_at": "2026-10-27T23:11:23.926360+00:00",
+    "charged_event_counts": {
+      "job": 0,
+      "employer": 0
+    }
+  },
+  {
+    "source": "Staffing firm career feeds",
+    "run_id": "gSahFnZSwsMZXD6MG",
+    "cap_usd": 0.09,
+    "build": "0.0.72",
+    "status": "SUCCEEDED",
+    "reservation_id": "292e853c064945209d7c68a83b36e4b7",
+    "actual_charge_usd": 0.01,
+    "charge_snapshot_at": "2026-10-27T23:11:32.423690+00:00",
+    "charged_event_counts": {
+      "apify-default-dataset-item": 10,
+      "apify-actor-start": 1
+    }
+  },
+  {
+    "source": "ZipRecruiter",
+    "run_id": "PzbgnV2tU02BsY2Qe",
+    "cap_usd": 0.006,
+    "build": "1.0.23",
+    "status": "SUCCEEDED",
+    "reservation_id": "d0d33a86922246588e71b2772693d101",
+    "actual_charge_usd": 0,
+    "charge_snapshot_at": "2026-10-27T23:14:27.858213+00:00",
+    "charged_event_counts": {
+      "job": 0,
+      "employer": 0
+    }
   }
 ]

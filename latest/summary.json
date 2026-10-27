@@ -1,14 +1,14 @@
 {
   "mode": "daily",
-  "created_at": "2026-10-27T22:52:50.883041+00:00",
-  "raw": 610,
-  "relevant": 587,
-  "new_unique": 137,
+  "created_at": "2026-10-27T23:17:35.088050+00:00",
+  "raw": 650,
+  "relevant": 621,
+  "new_unique": 147,
   "duplicates": 349,
-  "stale": 101,
-  "rejected": 23,
+  "stale": 125,
+  "rejected": 29,
   "new_remote_contracts": 29,
-  "secondary": 108,
+  "secondary": 118,
   "published_project_needs": 0,
   "target": 50,
   "shortfall": 21,
@@ -43,9 +43,9 @@
     },
     {
       "source": "ZipRecruiter",
-      "status": "empty / disabled",
+      "status": "provider issue",
       "raw": 0,
-      "detail": "Capped runs FntMsO7EO3FcfHreg; zero records on full verification query; daily collection remains disabled",
+      "detail": "Two collectors produced no usable records despite reported matches; direct source returned HTTP 403. Disabled pending a working collector; today's paid allowance is fully reserved.",
       "retained": 0
     },
     {
@@ -71,10 +71,11 @@
     },
     {
       "source": "Staffing firm career feeds",
-      "status": "empty / disabled",
-      "raw": 0,
-      "detail": "Capped runs lxfAwIasR43G0u5T8; provider ATS index; end client unverified; zero records on full verification query; daily collection remains disabled",
-      "retained": 0
+      "status": "ok",
+      "raw": 10,
+      "detail": "Verified TEKsystems ATS records; remote, rate and C2C terms evaluated locally; client unverified",
+      "retained": 10,
+      "checked_at": "2026-10-27T23:17:35.088050+00:00"
     },
     {
       "source": "Remotive",
@@ -96,10 +97,18 @@
     },
     {
       "source": "US SAM.gov solicitations",
-      "status": "failed",
+      "status": "rate limited",
       "raw": 0,
-      "detail": "HTTP 429: SAM.gov rate limit reached; bounded retry also returned 429. No further requests made.",
+      "detail": "HTTP 429 observed. Persistent 10-request rolling 24-hour ceiling, response caching and cooldown installed; no new request sent. Last successful leads preserved.",
       "retained": 0
+    },
+    {
+      "source": "Myticas direct career feed",
+      "status": "ok",
+      "raw": 30,
+      "retained": 0,
+      "checked_at": "2026-10-27T23:17:35.088050+00:00",
+      "detail": "Direct Myticas career feed; original dates retained; older postings excluded"
     }
   ],
   "actor_runs": [
@@ -256,6 +265,50 @@
         "apify-default-dataset-item": 0,
         "apify-actor-start": 1
       }
+    },
+    {
+      "source": "ZipRecruiter",
+      "run_id": "bSxRaskEUZA3yyfTb",
+      "cap_usd": 0.05,
+      "build": "1.0.23",
+      "status": "SUCCEEDED",
+      "reservation_id": "5fadc119549643ad94381f24ea5c5435",
+      "actual_charge_usd": 0,
+      "charge_snapshot_at": "2026-10-27T23:11:23.926360+00:00",
+      "charged_event_counts": {
+        "job": 0,
+        "employer": 0
+      }
+    },
+    {
+      "source": "Staffing firm career feeds",
+      "run_id": "gSahFnZSwsMZXD6MG",
+      "cap_usd": 0.09,
+      "build": "0.0.72",
+      "status": "SUCCEEDED",
+      "reservation_id": "292e853c064945209d7c68a83b36e4b7",
+      "actual_charge_usd": 0.01,
+      "charge_snapshot_at": "2026-10-27T23:11:32.423690+00:00",
+      "charged_event_counts": {
+        "apify-default-dataset-item": 10,
+        "apify-actor-start": 1
+      }
+    },
+    {
+      "source": "ZipRecruiter",
+      "run_id": "PzbgnV2tU02BsY2Qe",
+      "cap_usd": 0.006,
+      "build": "1.0.23",
+      "status": "SUCCEEDED",
+      "reservation_id": "d0d33a86922246588e71b2772693d101",
+      "actual_charge_usd": 0,
+      "charge_snapshot_at": "2026-10-27T23:14:27.858213+00:00",
+      "charged_event_counts": {
+        "job": 0,
+        "employer": 0
+      }
     }
-  ]
+  ],
+  "collection_started_at": "2026-10-27T22:52:50.883041+00:00",
+  "detail": "Full collection plus targeted staffing repair checks; paid collection caps remain within the Chicago-day allowance."
 }

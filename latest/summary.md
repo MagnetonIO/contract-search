@@ -1,7 +1,7 @@
 # Contract search — 2026-10-27
 
-Mode: **daily**. New remote contracts: **29 / 50**. Secondary roles: **108**. Published project needs: **0**.
-Raw rows: 610; normalized relevant rows: 587; unique new relevant leads: 137; duplicates: 349; stale: 101; rejected: 23.
+Mode: **daily**. New remote contracts: **29 / 50**. Secondary roles: **118**. Published project needs: **0**.
+Raw rows: 650; normalized relevant rows: 621; unique new relevant leads: 147; duplicates: 349; stale: 125; rejected: 29.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
 
@@ -28,16 +28,17 @@ First-seen means new to this collector, not newly published. Unknown original da
 | Indeed | ok | 61 | Capped runs wSe63utEFS7Nopiah |
 | Dice | ok | 120 | Capped runs u3OAblfQGKLxzW6ut |
 | Employer ATS discovery | ok | 10 | Capped runs 6L1AdaphyLAk27QID |
-| ZipRecruiter | empty / disabled | 0 | Capped runs FntMsO7EO3FcfHreg; zero records on full verification query; daily collection remains disabled |
+| ZipRecruiter | provider issue | 0 | Two collectors produced no usable records despite reported matches; direct source returned HTTP 403. Disabled pending a working collector; today's paid allowance is fully reserved. |
 | Glassdoor | ok | 87 | Capped runs 2Ry5lYfdB45C82x1h, 0yDCNq6TDCaHVrPPn, zkOqEtf9NOntW1LrV |
 | Wellfound | ok | 60 | Capped runs U5TXuBSfpFmiCmbdt |
 | Built In | ok | 31 | Capped runs tati7BI2U8mUvnsm3 |
-| Staffing firm career feeds | empty / disabled | 0 | Capped runs lxfAwIasR43G0u5T8; provider ATS index; end client unverified; zero records on full verification query; daily collection remains disabled |
+| Staffing firm career feeds | ok | 10 | Verified TEKsystems ATS records; remote, rate and C2C terms evaluated locally; client unverified |
 | Remotive | ok | 10 |  |
 | We Work Remotely | ok | 25 |  |
 | We Work Remotely DevOps | ok | 30 |  |
-| US SAM.gov solicitations | failed | 0 | HTTP 429: SAM.gov rate limit reached; bounded retry also returned 429. No further requests made. |
+| US SAM.gov solicitations | rate limited | 0 | HTTP 429 observed. Persistent 10-request rolling 24-hour ceiling, response caching and cooldown installed; no new request sent. Last successful leads preserved. |
+| Myticas direct career feed | ok | 30 | Direct Myticas career feed; original dates retained; older postings excluded |
 
-Daily paid-run allowance $4; configured daily caps $1.95; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
+Daily paid-run allowance $4; configured daily caps $3.60; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
 Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published procurement notices are separate buying opportunities; delivery and vendor eligibility must be checked.
