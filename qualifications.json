@@ -332,5 +332,174 @@
         "url": "https://www.magnetonlabs.com/services"
       }
     ]
+  },
+  {
+    "match": {
+      "company": "turing",
+      "title_contains": "Software Engineer - Python/Typescript",
+      "source_url": "https://www.indeed.com/viewjob?jk=4862ee33342f30f7"
+    },
+    "reviewed_at": "2026-10-27",
+    "verdict": "priority",
+    "summary": "Strong Python/TypeScript/Go and AI coding-agent evaluation fit. The employer-hosted page advertises $170–$200/hour, while its body asks for a rate expectation. Confirm the offered rate and company invoicing before taking assessments.",
+    "pay": {
+      "status": "advertised",
+      "detail": "The Betterteam posting header advertises $170–$200 hourly. Its engagement section says market rate and asks for a specific hourly expectation; the offered rate is not confirmed.",
+      "source_url": "https://turing.betterteam.com/software-engineer-python-typescript-55"
+    },
+    "c2c": {
+      "status": "to_verify",
+      "detail": "Independent contractor, approximately three months, with 40 hours/week preferred. Independent-contractor status does not confirm that Magneton Labs LLC can invoice C2C.",
+      "source_url": "https://turing.betterteam.com/software-engineer-python-typescript-55"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "The posting lists North America, LATAM, or India and requires at least six hours of Pacific Time overlap. Confirm Indiana eligibility, daily hours, and any restrictions on working abroad.",
+      "source_url": "https://turing.betterteam.com/software-engineer-python-typescript-55"
+    },
+    "client": {
+      "status": "unverified",
+      "detail": "Turing is the named engagement provider. The frontier AI research lab/end client is not identified in this posting.",
+      "source_url": "https://turing.betterteam.com/software-engineer-python-typescript-55"
+    },
+    "next_steps": [
+      "Confirm that Turing accepts a US LLC as the contracting/invoicing entity and ask whether the $170–$200/hour header range applies to this opening.",
+      "Confirm availability for 40 hours/week preferred and six hours of Pacific Time overlap.",
+      "Prepare repository-scale code-review, coding-agent evaluation, rubric, and failure-analysis examples.",
+      "The page lists an AI interview, a practical code/AI evaluation, and a hiring-manager interview. Confirm terms before investing in assessments."
+    ],
+    "sources": [
+      {
+        "title": "Live source posting reviewed October 27, 2026",
+        "url": "https://turing.betterteam.com/software-engineer-python-typescript-55"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "Global Applications Solution",
+      "title_contains": "Senior Platform Architect – Kubernetes",
+      "source_url": "https://www.linkedin.com/jobs/view/4484056609?pageNum=0&position=10"
+    },
+    "reviewed_at": "2026-10-27",
+    "verdict": "needs_confirmation",
+    "summary": "Relevant Kubernetes/Terraform platform-architecture contract. The source confirms remote work and substantial Azure AKS/on-premises Kubernetes requirements. Rate, C2C, duration, and end client remain unknown.",
+    "pay": {
+      "status": "unknown",
+      "detail": "No numeric rate is published in the source posting.",
+      "source_url": "https://www.linkedin.com/jobs/view/4484056609"
+    },
+    "c2c": {
+      "status": "to_verify",
+      "detail": "The posting says Contract but does not confirm C2C acceptance or duration.",
+      "source_url": "https://www.linkedin.com/jobs/view/4484056609"
+    },
+    "location": {
+      "status": "to_verify",
+      "detail": "The posting says United States and Remote. State restrictions, work authorization requirements, on-call duties, and work-abroad permissions need confirmation.",
+      "source_url": "https://www.linkedin.com/jobs/view/4484056609"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "Global Applications Solution is the named recruiter/provider; the actual hiring client is not named.",
+      "source_url": "https://www.linkedin.com/jobs/view/4484056609"
+    },
+    "next_steps": [
+      "Ask job poster Akshay K. for the hourly budget, C2C eligibility, end client, and contract duration.",
+      "Confirm whether hands-on production AKS and on-premises Kubernetes experience meets the required depth.",
+      "Confirm on-call/operating-hour expectations and state/location restrictions before applying."
+    ],
+    "sources": [
+      {
+        "title": "Live source posting reviewed October 27, 2026",
+        "url": "https://www.linkedin.com/jobs/view/4484056609"
+      }
+    ],
+    "contact": {
+      "name": "Akshay K.",
+      "url": "https://www.linkedin.com/jobs/view/4484056609",
+      "detail": "The posting identifies Akshay K. as the job poster. Use the LinkedIn posting to view and contact the recruiter; no hiring email was verified."
+    }
+  },
+  {
+    "match": {
+      "company": "Artmac",
+      "title_contains": "Senior Databricks Data Engineer",
+      "source_url": "https://www.linkedin.com/jobs/view/4482107191?pageNum=0&position=19"
+    },
+    "reviewed_at": "2026-10-27",
+    "verdict": "needs_confirmation",
+    "summary": "Remote data-engineering contract with explicitly advertised C2C or W2 options. Useful if production Databricks/PySpark/Delta Lake work is a strong fit; confirm budget and client first.",
+    "pay": {
+      "status": "unknown",
+      "detail": "No numeric rate is published; $100+/hour is not confirmed.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482107191"
+    },
+    "c2c": {
+      "status": "confirmed",
+      "detail": "The live posting explicitly lists C2C / W2. Duration and specific company invoicing terms remain unconfirmed.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482107191"
+    },
+    "location": {
+      "status": "to_verify",
+      "detail": "The posting is tagged United States and says Remote. State eligibility, time-zone overlap, and work-abroad permissions are not specified.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482107191"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "Artmac Soft describes itself as a technology consulting/services company. The customer/end client for this engagement is not named.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482107191"
+    },
+    "next_steps": [
+      "Ask for the C2C hourly budget, end-client name, contract duration, and US-state eligibility.",
+      "Confirm hands-on Databricks, PySpark, Delta Lake, Unity Catalog, and production data-pipeline experience against the requirements.",
+      "Use the original LinkedIn application route after confirming the terms; no public hiring email was verified."
+    ],
+    "sources": [
+      {
+        "title": "Live source posting reviewed October 27, 2026",
+        "url": "https://www.linkedin.com/jobs/view/4482107191"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "Myticas Consulting",
+      "title_contains": "Data Engineer - ETL Python Developer (36024)",
+      "source_url": "https://www.linkedin.com/jobs/view/4482696611?pageNum=0&position=8"
+    },
+    "reviewed_at": "2026-10-27",
+    "verdict": "secondary",
+    "summary": "C2C is advertised, but the posted rate figures do not support the $100+/hour target. The body names Clover Consulting and an unnamed Springfield client; occasional Illinois travel is possible.",
+    "pay": {
+      "status": "secondary",
+      "detail": "The source states $56 W2 / $66 C2C without an explicit pay unit. Confirm the unit and budget; this does not establish a $100+/hour opportunity.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482696611"
+    },
+    "c2c": {
+      "status": "confirmed",
+      "detail": "The source advertises a C2C rate option and a 12+ month contract, with possible extension.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482696611"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "Remote from within the US, with periodic travel to Illinois/Springfield possible.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482696611"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "The LinkedIn page is branded Myticas Consulting; its body names Clover Consulting and an unnamed direct client in Springfield, Illinois. The actual end client is not verified.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482696611"
+    },
+    "next_steps": [
+      "Deprioritize unless the recruiter confirms a budget consistent with your target.",
+      "Clarify the Myticas/Clover relationship, actual hiring client, pay unit, and Illinois travel expectations."
+    ],
+    "sources": [
+      {
+        "title": "Live source posting reviewed October 27, 2026",
+        "url": "https://www.linkedin.com/jobs/view/4482696611"
+      }
+    ]
   }
 ]
