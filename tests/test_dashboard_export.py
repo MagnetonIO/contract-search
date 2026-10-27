@@ -30,6 +30,9 @@ class DashboardExportTests(unittest.TestCase):
         self.assertNotEqual(posting_key('https://notlinkedin.com/jobs/view/123'), posting_key('https://www.linkedin.com/jobs/view/123'))
         self.assertNotEqual(posting_key('https://indeed.com/viewjob?jk=1'), posting_key('https://indeed.com/viewjob?jk=2'))
 
+    def test_glassdoor_review_identity_keeps_listing_id(self):
+        self.assertNotEqual(posting_key('https://glassdoor.com/job-listing/j?jl=1'), posting_key('https://glassdoor.com/job-listing/j?jl=2'))
+
     def test_export_excludes_raw_descriptions_and_attaches_reviews_to_exact_postings(self):
         with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
             root = Path(tmp); state = root/'seen.sqlite3'; db = sqlite3.connect(state)

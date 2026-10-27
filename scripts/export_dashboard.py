@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Export existing collector state for the authenticated web dashboard; never starts actors."""
 import argparse
+import sys
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -10,6 +11,8 @@ import sqlite3
 from urllib.parse import parse_qsl, urlencode, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from collectors import coverage_for_config
 
 
 def lead_id(job):
@@ -22,7 +25,7 @@ def posting_key(url):
     if parsed.hostname and (parsed.hostname == 'linkedin.com' or parsed.hostname.endswith('.linkedin.com')) and linkedin:
         return 'linkedin:' + linkedin[1]
     identity = [(key, value) for key, value in parse_qsl(parsed.query)
-                if key.lower() in ('jk', 'jobid', 'job_id', 'id', 'gh_jid', 'reqid')]
+                if key.lower() in ('jk', 'jobid', 'job_id', 'id', 'gh_jid', 'reqid', 'jl')]
     return (parsed.hostname or '').lower() + parsed.path.rstrip('/') + '?' + urlencode(sorted(identity))
 
 
@@ -55,8 +58,10 @@ def review_score(job):
     return score
 
 
-def export(state_path, summary_path, qualifications_path, output):
+def export(state_path, summary_path, qualifications_path, output, config_path=None):
     summary = json.loads(Path(summary_path).read_text(encoding='utf-8'))
+    config = json.loads(Path(config_path or ROOT/'config.json').read_text(encoding='utf-8'))
+    summary['source_coverage'] = coverage_for_config(summary.get('source_coverage', []), config)
     qualifications = json.loads(Path(qualifications_path).read_text(encoding='utf-8')) if Path(qualifications_path).exists() else []
     connection = sqlite3.connect(state_path)
     try:

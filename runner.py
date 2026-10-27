@@ -2,6 +2,11 @@
 """Bounded contract search. Run python3 runner.py --help for local usage."""
 import argparse
 import csv
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import os
+import subprocess
+from collectors import SourceError, Budget, adapt, variants
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import email.utils
@@ -31,10 +36,6 @@ FIELDS = ['title', 'company_agency', 'source', 'source_job_id', 'source_posted_a
           'work_abroad_restrictions', 'geography', 'application_url', 'source_url',
           'public_recruiter_contact', 'fit_tier', 'fit_reason', 'pipeline',
           'direct_client_classification', 'direct_client_evidence', 'official_employer_url']
-
-
-class SourceError(Exception):
-    pass
 
 
 class CredentialMissing(SourceError):
@@ -128,7 +129,7 @@ def validate_input(schema, value):
                 raise SourceError('Actor item enum changed: ' + key)
 
 
-def collect_actor(spec, token, smoke=False, journal=None):
+def collect_actor(spec, token, smoke=False, journal=None, budget=None):
     if not token:
         raise SourceError('APIFY_TOKEN is missing')
     actor = spec['actor']
@@ -141,23 +142,23 @@ def collect_actor(spec, token, smoke=False, journal=None):
     build = fetch(f'{API}/acts/{actor}/builds/default', token=token)['data']
     body = json.loads(json.dumps(spec['input']))
     cap = 0.15 if smoke else spec['cap_usd']
-    max_items = 3 if smoke else spec['max_items']
-    if smoke:
-        body['urls'] = body.get('urls', [])[:1]
-        body['limitPerSource'] = 3
+    max_items = spec['max_items']
     validate_input(build.get('actorDefinition', {}).get('input'), body)
     if pricing.get('minimalMaxTotalChargeUsd') and pricing['minimalMaxTotalChargeUsd'] > cap:
         raise SourceError('Actor minimum charge cap exceeds configured budget')
     opts = urlencode({'maxTotalChargeUsd': cap, 'maxItems': max_items,
                       'timeout': 480 if not smoke else 180, 'memory': 512,
                       'build': build['buildNumber']})
+    if pricing.get('isPPEPlatformUsagePaidByUser') or meta.get('isPPEPlatformUsagePaidByUser'):
+        raise SourceError('Separate platform charges are unsupported by the daily cap')
+    reservation = budget.reserve(cap, spec['name']) if budget else None
     run = fetch(f'{API}/acts/{actor}/runs?{opts}', token=token, payload=body)['data']
     record = {'source': spec['name'], 'run_id': run['id'], 'cap_usd': cap,
-              'build': build['buildNumber'], 'status': run['status']}
-    if journal:
-        journal(record)
+              'build': build['buildNumber'], 'status': run['status'], 'reservation_id': reservation}
     deadline = time.monotonic() + (540 if not smoke else 240)
     try:
+        if journal:
+            journal(record)
         while run['status'] not in TERMINAL:
             if time.monotonic() >= deadline:
                 raise SourceError('Actor polling deadline exceeded')
@@ -254,6 +255,8 @@ def normalize(row, source, now, project=False):
     rate = None
     pay_text = salary or desc
     match = re.search(r'(?:USD\s*|\$)\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*[-–]\s*\$?\s*\d{2,3}(?:\.\d{1,2})?)?\s*(?:/\s*(?:h(?:ou)?r|hour)|per hour|an hour|hourly)', pay_text, re.I)
+    if row.get('_salary_estimate'):
+        match = None
     if match and not re.search(r'\b(?:CAD|AUD|NZD)\b', pay_text[max(0, match.start()-10):match.end()+10], re.I):
         rate = float(match[1])
     skills = sorted(set(m.group().lower() for m in re.finditer(SKILLS, title+' '+desc, re.I)))
@@ -539,7 +542,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
     lines.extend(['', '## Source coverage', '', '| Source | Status | Raw rows | Detail |', '|---|---|---:|---|'])
     for c in coverage:
         lines.append(f'| {c["source"]} | {c["status"]} | {c.get("raw", 0)} | {c.get("detail", "")} |')
-    lines.extend(['', 'Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.', '',
+    lines.extend(['', f"Daily paid-run allowance ${config.get('daily_cap_usd', 4):g}; configured daily caps ${sum(s['cap_usd'] for s in config.get('actors', [])):.2f}; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.", '',
                   'Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published procurement notices are separate buying opportunities; delivery and vendor eligibility must be checked.'])
     (out/'summary.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
     print(json.dumps({k: summary[k] for k in ('mode', 'raw', 'new_unique', 'new_remote_contracts', 'secondary', 'published_project_needs', 'shortfall')}))
@@ -548,15 +551,20 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--mode', choices=['smoke', 'daily', 'public'], default='smoke', help='smoke: one LinkedIn actor, <=3 rows, $0.15 cap; daily: configured sources, $2 total caps; public: no paid actors')
+    p.add_argument('--mode', choices=['smoke', 'daily', 'public'], default='smoke', help='smoke: selected source, $0.15 cap; daily: configured sources, $4 Chicago-day allowance; public: no paid actors')
     p.add_argument('--config', default=str(Path(__file__).resolve().with_name('config.json')))
     p.add_argument('--state', default='state/seen.sqlite3')
     p.add_argument('--output', default='output/latest')
-    p.add_argument('--force', action='store_true', help='Allow a second daily run today; can spend another daily budget')
+    p.add_argument('--source', help='Configured actor name; select one source for smoke validation')
+    p.add_argument('--force', action='store_true', help='Allow another collection; never bypasses the daily paid allowance')
     args = p.parse_args(argv)
     config = json.loads(Path(args.config).read_text(encoding='utf-8'))
+    if any(not isinstance(s['cap_usd'], (int,float)) or not 0 < s['cap_usd'] <= config['daily_cap_usd'] or type(s['max_items']) is not int or s['max_items'] < 1 for s in config['actors']):
+        p.error('Actor caps and item limits must be positive and bounded')
     if sum(s['cap_usd'] for s in config['actors']) > config['daily_cap_usd'] + 1e-9:
         p.error('Actor caps exceed daily budget')
+    if args.source and (args.mode != 'smoke' or args.source not in {s['name'] for s in config['actors']}):
+        p.error('--source must name a configured actor and requires smoke mode')
     now = datetime.now(UTC)
     day = str(now.astimezone(ZoneInfo('America/Chicago')).date())
     state = State(args.state)
@@ -569,25 +577,49 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     runs, coverage, rows = [], [], []
     token = token_from_local()
+    budget_path = Path(args.state).with_name('budget.sqlite3')
+    persist_lock = threading.Lock()
+    def persist_budget():
+        if os.environ.get('CONTRACT_BUDGET_GIT_SYNC') == '1':
+            with persist_lock:
+                directory = str(budget_path.parent.resolve())
+                for command in (['add', 'budget.sqlite3'], ['-c','user.name=contract-search runner','-c','user.email=contract-search@users.noreply.github.com','commit','-m','Reserve paid collection allowance'], ['push','origin','HEAD:runner-state']):
+                    result = subprocess.run(['git','-C',directory]+command, capture_output=True)
+                    if result.returncode:
+                        raise SourceError('Could not persist paid allowance; no actor started')
+    budget = Budget(budget_path, config['daily_cap_usd'], day, persist_budget)
+
+    journal_lock = threading.Lock()
     def journal(record):
-        for old in runs:
-            if old['run_id'] == record['run_id']:
-                old.update(record)
-                break
-        else:
-            runs.append(dict(record))
-        (out/'actor-runs.json').write_text(json.dumps(runs, indent=2)+'\n', encoding='utf-8')
-    selected = config['actors'][:1] if args.mode == 'smoke' else config['actors'] if args.mode == 'daily' else []
-    for spec in selected:
-        try:
-            batch, record = collect_actor(spec, token, args.mode == 'smoke', journal)
-            # A provider echoing the credential must never put it into artifacts/state.
-            batch = json.loads(json.dumps(batch).replace(token, '[REDACTED]')) if token else batch
+        with journal_lock:
+            for old in runs:
+                if old['run_id'] == record['run_id']:
+                    old.update(record)
+                    break
+            else:
+                runs.append(dict(record))
+            (out/'actor-runs.json').write_text(json.dumps(runs, indent=2)+'\n', encoding='utf-8')
+    selected = ([next(s for s in config['actors'] if s['name'] == args.source)] if args.source else config['actors'][:1]) if args.mode == 'smoke' else config['actors'] if args.mode == 'daily' else []
+    def collect_source(spec):
+        batch, errors, records = [], [], []
+        if spec.get('enabled') is False and args.mode != 'smoke':
+            return spec, batch, records, ['Awaiting live validation']
+        for variant in variants(spec, args.mode == 'smoke'):
+            try:
+                data, record = collect_actor(variant, token, args.mode == 'smoke', journal, budget)
+                data = json.loads(json.dumps(data).replace(token, '[REDACTED]')) if token else data
+                batch.extend(adapt(r, spec.get('adapter')) for r in data)
+                records.append(record)
+            except (SourceError, KeyError, TypeError, ValueError) as exc:
+                errors.append(str(exc) if isinstance(exc, SourceError) else 'Provider schema changed; adapter requires review')
+        return spec, batch, records, errors
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for spec, batch, records, errors in pool.map(collect_source, selected):
             rows.extend((spec['name'], r, False) for r in batch)
-            coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), 'detail': 'Capped run '+record['run_id']})
-        except (SourceError, KeyError, TypeError, ValueError) as exc:
-            detail = str(exc) if isinstance(exc, SourceError) else 'Provider schema changed; adapter requires review'
-            coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': detail})
+            status = 'not validated' if spec.get('enabled') is False and args.mode != 'smoke' else 'failed' if errors else 'ok'
+            detail = '; '.join(errors) if errors else 'Capped runs '+', '.join(r['run_id'] for r in records)
+            if spec.get('adapter') == 'staffing': detail += '; provider ATS index; end client unverified'
+            coverage.append({'source':spec['name'], 'status':status, 'raw':len(batch), 'detail':detail})
     if args.mode != 'smoke':
         for spec in config['feeds']:
             if spec.get('enabled') is False:
@@ -614,6 +646,8 @@ def main(argv=None):
             counts['stale'] += 1
             continue
         candidates.append(job)
+    for item in coverage:
+        item['retained'] = sum(j['source'] == item['source'] for j in candidates)
     enrich(candidates, max_checks=0 if args.mode == 'smoke' else 15)
     for job in candidates:
         if state.observe(job):

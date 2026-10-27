@@ -1,7 +1,7 @@
 {
   "target": 50,
   "max_age_days": 7,
-  "daily_cap_usd": 2.0,
+  "daily_cap_usd": 4,
   "actors": [
     {
       "name": "LinkedIn",
@@ -21,6 +21,15 @@
         "limitPerSource": 30,
         "scrapeCompany": false,
         "autoConvertToAiSearch": true
+      },
+      "smoke_input": {
+        "urls": [
+          "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20software%20architect&location=United%20States&f_TPR=r604800"
+        ],
+        "datePosted": "pastWeek",
+        "limitPerSource": 3,
+        "scrapeCompany": false,
+        "autoConvertToAiSearch": true
       }
     },
     {
@@ -30,12 +39,31 @@
       "max_items": 100,
       "input": {
         "startUrls": [
-          {"url": "https://www.indeed.com/jobs?q=software+engineer+contract&l=Remote&fromage=7"},
-          {"url": "https://www.indeed.com/jobs?q=DevOps+contract&l=Remote&fromage=7"},
-          {"url": "https://www.indeed.com/jobs?q=data+engineer+contract&l=Remote&fromage=7"},
-          {"url": "https://www.indeed.com/jobs?q=cloud+architect+contract&l=Remote&fromage=7"}
+          {
+            "url": "https://www.indeed.com/jobs?q=software+engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=DevOps+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=data+engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=cloud+architect+contract&l=Remote&fromage=7"
+          }
         ],
         "maxItemsPerSearch": 25,
+        "country": "US",
+        "saveOnlyUniqueItems": true,
+        "parseCompanyDetails": true
+      },
+      "smoke_input": {
+        "startUrls": [
+          {
+            "url": "https://www.indeed.com/jobs?q=software+engineer+contract&l=Remote&fromage=7"
+          }
+        ],
+        "maxItemsPerSearch": 3,
         "country": "US",
         "saveOnlyUniqueItems": true,
         "parseCompanyDetails": true
@@ -47,14 +75,44 @@
       "cap_usd": 0.2,
       "max_items": 120,
       "input": {
-        "searchQueries": ["software architect", "DevOps Kubernetes", "Python AI", "React TypeScript", "data engineer", "Golang Java Rust"],
-        "locations": ["Remote"],
+        "searchQueries": [
+          "software architect",
+          "DevOps Kubernetes",
+          "Python AI",
+          "React TypeScript",
+          "data engineer",
+          "Golang Java Rust"
+        ],
+        "locations": [
+          "Remote"
+        ],
         "postedDate": "7d",
         "workplaceType": "remote",
-        "employmentTypes": ["CONTRACTS", "THIRD_PARTY"],
+        "employmentTypes": [
+          "CONTRACTS",
+          "THIRD_PARTY"
+        ],
         "includeDetails": true,
         "maxItems": 120,
         "maxPagesPerSearch": 2,
+        "maxProxyRetries": 1
+      },
+      "smoke_input": {
+        "searchQueries": [
+          "software architect"
+        ],
+        "locations": [
+          "Remote"
+        ],
+        "postedDate": "7d",
+        "workplaceType": "remote",
+        "employmentTypes": [
+          "CONTRACTS",
+          "THIRD_PARTY"
+        ],
+        "includeDetails": true,
+        "maxItems": 3,
+        "maxPagesPerSearch": 1,
         "maxProxyRetries": 1
       }
     },
@@ -66,27 +124,345 @@
       "input": {
         "timeRange": "7d",
         "limit": 60,
-        "titleSearch": ["Software", "Architect", "DevOps", "Data Engineer", "Platform Engineer", "AI Engineer"],
-        "locationSearch": ["United States"],
-        "aiEmploymentTypeFilter": ["CONTRACTOR", "TEMPORARY"],
-        "aiWorkArrangementFilter": ["Remote OK", "Remote Solely"],
+        "titleSearch": [
+          "Software",
+          "Architect",
+          "DevOps",
+          "Data Engineer",
+          "Platform Engineer",
+          "AI Engineer"
+        ],
+        "locationSearch": [
+          "United States"
+        ],
+        "aiEmploymentTypeFilter": [
+          "CONTRACTOR",
+          "TEMPORARY"
+        ],
+        "aiWorkArrangementFilter": [
+          "Remote OK",
+          "Remote Solely"
+        ],
         "removeAgency": true,
         "descriptionType": "text"
+      },
+      "smoke_max_items": 10,
+      "smoke_input": {
+        "timeRange": "7d",
+        "limit": 10,
+        "titleSearch": [
+          "Software",
+          "Architect",
+          "DevOps",
+          "Data Engineer",
+          "Platform Engineer",
+          "AI Engineer"
+        ],
+        "locationSearch": [
+          "United States"
+        ],
+        "aiEmploymentTypeFilter": [
+          "CONTRACTOR",
+          "TEMPORARY"
+        ],
+        "aiWorkArrangementFilter": [
+          "Remote OK",
+          "Remote Solely"
+        ],
+        "removeAgency": true,
+        "descriptionType": "text"
+      }
+    },
+    {
+      "name": "ZipRecruiter",
+      "actor": "parsebird~ziprecruiter-jobs-scraper",
+      "adapter": "ziprecruiter",
+      "cap_usd": 0.45,
+      "max_items": 60,
+      "input": {
+        "searches": [
+          "software architect",
+          "DevOps Kubernetes",
+          "Python AI engineer",
+          "TypeScript React",
+          "data engineer",
+          "Golang Java Rust"
+        ],
+        "location": "United States",
+        "jobType": "contract",
+        "postedWithin": "week",
+        "remoteType": "only_remote",
+        "maxItems": 60,
+        "maxPages": 3,
+        "includeDetails": true,
+        "concurrency": 3
+      },
+      "smoke_input": {
+        "searches": [
+          "software architect"
+        ],
+        "location": "United States",
+        "jobType": "contract",
+        "postedWithin": "week",
+        "remoteType": "only_remote",
+        "maxItems": 3,
+        "maxPages": 1,
+        "includeDetails": true,
+        "concurrency": 3
+      },
+      "enabled": false,
+      "validation": {
+        "status": "empty / not validated",
+        "raw": 0,
+        "valid_records": 0,
+        "run_id": "fdd5VPuohsIO8DD79",
+        "checked_at": "2026-10-27T22:28:24.580Z",
+        "detail": "Live query returned zero records; kept disabled pending usable sample"
+      }
+    },
+    {
+      "name": "Glassdoor",
+      "actor": "valig~glassdoor-jobs-scraper",
+      "adapter": "glassdoor",
+      "cap_usd": 0.1,
+      "max_items": 120,
+      "inputs": [
+        {
+          "keywords": "software engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 40
+        },
+        {
+          "keywords": "DevOps contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 40
+        },
+        {
+          "keywords": "data engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 40
+        }
+      ],
+      "smoke_input": {
+        "keywords": "software engineer contract",
+        "location": "United States",
+        "daysOld": 7,
+        "remoteWorkType": true,
+        "sortBy": "date_desc",
+        "limit": 3
+      },
+      "enabled": true,
+      "validation": {
+        "status": "validated",
+        "raw": 3,
+        "valid_records": 3,
+        "run_id": "i1vcEt6jwTfPOdmOR",
+        "checked_at": "2026-10-27T22:28:34.450Z",
+        "detail": "Live sample validated; full weekday collection pending"
+      }
+    },
+    {
+      "name": "Wellfound",
+      "actor": "automation-lab~wellfound-startup-jobs-scraper",
+      "adapter": "wellfound",
+      "cap_usd": 0.25,
+      "max_items": 120,
+      "input": {
+        "roles": [
+          "software-engineer"
+        ],
+        "remoteOnly": true,
+        "maxItems": 120,
+        "maxPages": 3,
+        "proxyTier": "AUTO"
+      },
+      "smoke_input": {
+        "roles": [
+          "software-engineer"
+        ],
+        "remoteOnly": true,
+        "maxItems": 3,
+        "maxPages": 1,
+        "proxyTier": "AUTO"
+      },
+      "enabled": true,
+      "validation": {
+        "status": "validated",
+        "raw": 3,
+        "valid_records": 3,
+        "run_id": "BrYAXdaLsk6xdj5Gf",
+        "checked_at": "2026-10-27T22:29:08.796Z",
+        "detail": "Live sample validated; full weekday collection pending"
+      }
+    },
+    {
+      "name": "Built In",
+      "actor": "solidcode~builtin-scraper",
+      "adapter": "builtin",
+      "cap_usd": 0.2,
+      "max_items": 120,
+      "input": {
+        "searchQueries": [
+          "software architect",
+          "DevOps Kubernetes",
+          "Python AI engineer",
+          "TypeScript React",
+          "data engineer",
+          "Golang Java Rust"
+        ],
+        "location": "United States",
+        "remoteMode": "remote",
+        "postedWithinDays": "7",
+        "maxResultsPerQuery": 20,
+        "fetchDescription": true
+      },
+      "smoke_input": {
+        "searchQueries": [
+          "software architect"
+        ],
+        "location": "United States",
+        "remoteMode": "remote",
+        "postedWithinDays": "7",
+        "maxResultsPerQuery": 3,
+        "fetchDescription": true
+      },
+      "enabled": true,
+      "validation": {
+        "status": "validated",
+        "raw": 4,
+        "valid_records": 4,
+        "run_id": "dcr4yOdQENibBS2g5",
+        "checked_at": "2026-10-27T22:29:21.179Z",
+        "detail": "Live sample validated; full weekday collection pending"
+      }
+    },
+    {
+      "name": "Staffing firm career feeds",
+      "actor": "fantastic-jobs~career-site-job-listing-api",
+      "adapter": "staffing",
+      "cap_usd": 0.6,
+      "max_items": 40,
+      "input": {
+        "timeRange": "7d",
+        "limit": 40,
+        "titleSearch": [
+          "Software",
+          "Architect",
+          "DevOps",
+          "Data Engineer",
+          "Platform Engineer",
+          "AI Engineer"
+        ],
+        "locationSearch": [
+          "United States"
+        ],
+        "aiEmploymentTypeFilter": [
+          "CONTRACTOR",
+          "TEMPORARY"
+        ],
+        "aiWorkArrangementFilter": [
+          "Remote OK",
+          "Remote Solely"
+        ],
+        "removeAgency": false,
+        "descriptionType": "text",
+        "organizationSearch": [
+          "TEKsystems",
+          "Insight Global",
+          "Kforce",
+          "Apex Systems",
+          "Robert Half",
+          "Randstad",
+          "Artmac",
+          "Myticas",
+          "Global Applications Solution",
+          "Motion Recruitment"
+        ]
+      },
+      "smoke_input": {
+        "timeRange": "7d",
+        "limit": 10,
+        "titleSearch": [
+          "Software",
+          "Architect",
+          "DevOps",
+          "Data Engineer",
+          "Platform Engineer",
+          "AI Engineer"
+        ],
+        "locationSearch": [
+          "United States"
+        ],
+        "aiEmploymentTypeFilter": [
+          "CONTRACTOR",
+          "TEMPORARY"
+        ],
+        "aiWorkArrangementFilter": [
+          "Remote OK",
+          "Remote Solely"
+        ],
+        "removeAgency": false,
+        "descriptionType": "text",
+        "organizationSearch": [
+          "TEKsystems",
+          "Insight Global",
+          "Kforce",
+          "Apex Systems",
+          "Robert Half",
+          "Randstad",
+          "Artmac",
+          "Myticas",
+          "Global Applications Solution",
+          "Motion Recruitment"
+        ]
+      },
+      "smoke_max_items": 10,
+      "enabled": false,
+      "validation": {
+        "status": "empty / not validated",
+        "raw": 0,
+        "valid_records": 0,
+        "run_id": "lLQRfaXNc124vLbOL",
+        "checked_at": "2026-10-27T22:29:28.818Z",
+        "detail": "Live query returned zero records; kept disabled pending usable sample"
       }
     }
   ],
   "feeds": [
-    {"name": "Remotive", "kind": "remotive", "url": "https://remotive.com/api/remote-jobs"},
-    {"name": "We Work Remotely", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-programming-jobs.rss"},
-    {"name": "We Work Remotely DevOps", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss"},
-    {"name": "UK Find a Tender", "kind": "ocds", "url": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=100", "enabled": false, "reason": "UK procurement is outside the default US search; retained as an optional source"},
-    {"name": "US SAM.gov solicitations", "kind": "sam", "url": "https://api.sam.gov/opportunities/v2/search", "titles": ["software", "cloud", "artificial intelligence"]}
+    {
+      "name": "Remotive",
+      "kind": "remotive",
+      "url": "https://remotive.com/api/remote-jobs"
+    },
+    {
+      "name": "We Work Remotely",
+      "kind": "rss",
+      "url": "https://weworkremotely.com/categories/remote-programming-jobs.rss"
+    },
+    {
+      "name": "We Work Remotely DevOps",
+      "kind": "rss",
+      "url": "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss"
+    },
+    {
+      "name": "US SAM.gov solicitations",
+      "kind": "sam",
+      "url": "https://api.sam.gov/opportunities/v2/search",
+      "titles": [
+        "software",
+        "cloud",
+        "artificial intelligence"
+      ]
+    }
   ],
-  "unconfigured_sources": {
-    "ZipRecruiter": "No validated collector configured",
-    "Glassdoor": "No validated collector configured",
-    "Wellfound": "No validated collector configured",
-    "Built In": "No validated collector configured",
-    "Staffing firm career feeds": "Agency postings may appear on boards; no separate firm feeds configured"
-  }
+  "unconfigured_sources": {}
 }
