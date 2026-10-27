@@ -7,7 +7,7 @@ import threading
 import os
 import subprocess
 from collectors import SourceError, Budget, adapt, variants
-from sam_quota import SamQuota, SamDeferred
+from sam_quota import SamQuota, SamDeferred, search_queries
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import email.utils
@@ -383,49 +383,47 @@ def collect_sam(spec):
     now = datetime.now(UTC)
     rows = {}
     quota = SamQuota(spec.get('state_path', str(Path(__file__).resolve().parent/'state/sam.sqlite3')), key, spec.get('max_requests_per_day', 10), spec.get('_persist'))
-    # Deliberately bounded, title-based discovery; not an exhaustive procurement search.
-    for title in spec.get('titles', ['software', 'cloud', 'artificial intelligence'])[:3]:
-        for notice_type in ('o', 'k'):
-            query = urlencode({'api_key': key, 'postedFrom': (now-timedelta(days=7)).strftime('%m/%d/%Y'),
-                               'postedTo': now.strftime('%m/%d/%Y'), 'ptype': notice_type,
-                               'title': title, 'limit': 100, 'offset': 0})
-            params = dict(parse_qsl(query)); params.pop('api_key')
-            def send():
-                payload = fetch(spec['url']+'?'+query, attempts=1)
-                if not isinstance(payload, dict) or not isinstance(payload.get('opportunitiesData'), list):
-                    raise SourceError('SAM opportunities schema changed')
-                return json.loads(json.dumps(payload).replace(key, '[REDACTED]'))
-            data = quota.query(params, send)
-            # Query-string authentication is required by SAM; never persist a key
-            # echoed in a provider response or its pagination links.
-            data = json.loads(json.dumps(data).replace(key, '[REDACTED]'))
-            if not isinstance(data.get('opportunitiesData'), list):
+    requests = search_queries(spec.get('titles', ['software','cloud','artificial intelligence']), now)
+    quota.preflight(requests)
+    for params in requests:
+        query = urlencode({'api_key':key, **params})
+        def send():
+            payload = fetch(spec['url']+'?'+query, attempts=1)
+            if not isinstance(payload, dict) or not isinstance(payload.get('opportunitiesData'), list):
                 raise SourceError('SAM opportunities schema changed')
-            for notice in data['opportunitiesData']:
-                if str(notice.get('active', '')).lower() != 'yes' or notice.get('type') not in ('Solicitation', 'Combined Synopsis/Solicitation'):
-                    continue
-                deadline = parse_date(notice.get('responseDeadLine') or notice.get('reponseDeadLine'), now)
-                if not deadline or deadline <= now.isoformat():
-                    continue
-                identifier = notice.get('noticeId')
-                url = canonical(notice.get('uiLink'))
-                if not identifier or not url or urlsplit(url).hostname not in ('sam.gov', 'www.sam.gov'):
-                    continue
-                contacts = notice.get('pointOfContact') or []
-                contact_text = '; '.join(plain(c.get('fullName') or c.get('fullname'))+' '+plain(c.get('email')) for c in contacts if isinstance(c, dict))
-                performance = notice.get('placeOfPerformance') or {}
-                country = performance.get('country') or {}
-                country_name = plain(country.get('name') or country.get('code')) if isinstance(country, dict) else plain(country)
-                if country_name.upper() in ('USA', 'US'):
-                    country_name = 'United States'
-                # Description is an API link, not source text. Do not fetch or export its credential-bearing URL.
-                rows[identifier] = {'id': identifier, 'title': notice.get('title'),
-                    'company': notice.get('fullParentPathName') or notice.get('department') or 'US federal buyer',
-                    'url': url, 'date': notice.get('postedDate'),
-                    'location': (country_name or 'US federal procurement; place of performance unconfirmed')+'; vendor eligibility must be verified',
-                    'description': f"US federal solicitation. Response deadline {deadline}. Set-aside: {plain(notice.get('typeOfSetAsideDescription')) or 'verify in notice'}. Public procurement contacts: {contact_text}",
-                    'isExpired': False}
+            return json.loads(json.dumps(payload).replace(key, '[REDACTED]'))
+        data = quota.query(params, send)
+        # Query-string authentication is required by SAM; never persist a key
+        # echoed in a provider response or its pagination links.
+        data = json.loads(json.dumps(data).replace(key, '[REDACTED]'))
+        if not isinstance(data.get('opportunitiesData'), list):
+            raise SourceError('SAM opportunities schema changed')
+        for notice in data['opportunitiesData']:
+            if str(notice.get('active', '')).lower() != 'yes' or notice.get('type') not in ('Solicitation', 'Combined Synopsis/Solicitation'):
+                continue
+            deadline = parse_date(notice.get('responseDeadLine') or notice.get('reponseDeadLine'), now)
+            if not deadline or deadline <= now.isoformat():
+                continue
+            identifier = notice.get('noticeId')
+            url = canonical(notice.get('uiLink'))
+            if not identifier or not url or urlsplit(url).hostname not in ('sam.gov', 'www.sam.gov'):
+                continue
+            contacts = notice.get('pointOfContact') or []
+            contact_text = '; '.join(plain(c.get('fullName') or c.get('fullname'))+' '+plain(c.get('email')) for c in contacts if isinstance(c, dict))
+            performance = notice.get('placeOfPerformance') or {}
+            country = performance.get('country') or {}
+            country_name = plain(country.get('name') or country.get('code')) if isinstance(country, dict) else plain(country)
+            if country_name.upper() in ('USA', 'US'):
+                country_name = 'United States'
+            # Description is an API link, not source text. Do not fetch or export its credential-bearing URL.
+            rows[identifier] = {'id': identifier, 'title': notice.get('title'),
+                'company': notice.get('fullParentPathName') or notice.get('department') or 'US federal buyer',
+                'url': url, 'date': notice.get('postedDate'),
+                'location': (country_name or 'US federal procurement; place of performance unconfirmed')+'; vendor eligibility must be verified',
+                'description': f"US federal solicitation. Response deadline {deadline}. Set-aside: {plain(notice.get('typeOfSetAsideDescription')) or 'verify in notice'}. Public procurement contacts: {contact_text}",
+                'isExpired': False}
     spec['_sam_cache_hits'] = quota.cache_hits
+    spec['_sam_query_count'] = len(requests)
     return list(rows.values())
 
 
@@ -440,6 +438,7 @@ class State:
         self.db.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, first_seen TEXT, last_seen TEXT, data TEXT)')
         self.db.execute('CREATE TABLE IF NOT EXISTS aliases (alias TEXT PRIMARY KEY, job_id INTEGER)')
         self.db.execute('CREATE TABLE IF NOT EXISTS runs (run_date TEXT PRIMARY KEY, completed TEXT)')
+        self.db.execute('CREATE TABLE IF NOT EXISTS source_history (source TEXT PRIMARY KEY, last_success_at TEXT)')
         columns = {row[1] for row in self.db.execute('PRAGMA table_info(jobs)')}
         for column in ('match_key', 'title_key'):
             if column not in columns:
@@ -676,9 +675,9 @@ def main(argv=None):
                     spec = {**spec, 'state_path': str(Path(args.state).with_name('sam.sqlite3')), '_persist': lambda: persist_budget('sam.sqlite3')}
                 batch = collect_feed(spec)
                 rows.extend((spec['name'], r, spec['kind'] in ('ocds', 'sam')) for r in batch)
-                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), **({'detail': 'Direct agency career feeds: '+', '.join(site['company'] for site in spec['sites'])+'; hiring client unverified'} if spec['kind'] == 'staffing' else {'detail': f"Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; {spec.get('_sam_cache_hits',0)} cached queries; 10 requests per rolling 24h; federal projects, not individual jobs"} if spec['kind'] == 'sam' else {})})
+                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), 'cached_queries':spec.get('_sam_cache_hits',0), 'query_count':spec.get('_sam_query_count',0), **({'detail': 'Direct agency career feeds: '+', '.join(site['company'] for site in spec['sites'])+'; hiring client unverified'} if spec['kind'] == 'staffing' else {'detail': f"Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; {spec.get('_sam_cache_hits',0)} cached queries; 10 requests per rolling 24h; federal projects, not individual jobs"} if spec['kind'] == 'sam' else {})})
             except SamDeferred as exc:
-                coverage.append({'source':spec['name'], 'status':'rate limited', 'raw':0, 'detail':str(exc)+'; previous leads preserved'})
+                coverage.append({'source':spec['name'], 'status':'scheduled', 'raw':0, 'detail':'Refresh scheduled; saved opportunities remain available', 'last_attempt_status':'deferred', 'eligible_at':datetime.fromtimestamp(exc.retry_at,UTC).isoformat() if exc.retry_at else None})
             except CredentialMissing as exc:
                 coverage.append({'source': spec['name'], 'status': 'not configured', 'raw': 0, 'detail': str(exc)})
             except (SourceError, ValueError, KeyError, ET.ParseError, TypeError) as exc:
@@ -698,6 +697,9 @@ def main(argv=None):
             continue
         candidates.append(job)
     for item in coverage:
+        if item['status']=='ok' and not (item.get('query_count',0)>0 and item.get('cached_queries',0)==item.get('query_count')):
+            item['last_success_at']=now.isoformat()
+            state.db.execute('INSERT OR REPLACE INTO source_history VALUES (?,?)',(item['source'],now.isoformat()))
         item['retained'] = sum(j['source'] == item['source'] for j in candidates)
     enrich(candidates, max_checks=0 if args.mode == 'smoke' else 15)
     for job in candidates:

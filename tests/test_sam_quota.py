@@ -11,7 +11,7 @@ class SamQuotaTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch('runner.load_secret',return_value='synthetic-key'), patch('runner.fetch',return_value={'opportunitiesData':[]}) as fetch:
             spec={'url':'https://api.sam.gov/opportunities/v2/search','state_path':str(Path(tmp)/'sam.sqlite3')}
             runner.collect_sam(spec);runner.collect_sam(spec)
-            self.assertEqual(fetch.call_count,6)
+            self.assertEqual(fetch.call_count,3)
             self.assertTrue(Path(spec['state_path']).exists())
 
     def test_429_stops_following_collection_before_network(self):
@@ -38,3 +38,12 @@ class SamQuotaTests(unittest.TestCase):
             with self.assertRaises(SamDeferred):SamQuota(path,'synthetic-key').query({'title':'test'},fail,now=100000)
             with self.assertRaises(SamDeferred):SamQuota(path,'synthetic-key').query({'title':'other'},lambda:self.fail('Network called during Retry-After'),now=107199)
             self.assertEqual(SamQuota(path,'synthetic-key').query({'title':'other'},lambda:{'ok':True},now=107201),{'ok':True})
+
+    def test_full_scan_waits_until_enough_requests_are_available(self):
+        from sam_quota import SamQuota
+        with tempfile.TemporaryDirectory() as tmp, patch('runner.load_secret',return_value='synthetic-key'), patch('runner.fetch',return_value={'opportunitiesData':[]}) as fetch:
+            path=Path(tmp)/'sam.sqlite3'
+            quota=SamQuota(path,'synthetic-key')
+            for n in range(8):quota.query({'old':n},lambda:{})
+            with self.assertRaises(runner.SourceError):runner.collect_sam({'url':'https://api.sam.gov/opportunities/v2/search','state_path':str(path)})
+            self.assertEqual(fetch.call_count,0)

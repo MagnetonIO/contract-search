@@ -2,7 +2,8 @@
 """Export existing collector state for the authenticated web dashboard; never starts actors."""
 import argparse
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +14,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from collectors import coverage_for_config
+from sam_quota import next_eligible_from_file
 
 
 def lead_id(job):
@@ -58,6 +60,42 @@ def review_score(job):
     return score
 
 
+def next_weekday_check(after):
+    local=after.astimezone(ZoneInfo('America/Chicago'))
+    candidate=local.replace(hour=8,minute=7,second=0,microsecond=0)
+    if candidate<=local: candidate+=timedelta(days=1)
+    while candidate.weekday()>=5: candidate+=timedelta(days=1)
+    return candidate.astimezone(timezone.utc)
+
+
+def display_sam_history(summary, config, jobs, history, quota_path, now):
+    for spec in config.get('feeds',[]):
+        if spec.get('kind')!='sam': continue
+        row=next((r for r in summary['source_coverage'] if r['source']==spec['name']),None)
+        if row is None: continue
+        last=history.get(spec['name'])
+        if last: row['last_success_at']=last
+        titles=spec.get('titles',['software','cloud','artificial intelligence'])
+        limit=spec.get('max_requests_per_day',10)
+        eligible=next_eligible_from_file(quota_path,titles,limit,now.timestamp())
+        row['eligible_at']=datetime.fromtimestamp(eligible,timezone.utc).isoformat()
+        check=next_weekday_check(now)
+        # Quota is evaluated for the planned check, including cache expiry.
+        for _ in range(4):
+            allowed=next_eligible_from_file(quota_path,titles,limit,check.timestamp())
+            if allowed<=check.timestamp(): break
+            check=next_weekday_check(datetime.fromtimestamp(allowed,timezone.utc))
+        row['next_check_at']=check.isoformat()
+        deferred=row['status'] in ('scheduled','rate limited','saved') or (row['status']=='failed' and '429' in row.get('detail',''))
+        cached=row.get('query_count',0)>0 and row.get('cached_queries')==row['query_count']
+        if deferred or cached:
+            row['last_attempt_status']=row.get('last_attempt_status',row['status'])
+            row['last_attempt_detail']=row.get('last_attempt_detail',row.get('detail',''))
+            row['saved_count']=sum(j.get('source')==spec['name'] and bool(j.get('pipeline')) for j in jobs)
+            row['status']='saved' if row['saved_count'] or last else 'scheduled'
+            row['detail']='Showing saved opportunities; refresh follows the source request allowance.' if row['status']=='saved' else 'First collection is scheduled within the source request allowance.'
+
+
 def export(state_path, summary_path, qualifications_path, output, config_path=None):
     summary = json.loads(Path(summary_path).read_text(encoding='utf-8'))
     config = json.loads(Path(config_path or ROOT/'config.json').read_text(encoding='utf-8'))
@@ -66,8 +104,17 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
     connection = sqlite3.connect(state_path)
     try:
         jobs = [json.loads(row[0]) for row in connection.execute('SELECT data FROM jobs')]
+        history={}
+        if 'last_seen' in {r[1] for r in connection.execute('PRAGMA table_info(jobs)')}:
+            for stamp, data in connection.execute('SELECT last_seen,data FROM jobs'):
+                source=json.loads(data).get('source')
+                if source and stamp and stamp>history.get(source,''): history[source]=stamp
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='source_history'").fetchone():
+            history.update(dict(connection.execute('SELECT source,last_success_at FROM source_history')))
+
     finally:
         connection.close()
+    display_sam_history(summary,config,jobs,history,Path(state_path).with_name('sam.sqlite3'),datetime.now(timezone.utc))
     leads = []
     for job in jobs:
         if not job.get('pipeline'):

@@ -179,7 +179,7 @@ class ProviderTests(unittest.TestCase):
             {**notice, 'noticeId': 'inactive', 'active': 'No'}]}
         rows = r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search', 'state_path':sam_state})
         self.assertEqual(len(rows), 1)
-        self.assertEqual(fetch.call_count, 6)
+        self.assertEqual(fetch.call_count, 3)
         self.assertNotIn('synthetic-sam-test-only', json.dumps(rows))
         job = r.normalize(rows[0], 'US SAM.gov solicitations', NOW, True)
         self.assertEqual(job['pipeline'], 'published_project_need')

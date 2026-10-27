@@ -57,3 +57,60 @@ class DashboardExportTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class SavedCoverageTests(unittest.TestCase):
+    def test_throttling_shows_saved_opportunities_without_advancing_last_success(self):
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stdout(io.StringIO()):
+            root=Path(tmp); db=sqlite3.connect(root/'seen.sqlite3')
+            db.execute('CREATE TABLE jobs(data TEXT,last_seen TEXT)')
+            job={'title':'Cloud platform solicitation','source':'US SAM.gov solicitations','source_url':'https://sam.gov/opp/abc/view','pipeline':'published_project_need','geography':'US','fit_tier':'project','public_recruiter_contact':''}
+            last='2026-10-27T17:29:44+00:00'
+            db.execute('INSERT INTO jobs VALUES (?,?)',(json.dumps(job),last));db.commit();db.close()
+            (root/'summary.json').write_text(json.dumps({'created_at':'2026-10-27T23:00:00+00:00','source_coverage':[{'source':'US SAM.gov solicitations','status':'rate limited','raw':0,'detail':'HTTP 429'}]}),encoding='utf-8')
+            (root/'config.json').write_text(json.dumps({'actors':[],'feeds':[{'name':'US SAM.gov solicitations','kind':'sam'}]}),encoding='utf-8')
+            export(root/'seen.sqlite3',root/'summary.json',root/'reviews.json',root/'out.json',root/'config.json')
+            payload=json.loads((root/'out.json').read_text(encoding='utf-8'));row=payload['summary']['source_coverage'][0]
+            self.assertEqual(row['status'],'saved')
+            self.assertEqual(row['saved_count'],1)
+            self.assertEqual(row['last_success_at'],last)
+            self.assertNotIn('429',row['detail'])
+            self.assertIn('next_check_at',row)
+            self.assertEqual(len(payload['leads']),1)
+
+    def test_no_previous_collection_is_scheduled_without_fabricating_results(self):
+        from scripts.export_dashboard import display_sam_history
+        from datetime import datetime,timezone
+        summary={'source_coverage':[{'source':'SAM','status':'scheduled','raw':0,'detail':'HTTP 429'}]}
+        config={'feeds':[{'name':'SAM','kind':'sam'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            display_sam_history(summary,config,[],{},Path(tmp)/'missing.sqlite3',datetime(2026,10,30,20,tzinfo=timezone.utc))
+        row=summary['source_coverage'][0]
+        self.assertEqual(row['status'],'scheduled')
+        self.assertNotIn('last_success_at',row)
+        self.assertEqual(row['saved_count'],0)
+        self.assertEqual(row['next_check_at'],'2026-11-02T14:07:00+00:00')
+
+    def test_authentication_failure_remains_actionable(self):
+        from scripts.export_dashboard import display_sam_history
+        from datetime import datetime,timezone
+        summary={'source_coverage':[{'source':'SAM','status':'failed','raw':0,'detail':'HTTP 403'}]}
+        with tempfile.TemporaryDirectory() as tmp:
+            display_sam_history(summary,{'feeds':[{'name':'SAM','kind':'sam'}]},[{'source':'SAM','pipeline':'published_project_need'}],{'SAM':'2026-10-27T12:00:00+00:00'},Path(tmp)/'missing.sqlite3',datetime(2026,10,27,23,tzinfo=timezone.utc))
+        self.assertEqual(summary['source_coverage'][0]['status'],'failed')
+        self.assertEqual(summary['source_coverage'][0]['detail'],'HTTP 403')
+
+    def test_next_check_respects_quota_and_export_does_not_modify_it(self):
+        from scripts.export_dashboard import display_sam_history
+        from sam_quota import SamQuota
+        from datetime import datetime,timezone
+        with tempfile.TemporaryDirectory() as tmp:
+            path=Path(tmp)/'State with spaces – data'/ 'sam.sqlite3'
+            now=datetime(2026,10,30,12,55,tzinfo=timezone.utc)
+            quota=SamQuota(path,'synthetic-key')
+            for n in range(8):quota.query({'previous':n},lambda:{},now=now.timestamp())
+            before=path.read_bytes()
+            summary={'source_coverage':[{'source':'SAM','status':'scheduled','raw':0}]}
+            display_sam_history(summary,{'feeds':[{'name':'SAM','kind':'sam'}]},[],{},path,now)
+            self.assertEqual(summary['source_coverage'][0]['next_check_at'],'2026-11-02T14:07:00+00:00')
+            self.assertEqual(path.read_bytes(),before)
