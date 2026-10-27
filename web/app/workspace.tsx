@@ -45,6 +45,7 @@ export default function Dashboard() {
   const [view,setView] = useState('opportunities'); const [search,setSearch] = useState('');
   const [filter,setFilter] = useState('all'); const [source,setSource] = useState('all');
   const [sort,setSort] = useState('fit'); const [selected,setSelected] = useState<string|null>(null); const [page,setPage] = useState(0);
+  const openedInitialLink = useRef(false);
   const pendingRef = useRef<PendingApplication[]>([]);
   const [pending,setPending] = useState<PendingApplication[]>([]);
   const [returned,setReturned] = useState(false);
@@ -60,7 +61,7 @@ export default function Dashboard() {
     setReturned(true);
   } catch { /* Ignore unavailable or invalid browser storage. */ }},[]);
   const notify = (message:string) => {setToast(message);setTimeout(()=>setToast(''),3500);};
-  async function load() { setError(''); try { const current=await api('session');setSession(current);if(current.authenticated){const next=await api('data');setData(next);setSelected(old=>{const id=new URLSearchParams(window.location.search).get('lead');return old||(next.snapshot.leads.some((lead:Lead)=>lead.id===id)?id:null)||(window.innerWidth>=930?next.snapshot.leads.find((lead:Lead)=>leadInView(lead,next.workflow[lead.id],view))?.id:null)||null;});}}catch(e){setError((e as Error).message);} }
+  async function load() { setError(''); try { const current=await api('session');setSession(current);if(current.authenticated){const next=await api('data');if(!openedInitialLink.current){openedInitialLink.current=true;const linked=new URLSearchParams(window.location.search).get('lead');if(linked&&next.workflow[linked]?.stage==='applied')setView('applied');}setData(next);setSelected(old=>{const id=new URLSearchParams(window.location.search).get('lead');return old||(next.snapshot.leads.some((lead:Lead)=>lead.id===id)?id:null)||(window.innerWidth>=930?next.snapshot.leads.find((lead:Lead)=>leadInView(lead,next.workflow[lead.id],view))?.id:null)||null;});}}catch(e){setError((e as Error).message);} }
   useEffect(()=>{void load();},[]);
   useEffect(()=>{
     const refresh=()=>{if(document.visibilityState==='visible'){setReturned(false);void load().finally(()=>setReturned(true));}};
@@ -69,8 +70,6 @@ export default function Dashboard() {
   },[view]);
   function selectLead(id:string|null){setSelected(id);const url=new URL(window.location.href);if(id)url.searchParams.set('lead',id);else url.searchParams.delete('lead');window.history.replaceState(null,'',url);}
   function switchView(next:string){setView(next);setFilter('all');setSearch('');setSource('all');selectLead(null);}
-  function showApplication(id:string){setView('applied');setFilter('all');setSearch('');setSource('all');setPage(0);selectLead(id);}
-  useEffect(()=>{if(view==='opportunities'&&selected&&data?.workflow[selected]?.stage==='applied')showApplication(selected);},[view,selected,data?.workflow]);
   useEffect(()=>setPage(0),[search,filter,source,sort,view]);
   const leads=data?.snapshot.leads||[];
   const contracts=leads.filter(lead=>leadInView(lead,data?.workflow[lead.id],'opportunities'));
@@ -87,10 +86,18 @@ export default function Dashboard() {
     rows=[...rows].sort((a,b)=>sort==='newest'?b.first_seen.localeCompare(a.first_seen):sort==='pay'?Number(b.hourly_min_usd||0)-Number(a.hourly_min_usd||0):b.review_score-a.review_score);
     return rows;
   },[leads,data?.workflow,view,filter,source,search,sort]);
+  const previousRows=useRef<string[]>([]);
+  useEffect(()=>{
+    if(view==='opportunities'&&selected&&data?.workflow[selected]?.stage==='applied'){
+      const index=Math.max(0,previousRows.current.indexOf(selected));
+      selectLead(window.innerWidth>=930?visible[Math.min(index,visible.length-1)]?.id||null:null);
+    }
+    previousRows.current=visible.map(lead=>lead.id);
+  },[view,selected,data?.workflow,visible]);
   useEffect(()=>setPage(old=>Math.min(old,Math.max(0,Math.ceil(visible.length/20)-1))),[visible.length]);
   const active=leads.find(lead=>lead.id===selected);
   async function progress(lead:Lead,stage:Stage,notes:string) {
-    if(!data)return; const updated=await api('progress',{id:lead.id,stage,notes,version:data.version});setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);if(stage==='applied'){showApplication(lead.id);notify('Moved to Applications');}else notify('Pipeline updated');
+    if(!data)return; const updated=await api('progress',{id:lead.id,stage,notes,version:data.version});setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);if(stage==='applied')notify('Submitted — saved in Applications');else notify('Pipeline updated');
   }
   async function application(lead:Lead,kind:ApplicationEvent['kind'],eventId:string=crypto.randomUUID()) {
     if(kind==='opened'){
@@ -104,8 +111,7 @@ export default function Dashboard() {
       const updated=await api('application',{id:lead.id,kind,eventId});
       setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);
       if(kind!=='opened')dismissPending(lead.id);
-      if(kind==='submitted')showApplication(lead.id);
-      notify(kind==='opened'?'Application started. Confirm submission when you return.':kind==='submitted'?'Submitted — moved to Applications':'Application cancelled — opportunity stays open');
+      notify(kind==='opened'?'Application started. Confirm submission when you return.':kind==='submitted'?'Submitted — saved in Applications':'Application cancelled — opportunity stays open');
     } finally {if(kind==='opened')setOpening(count=>count-1);}
   }
   const waiting=pending.find(item=>data?.snapshot.leads.some(lead=>lead.id===item.id)&&data.workflow[item.id]?.stage!=='applied');
@@ -117,7 +123,7 @@ export default function Dashboard() {
   return <div className="app-shell">
     <aside className="sidebar"><a href="/" className="brand"><span className="brand-mark">C</span><span>Contract Desk<small>Your next engagement</small></span></a>
       <nav aria-label="Workspace">{nav.map(([key,label,icon,count])=><button key={key} onClick={()=>switchView(key)} className={view===key?'active':''}><Icon name={icon}/><span>{label}</span>{count!==undefined&&<span className="nav-count">{count}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="schedule"><Icon name="clock"/><div><strong>Weekday search</strong><span>8:07am Chicago</span></div><span className="status-dot"/></div><button className={view==='coverage'?'nav-extra active':'nav-extra'} onClick={()=>setView('coverage')}><Icon name="shield"/>Source coverage</button><button className={view==='profile'?'nav-extra active':'nav-extra'} onClick={()=>setView('profile')}><Icon name="user"/>Profile & resume</button><div className="account"><span className="avatar">ML</span><div><strong>{data?.profile.name||'Your workspace'}</strong><small>Private workspace</small></div><button title="Sign out" aria-label="Sign out" onClick={async()=>{await api('logout',{});rememberPending([]);setData(null);setSession({...session,authenticated:false});}}><Icon name="logout"/></button></div></div>
+      <div className="sidebar-bottom"><div className="schedule"><Icon name="clock"/><div><strong>Weekday search</strong><span>8:07am Chicago</span></div><span className="status-dot"/></div><button className={view==='coverage'?'nav-extra active':'nav-extra'} onClick={()=>setView('coverage')}><Icon name="shield"/>Source coverage</button><button className={view==='profile'?'nav-extra active':'nav-extra'} onClick={()=>setView('profile')}><Icon name="user"/>Profile & resume</button><div className="account"><span className="avatar">ML</span><div><strong>{data?.profile.name||'Your workspace'}</strong><small>Private workspace</small></div><button title="Sign out" aria-label="Sign out" onClick={async()=>{await api('logout',{});openedInitialLink.current=false;rememberPending([]);setData(null);setSession({...session,authenticated:false});}}><Icon name="logout"/></button></div></div>
     </aside>
     <main className="main"><header className="topbar"><div className="breadcrumb">Workspace <Icon name="chevron" size={12}/> <span>{titles[view]}</span></div><Badge tone="blue"><Icon name="shield" size={13}/> Private</Badge></header>
       <div className="page-content"><div className="page-heading"><div><h1>{titles[view]}</h1><p>{view==='profile'?'Keep your introduction and resume ready for the next conversation.':'Find the right work. Check the terms. Make the next connection.'}</p></div><button className="button secondary" onClick={load}><Icon name="refresh"/>Refresh</button></div>
