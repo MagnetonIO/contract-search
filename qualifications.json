@@ -1,0 +1,284 @@
+[
+  {
+    "match": {
+      "company": "Retelligence",
+      "title_contains": "Product Engineer",
+      "source_url": "https://www.linkedin.com/jobs/view/4481940306?pageNum=0&position=3"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "priority",
+    "summary": "Strong TypeScript/React/Node and data/AI fit. Advertised C2C terms meet the rate target. The recruiter is identified; the end client remains confidential.",
+    "pay": {
+      "status": "confirmed",
+      "detail": "Advertised range is USD 110–140 per hour. Confirm the offered rate and invoicing terms.",
+      "source_url": "https://www.linkedin.com/jobs/view/4481940306"
+    },
+    "c2c": {
+      "status": "confirmed",
+      "detail": "The posting explicitly offers an 18-month C2C engagement.",
+      "source_url": "https://www.linkedin.com/jobs/view/4481940306"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "US-based remote candidates; some working-hour overlap with US Pacific time. Permission to work abroad is not stated.",
+      "source_url": "https://www.linkedin.com/jobs/view/4481940306"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "Retelligence is the recruitment agency. Its research-oriented technology client is unnamed; no client identity has been inferred.",
+      "source_url": "https://www.linkedin.com/jobs/view/4481940306"
+    },
+    "contact": {
+      "name": "Tommy Atkinson",
+      "url": "https://uk.linkedin.com/in/tommy-atkinson-6abab5a5",
+      "email": "Colt@retelligence.co.uk",
+      "email_name": "Colt Sarginson, agency contact",
+      "detail": "Tommy is the named job poster. The agency's official contact page separately publishes founder Colt Sarginson's email."
+    },
+    "next_steps": [
+      "Ask Tommy whether the role is still accepting applications and request the end-client name.",
+      "Confirm your offered rate, Pacific-hours overlap, payment terms, and any work-abroad restrictions.",
+      "Share a TypeScript/React product example and a data synchronization or AI integration example."
+    ],
+    "sources": [
+      {
+        "title": "Original job posting",
+        "url": "https://www.linkedin.com/jobs/view/4481940306"
+      },
+      {
+        "title": "Official agency contact page",
+        "url": "https://www.retelligence.co.uk/contact/"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "NeoReach",
+      "title_contains": "Senior Data",
+      "source_url": "https://jobs.workable.com/view/evfhLNc8oCzm9W6gu6Bkso/remote-senior-data-%26-ai-engineer-(part-time-contract)-in-united-states-at-neoreach"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "needs_confirmation",
+    "summary": "Strong direct-company opportunity for Python, SQL, integrations, and AI workflows. The official application requests examples, availability, and a preferred hourly rate.",
+    "pay": {
+      "status": "unknown",
+      "detail": "Paid engagement; no numeric budget is published. The application asks for your preferred hourly rate.",
+      "source_url": "https://apply.workable.com/neoreach/j/F74589847D/"
+    },
+    "c2c": {
+      "status": "unknown",
+      "detail": "Part-time contract with an initial three-month term. Corporate invoicing and C2C eligibility are not specified.",
+      "source_url": "https://apply.workable.com/neoreach/j/F74589847D/"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "Remote within the United States. Weekly hours are to be agreed; overseas work is not explicitly permitted.",
+      "source_url": "https://apply.workable.com/neoreach/j/F74589847D/"
+    },
+    "client": {
+      "status": "direct",
+      "detail": "NeoReach's own careers page describes work on its internal data infrastructure and tools with product leadership.",
+      "source_url": "https://apply.workable.com/neoreach/j/F74589847D/"
+    },
+    "contact": {
+      "url": "https://apply.workable.com/neoreach/j/F74589847D/",
+      "detail": "Apply through NeoReach's official Workable posting. A hiring email is not published."
+    },
+    "next_steps": [
+      "Confirm the hourly budget, weekly hours, C2C eligibility, and start date.",
+      "Prepare two relevant projects explaining your contribution and measured results.",
+      "Include your portfolio or GitHub and availability in the official application."
+    ],
+    "sources": [
+      {
+        "title": "Official NeoReach application",
+        "url": "https://apply.workable.com/neoreach/j/F74589847D/"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "Left Field Labs",
+      "title_contains": "Freelance Mid/Senior Backend",
+      "source_url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "secondary",
+    "summary": "Strong Python/Go/backend fit, but this is a freelance roster-building posting. Its compensation disclosure does not establish a USD 100+ hourly floor.",
+    "pay": {
+      "status": "needs_clarification",
+      "detail": "Requisition 2026-9092 discloses a 50–100 dollar range for Culver City work, without clearly identifying the time unit. Confirm before treating it as hourly or USD 100+.",
+      "source_url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+    },
+    "c2c": {
+      "status": "unknown",
+      "detail": "Freelancers and independent contractors are invited. C2C invoicing is not explicitly confirmed.",
+      "source_url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "Remote within the US or Canada. No worldwide or work-abroad permission is stated.",
+      "source_url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "Left Field Labs is the contracting creative technology agency. No specific underlying brand or project client is named.",
+      "source_url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+    },
+    "contact": {
+      "url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job",
+      "detail": "Use the official iCIMS application. No recruiting email was verified."
+    },
+    "next_steps": [
+      "Ask whether there is funded work now or only a future freelancer roster.",
+      "Clarify the rate's unit, geographic applicability, and possibility of USD 100+ C2C.",
+      "Confirm project duration and the agency's contracting process."
+    ],
+    "sources": [
+      {
+        "title": "Official posting, requisition 2026-9092",
+        "url": "https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "Cogleus LLC",
+      "title_contains": "Machine Learning Engineer",
+      "source_url": "https://www.linkedin.com/jobs/view/4481960962?pageNum=0&position=1"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "secondary",
+    "summary": "Good GCP/Vertex AI fit and a verified recruiting email. The official careers page dates the underlying role about a year ago, so check whether it is still open before preparing a full application.",
+    "pay": {
+      "status": "unknown",
+      "detail": "No numeric budget is published. Ask whether USD 100+ per hour is available.",
+      "source_url": "https://cogleus.com/career/"
+    },
+    "c2c": {
+      "status": "unknown",
+      "detail": "The role allows several employment arrangements; corporate invoicing and C2C terms are not stated.",
+      "source_url": "https://cogleus.com/career/"
+    },
+    "location": {
+      "status": "confirmed",
+      "detail": "The official role title prefers US candidates but explicitly allows global applicants. Confirm working hours and any country-specific engagement limits.",
+      "source_url": "https://cogleus.com/career/"
+    },
+    "client": {
+      "status": "posting_company",
+      "detail": "Cogleus publishes the opening on its own careers site and describes work with its leadership. No separate end client is identified.",
+      "source_url": "https://cogleus.com/career/"
+    },
+    "contact": {
+      "email": "recruit@cogleus.com",
+      "url": "https://cogleus.com/career/",
+      "detail": "The official careers page asks applicants to email a resume, portfolio/GitHub links, and a short Vertex AI experience note."
+    },
+    "next_steps": [
+      "First confirm the year-old opening is active and ask for the current requisition.",
+      "Verify the hourly budget, C2C terms, and international contracting restrictions.",
+      "Send relevant GCP/Vertex AI examples only after confirming the role is current."
+    ],
+    "sources": [
+      {
+        "title": "Official Cogleus careers page",
+        "url": "https://cogleus.com/career/"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "INFOTRON",
+      "title_contains": "AI Prototyper",
+      "source_url": "https://www.linkedin.com/jobs/view/4482399015?pageNum=0&position=5"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "secondary",
+    "summary": "Strong match for AI agents, React/Next.js, and end-to-end application delivery. Compensation and the contracting entity need clarification before it meets the preferred terms.",
+    "pay": {
+      "status": "needs_clarification",
+      "detail": "CareerPlug displays a USD 120,000–140,000 annual band alongside a three-month contract description. This does not confirm a USD 100+ hourly rate.",
+      "source_url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new"
+    },
+    "c2c": {
+      "status": "unknown",
+      "detail": "Three-month contract with possible extension; C2C eligibility is not specified.",
+      "source_url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "US remote with a Pacific-time work schedule. Working abroad is not explicitly permitted.",
+      "source_url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new"
+    },
+    "client": {
+      "status": "unverified",
+      "detail": "The verified CareerPlug portal names INFOTRON as the posting company. No underlying client is disclosed; same-name companies are not assumed to be related.",
+      "source_url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new"
+    },
+    "contact": {
+      "url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new",
+      "detail": "Use the original CareerPlug application. No recruiting email has been verified."
+    },
+    "next_steps": [
+      "Ask for the hourly budget, C2C eligibility, and actual contracting company.",
+      "Confirm Pacific working hours and project start date.",
+      "Prepare 2–3 interactive or AI application examples and explain your individual contribution."
+    ],
+    "sources": [
+      {
+        "title": "Official CareerPlug application",
+        "url": "https://infotron-solutions-llc.careerplug.com/jobs/3659786/apps/new"
+      },
+      {
+        "title": "Same requisition compensation disclosure",
+        "url": "https://app.careerplug.com/jobs/3659786/apps/new?loc=es"
+      }
+    ]
+  },
+  {
+    "match": {
+      "company": "TEKsystems",
+      "title_contains": "HPC AI/ML Platform Engineer",
+      "source_url": "https://www.linkedin.com/jobs/view/4482016142?pageNum=0&position=27"
+    },
+    "reviewed_at": "2026-10-26",
+    "verdict": "needs_confirmation",
+    "summary": "Kubernetes, AWS, Python, and AI infrastructure align well. Deep HPC/GPU operations and Slurm experience are central requirements; confirm that experience fit and the engagement terms.",
+    "pay": {
+      "status": "confirmed",
+      "detail": "The original public posting advertises USD 100 per hour. It lists an anticipated application close of October 30, 2026.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482016142"
+    },
+    "c2c": {
+      "status": "unknown",
+      "detail": "Contract engagement is stated, but C2C eligibility is not. Benefits language alone does not establish either W2-only or C2C acceptance.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482016142"
+    },
+    "location": {
+      "status": "restricted",
+      "detail": "The posting describes a fully remote role based out of Seattle. Confirm eligible states, working hours, and overseas restrictions.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482016142"
+    },
+    "client": {
+      "status": "agency",
+      "detail": "TEKsystems is the staffing/technology services intermediary. The AI-compute client is unnamed and has not been inferred.",
+      "source_url": "https://www.linkedin.com/jobs/view/4482016142"
+    },
+    "contact": {
+      "url": "https://www.linkedin.com/jobs/view/4482016142",
+      "detail": "Use the original posting to apply or find the recruiting team. No hiring email was verified."
+    },
+    "next_steps": [
+      "Confirm C2C acceptance and the actual end-client name.",
+      "Check the October 30 deadline, location eligibility, and working hours.",
+      "Verify the depth of GPU/HPC and Slurm experience required before investing in the application."
+    ],
+    "sources": [
+      {
+        "title": "Original TEKsystems public posting",
+        "url": "https://www.linkedin.com/jobs/view/4482016142"
+      }
+    ]
+  }
+]

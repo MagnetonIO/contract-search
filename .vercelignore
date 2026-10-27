@@ -1,0 +1,16 @@
+.git
+.venv
+.playwright-mcp
+__pycache__
+**/__pycache__
+state
+durable-state
+output
+contract-search-handoff.txt
+.env*
+web/.local
+web/.env*
+web/.next
+web/node_modules
+web/tests
+web/tsconfig.tsbuildinfo

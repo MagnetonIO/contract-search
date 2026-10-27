@@ -8,3 +8,11 @@ state/
 durable-state/
 contract-search-handoff.txt
 .DS_Store
+node_modules/
+.next/
+.vercel/
+web/.local/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+output-browser/
+.playwright-mcp/

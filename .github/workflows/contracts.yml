@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'smoke: $0.15 cap, daily: $2 cap, public: no paid actors'
+        description: 'smoke: $0.15 cap; daily: $2 cap; public: feeds only; publish: saved leads only'
         type: choice
-        options: [smoke, daily, public]
+        options: [smoke, daily, public, publish]
         default: smoke
 
 permissions:
@@ -46,7 +46,10 @@ jobs:
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: |
-          if [ "$MODE" = smoke ]; then
+          if [ "$MODE" = publish ]; then
+            mkdir -p output/latest
+            cp ../durable-state/latest/* output/latest/
+          elif [ "$MODE" = smoke ]; then
             python runner.py --mode smoke --state /tmp/contract-smoke.sqlite3 --output output/latest
           else
             python runner.py --mode "$MODE" --state ../durable-state/seen.sqlite3 --output output/latest
@@ -81,3 +84,24 @@ jobs:
             git commit -m "Persist contract search state for run $GITHUB_RUN_ID"
             git push origin HEAD:runner-state
           fi
+      - name: Export private dashboard snapshot
+        id: dashboard
+        if: always() && steps.reports.outcome == 'success' && env.MODE != 'smoke' && hashFiles('code/output/latest/summary.json') != ''
+        working-directory: code
+        run: python scripts/export_dashboard.py --state ../durable-state/seen.sqlite3 --summary output/latest/summary.json --output output/dashboard.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: always() && steps.dashboard.outcome == 'success'
+        with:
+          node-version: '24'
+      - name: Update the private hosted dashboard
+        if: always() && steps.dashboard.outcome == 'success'
+        working-directory: code/web
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.DASHBOARD_BLOB_TOKEN }}
+        run: |
+          if [ -z "$BLOB_READ_WRITE_TOKEN" ]; then
+            echo 'Dashboard publishing is not configured.'
+            exit 1
+          fi
+          npm ci --omit=dev
+          node scripts/publish-data.mjs ../output/dashboard.json
