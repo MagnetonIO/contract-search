@@ -7,6 +7,7 @@ from difflib import SequenceMatcher
 import email.utils
 import html
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
@@ -22,7 +23,7 @@ from credentials import load_token as token_from_local
 UTC = timezone.utc
 API = 'https://api.apify.com/v2'
 TERMINAL = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'}
-SKILLS = r'\b(?:software|architect|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
+SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
 AGENCIES = r'\b(?:recruitment|recruiting|staffing|talent|tek.?systems|insight global|robert half|randstad|kforce|apex systems|motion recruitment|dice job bot)\b'
 FIELDS = ['title', 'company_agency', 'source', 'source_job_id', 'source_posted_at',
           'source_date_text', 'first_seen', 'pay', 'hourly_min_usd', 'contract_status',
@@ -36,9 +37,14 @@ class SourceError(Exception):
     pass
 
 
+class CredentialMissing(SourceError):
+    pass
+
+
 class SafeRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if req.has_header('Authorization') and urlsplit(newurl).netloc != urlsplit(req.full_url).netloc:
+        sensitive = req.has_header('Authorization') or any(k.lower() == 'api_key' for k, _ in parse_qsl(urlsplit(req.full_url).query))
+        if sensitive and urlsplit(newurl).netloc != urlsplit(req.full_url).netloc:
             raise SourceError('Refused credential-bearing redirect to another host')
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -287,6 +293,8 @@ def normalize(row, source, now, project=False):
 
 
 def collect_feed(spec):
+    if spec['kind'] == 'sam':
+        return collect_sam(spec)
     raw = fetch(spec['url'], raw=True)
     if spec['kind'] == 'remotive':
         data = json.loads(raw)
@@ -323,6 +331,45 @@ def collect_feed(spec):
                      'date': item.findtext('pubDate'),
                      'description': item.findtext('description', ''), 'location': 'Remote'})
     return rows
+
+
+def collect_sam(spec):
+    key = os.environ.get('SAM_API_KEY', '').strip()
+    if not key:
+        raise CredentialMissing('SAM_API_KEY is not configured; US federal solicitations have not been searched')
+    if spec['url'] != 'https://api.sam.gov/opportunities/v2/search':
+        raise SourceError('Refused SAM credential use outside the official API')
+    now = datetime.now(UTC)
+    rows = {}
+    # Deliberately bounded, title-based discovery; not an exhaustive procurement search.
+    for title in spec.get('titles', ['software', 'cloud', 'artificial intelligence'])[:3]:
+        for notice_type in ('o', 'k'):
+            query = urlencode({'api_key': key, 'postedFrom': (now-timedelta(days=7)).strftime('%m/%d/%Y'),
+                               'postedTo': now.strftime('%m/%d/%Y'), 'ptype': notice_type,
+                               'title': title, 'limit': 100, 'offset': 0})
+            data = fetch(spec['url']+'?'+query)
+            if not isinstance(data.get('opportunitiesData'), list):
+                raise SourceError('SAM opportunities schema changed')
+            for notice in data['opportunitiesData']:
+                if str(notice.get('active', '')).lower() != 'yes' or notice.get('type') not in ('Solicitation', 'Combined Synopsis/Solicitation'):
+                    continue
+                deadline = parse_date(notice.get('responseDeadLine') or notice.get('reponseDeadLine'), now)
+                if not deadline or deadline <= now.isoformat():
+                    continue
+                identifier = notice.get('noticeId')
+                url = canonical(notice.get('uiLink'))
+                if not identifier or not url or urlsplit(url).hostname not in ('sam.gov', 'www.sam.gov'):
+                    continue
+                contacts = notice.get('pointOfContact') or []
+                contact_text = '; '.join(plain(c.get('fullName') or c.get('fullname'))+' '+plain(c.get('email')) for c in contacts if isinstance(c, dict))
+                # Description is an API link, not source text. Do not fetch or export its credential-bearing URL.
+                rows[identifier] = {'id': identifier, 'title': notice.get('title'),
+                    'company': notice.get('fullParentPathName') or notice.get('department') or 'US federal buyer',
+                    'url': url, 'date': notice.get('postedDate'),
+                    'location': 'United States; place of performance and vendor eligibility must be verified',
+                    'description': f"US federal solicitation. Response deadline {deadline}. Set-aside: {plain(notice.get('typeOfSetAsideDescription')) or 'verify in notice'}. Public procurement contacts: {contact_text}",
+                    'isExpired': False}
+    return list(rows.values())
 
 
 def words(value):
@@ -535,10 +582,15 @@ def main(argv=None):
             coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': detail})
     if args.mode != 'smoke':
         for spec in config['feeds']:
+            if spec.get('enabled') is False:
+                coverage.append({'source': spec['name'], 'status': 'disabled', 'raw': 0, 'detail': spec.get('reason', 'Disabled by configuration')})
+                continue
             try:
                 batch = collect_feed(spec)
-                rows.extend((spec['name'], r, spec['kind'] == 'ocds') for r in batch)
-                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch)})
+                rows.extend((spec['name'], r, spec['kind'] in ('ocds', 'sam')) for r in batch)
+                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), **({'detail': 'Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; federal projects, not individual jobs'} if spec['kind'] == 'sam' else {})})
+            except CredentialMissing as exc:
+                coverage.append({'source': spec['name'], 'status': 'not configured', 'raw': 0, 'detail': str(exc)})
             except (SourceError, ValueError, KeyError, ET.ParseError, TypeError):
                 coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': 'Feed unavailable or schema changed'})
         coverage.extend({'source': k, 'status': 'not configured', 'raw': 0, 'detail': v} for k, v in config.get('unconfigured_sources', {}).items())

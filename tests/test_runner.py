@@ -148,6 +148,36 @@ class DedupTests(unittest.TestCase):
 
 
 class ProviderTests(unittest.TestCase):
+    @patch.dict('os.environ', {'SAM_API_KEY': ''})
+    @patch('runner.fetch')
+    def test_sam_requires_key_without_making_a_request(self, fetch):
+        with self.assertRaises(r.CredentialMissing):
+            r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search'})
+        fetch.assert_not_called()
+
+    @patch.dict('os.environ', {'SAM_API_KEY': 'synthetic-sam-test-only'})
+    @patch('runner.fetch')
+    def test_sam_only_active_open_solicitations_and_public_contacts(self, fetch):
+        notice = {'noticeId': 'abc', 'title': 'Software platform engineering', 'active': 'Yes',
+                  'type': 'Solicitation', 'postedDate': '2026-10-26 12:00:00',
+                  'responseDeadLine': '2099-01-01T00:00:00Z', 'fullParentPathName': 'US Federal Buyer',
+                  'uiLink': 'https://sam.gov/opp/abc/view',
+                  'description': 'https://api.sam.gov/description?api_key=synthetic-sam-test-only',
+                  'pointOfContact': [{'fullname': 'Public Buyer', 'email': 'buyer@example.gov'}]}
+        fetch.return_value = {'opportunitiesData': [notice, {**notice, 'noticeId': 'award', 'type': 'Award Notice'},
+            {**notice, 'noticeId': 'expired', 'responseDeadLine': '2020-01-01T00:00:00Z'},
+            {**notice, 'noticeId': 'inactive', 'active': 'No'}]}
+        rows = r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search'})
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(fetch.call_count, 6)
+        self.assertNotIn('synthetic-sam-test-only', json.dumps(rows))
+        job = r.normalize(rows[0], 'US SAM.gov solicitations', NOW, True)
+        self.assertEqual(job['pipeline'], 'published_project_need')
+        self.assertEqual(job['geography'], 'US')
+        self.assertIn('buyer@example.gov', job['public_recruiter_contact'])
+        with self.assertRaises(r.SourceError):
+            r.collect_sam({'url': 'https://other.example/search'})
+
     @patch('runner.fetch')
     def test_procurement_only_open_notices_and_notice_link(self, fetch):
         fetch.return_value = json.dumps({'releases': [

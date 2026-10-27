@@ -4,6 +4,10 @@ import { readBytes, writeBytes, readJson, writeJson, ConflictError } from '../..
 import type { Snapshot, Profile, LeadProgress } from '../../../lib/types';
 import { STAGES } from '../../../lib/types';
 import { safeWebUrl } from '../../../lib/auth-core.mjs';
+import { recordApplication, saveApplication } from '../../../lib/workflow';
+import { randomUUID } from 'node:crypto';
+import { mailKey, prepareOutreach, latestOutreach, sendOutreach } from '../../../lib/outreach';
+import { MailError, MAIL_FROM, DIGEST_TO } from '../../../lib/mail.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,7 +58,33 @@ async function handle(request: Request, context: Context) {
       readJson<Snapshot | null>('leads.json', null), readJson<Record<string, LeadProgress>>('workflow.json', {}), readJson<Profile>('profile.json', defaultProfile),
     ]);
     if (!snapshot.value) return json({ error: 'No collected leads have been loaded yet.' }, 503);
-    return json({ snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version });
+    const digest = await readJson<{status:string;accepted_at?:string;meta?:{count:number}}|null>('digest-state.json',null);
+    return json({ snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version, email:{configured:Boolean(await mailKey()),from:MAIL_FROM,recipient:DIGEST_TO,last_digest:digest.value?.status==='accepted'?digest.value.accepted_at:undefined,digest_count:digest.value?.meta?.count} });
+  }
+  if (action === 'outreach' && request.method === 'GET') {
+    const id = new URL(request.url).searchParams.get('lead');
+    if (!id || !/^[a-f0-9]{20}$/.test(id)) return json({error:'Choose an opportunity.'},400);
+    return json({message:await latestOutreach(id)});
+  }
+  if (action === 'outreach' && request.method === 'POST') {
+    const input = await request.json();
+    const snapshot = await readJson<Snapshot|null>('leads.json',null);
+    const lead = snapshot.value?.leads.find(lead=>lead.id===input.id);
+    if (!lead) return json({error:'Opportunity not found.'},404);
+    return json({message:await prepareOutreach(lead,input)});
+  }
+  if (action === 'outreach/send' && request.method === 'POST') {
+    const input = await request.json();
+    if (input.approved !== true) return json({error:'Review the recipient, message, and attachment before sending.'},400);
+    return json(await sendOutreach(input.messageId));
+  }
+  if (action === 'application' && request.method === 'POST') {
+    const input = await request.json();
+    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['opened', 'submitted'].includes(input.kind) || typeof input.eventId !== 'string' || !/^[a-f0-9-]{36}$/.test(input.eventId)) return json({ error: 'Choose an opportunity and a valid application action.' }, 400);
+    const snapshot = await readJson<Snapshot | null>('leads.json', null);
+    const lead = snapshot.value?.leads.find(lead => lead.id === input.id);
+    if (!lead) return json({ error: 'Opportunity not found.' }, 404);
+    return json(await saveApplication(lead, input.kind, input.eventId));
   }
   if (action === 'progress' && request.method === 'POST') {
     const input = await request.json();
@@ -62,7 +92,8 @@ async function handle(request: Request, context: Context) {
     const [snapshot, workflow] = await Promise.all([readJson<Snapshot | null>('leads.json', null), readJson<Record<string, LeadProgress>>('workflow.json', {})]);
     if (!snapshot.value?.leads.some(lead => lead.id === input.id)) return json({ error: 'Opportunity not found.' }, 404);
     if (input.version !== workflow.version) throw new ConflictError('Another session updated your pipeline. Refresh and try again.');
-    const progress: LeadProgress = { stage: input.stage, notes: input.notes, updated_at: new Date().toISOString() };
+    let progress: LeadProgress = { ...workflow.value[input.id], stage: input.stage, notes: input.notes, updated_at: new Date().toISOString() };
+    if (input.stage === 'applied' && workflow.value[input.id]?.stage !== 'applied') progress = recordApplication(progress, snapshot.value.leads.find(lead => lead.id === input.id)!, 'submitted', randomUUID());
     const next = { ...workflow.value, [input.id]: progress };
     const version = await writeJson('workflow.json', next, workflow.version);
     return json({ workflow: next, version });
@@ -100,6 +131,7 @@ async function handle(request: Request, context: Context) {
 async function dispatch(request: Request, context: Context) {
   try { return await handle(request, context); }
   catch (error) {
+    if (error instanceof MailError) return json({error:error.message},400);
     if (error instanceof ConflictError) return json({ error: error.message }, 409);
     if (error instanceof SyntaxError) return json({ error: 'Invalid request.' }, 400);
     console.error('Dashboard request failed:', (error as Error).name);

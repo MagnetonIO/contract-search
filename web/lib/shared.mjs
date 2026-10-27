@@ -13,6 +13,11 @@ export function formatPay(value) {
   }
   return value;
 }
+export function applicationUrl(lead) {
+  const reviewed = lead.qualification?.contact?.url || '';
+  const jobLink = /\/j\/|careerplug\.com\/jobs\/|icims\.com\/jobs\//.test(reviewed) ? reviewed : '';
+  return [jobLink, lead.official_employer_url, lead.application_url, lead.source_url].map(safeWebUrl).find(Boolean) || '';
+}
 export function draftEmail(lead, profile) {
   const name = lead.qualification?.contact?.name;
   const greeting = name && !lead.qualification?.contact?.email_name ? `Hi ${name.split(' ')[0]},` : 'Hello,';

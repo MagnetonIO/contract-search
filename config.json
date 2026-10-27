@@ -79,14 +79,14 @@
     {"name": "Remotive", "kind": "remotive", "url": "https://remotive.com/api/remote-jobs"},
     {"name": "We Work Remotely", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-programming-jobs.rss"},
     {"name": "We Work Remotely DevOps", "kind": "rss", "url": "https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss"},
-    {"name": "UK Find a Tender", "kind": "ocds", "url": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=100"}
+    {"name": "UK Find a Tender", "kind": "ocds", "url": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?limit=100", "enabled": false, "reason": "UK procurement is outside the default US search; retained as an optional source"},
+    {"name": "US SAM.gov solicitations", "kind": "sam", "url": "https://api.sam.gov/opportunities/v2/search", "titles": ["software", "cloud", "artificial intelligence"]}
   ],
   "unconfigured_sources": {
     "ZipRecruiter": "No validated collector configured",
     "Glassdoor": "No validated collector configured",
     "Wellfound": "No validated collector configured",
     "Built In": "No validated collector configured",
-    "Staffing firm career feeds": "Agency postings may appear on boards; no separate firm feeds configured",
-    "US SAM.gov project opportunities": "Requires a separate SAM API key and validated adapter"
+    "Staffing firm career feeds": "Agency postings may appear on boards; no separate firm feeds configured"
   }
 }

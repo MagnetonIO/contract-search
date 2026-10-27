@@ -45,6 +45,7 @@ jobs:
         working-directory: code
         env:
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
         run: |
           if [ "$MODE" = publish ]; then
             mkdir -p output/latest

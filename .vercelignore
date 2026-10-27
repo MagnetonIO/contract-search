@@ -14,3 +14,5 @@ web/.next
 web/node_modules
 web/tests
 web/tsconfig.tsbuildinfo
+
+.wrangler

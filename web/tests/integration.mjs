@@ -4,6 +4,7 @@ import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:net';
+import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { makeAuthConfig } from '../lib/auth-core.mjs';
 
@@ -11,11 +12,11 @@ const directory = await mkdtemp(path.join(tmpdir(),'contract-dashboard-test-'));
 const port = await new Promise(resolve=>{const socket=createServer();socket.listen(0,'127.0.0.1',()=>{const port=socket.address().port;socket.close(()=>resolve(port));});});
 const base=`http://127.0.0.1:${port}`;
 let logs='';let child;
-const fixture={id:'a'.repeat(20),title:'Synthetic Python Engineer',company_agency:'Example Test Company',source:'Fixture',source_job_id:'test1',source_posted_at:'',source_date_text:'',first_seen:new Date().toISOString(),pay:'$110/hr',hourly_min_usd:110,contract_status:'contract',c2c_status:'explicitly accepted',duration:'3 months',remote_location:'Remote US',work_arrangement:'remote',work_abroad_restrictions:'US only',geography:'US',application_url:'https://example.com/jobs/1',source_url:'https://example.com/jobs/1',fit_tier:'1 - remote C2C USD100+/hr',fit_reason:'Python',pipeline:'contract',direct_client_classification:'unverified',direct_client_evidence:'Synthetic fixture',official_employer_url:'',contacts:[],review_score:100};
+const fixture={id:'a'.repeat(20),title:'Synthetic Python Engineer',company_agency:'Example Test Company',source:'Fixture',source_job_id:'test1',source_posted_at:'',source_date_text:'',first_seen:new Date().toISOString(),pay:'$110/hr',hourly_min_usd:110,contract_status:'contract',c2c_status:'explicitly accepted',duration:'3 months',remote_location:'Remote US',work_arrangement:'remote',work_abroad_restrictions:'US only',geography:'US',application_url:'https://example.com/jobs/1',source_url:'https://example.com/jobs/1',fit_tier:'1 - remote C2C USD100+/hr',fit_reason:'Python',pipeline:'contract',direct_client_classification:'unverified',direct_client_evidence:'Synthetic fixture',official_employer_url:'',contacts:[{email:'recruiter@example.com',kind:'hiring',detail:'Synthetic recruiter'},{email:'accommodation@example.com',kind:'accessibility_only',detail:'Accommodation'}],review_score:100};
 await writeFile(path.join(directory,'leads.json'),JSON.stringify({generated_at:new Date().toISOString(),collected_at:new Date().toISOString(),leads:[fixture],summary:{new_remote_contracts:1,secondary:0,published_project_needs:0,raw:1,duplicates:0,target:50,source_coverage:[]}}));
 
 async function start(extra={}) {
-  child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),env:{...process.env,VERCEL:'',DASHBOARD_AUTH_CONFIG:'',DASHBOARD_LOCAL_DIR:directory,DASHBOARD_STORAGE:'local',...extra},stdio:['ignore','pipe','pipe']});
+  child=spawn(process.execPath,['node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port',String(port)],{cwd:process.cwd(),env:{...process.env,VERCEL:'',DASHBOARD_AUTH_CONFIG:'',DASHBOARD_LOCAL_DIR:directory,DASHBOARD_STORAGE:'local',RESEND_API_KEY:'',...extra},stdio:['ignore','pipe','pipe']});
   child.stdout.on('data',data=>{logs=(logs+data).slice(-4000);});child.stderr.on('data',data=>{logs=(logs+data).slice(-4000);});
   for(let attempt=0;attempt<100;attempt++){if(child.exitCode!==null)throw new Error('Dashboard test server exited: '+logs);try{const response=await fetch(base+'/api/session');if(response.ok)return;}catch{}await delay(100);}
   throw new Error('Test server did not start: '+logs);
@@ -44,10 +45,50 @@ try {
  response=await request('progress',{body:{id:fixture.id,stage:'saved',notes:'Synthetic private note',version:null}});assert.equal(response.status,200);let saved=await response.json();
  response=await request('progress',{body:{id:fixture.id,stage:'applied',notes:'stale write',version:null}});assert.equal(response.status,409);
  await stop();await start();data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].notes,'Synthetic private note','notes survive restarts');
+ const openedId='11111111-1111-4111-8111-111111111111';
+ assert.equal((await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId},authenticated:false})).status,401);
+ response=await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId}});assert.equal(response.status,200);saved=await response.json();
+ assert.equal(saved.workflow[fixture.id].stage,'applying');assert.equal(saved.workflow[fixture.id].notes,'Synthetic private note');
+ assert.equal(saved.workflow[fixture.id].application.submission_recorded_at,undefined,'opening is not submission');
+ await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId}});
+ data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].events.length,1,'retry does not duplicate activity');
+ const concurrent=await Promise.all(['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(eventId=>request('application',{body:{id:fixture.id,kind:'opened',eventId}})));
+ assert.ok(concurrent.every(response=>response.status===200),'concurrent clicks merge safely');
+ response=await request('application',{body:{id:fixture.id,kind:'submitted',eventId:'44444444-4444-4444-8444-444444444444'}});assert.equal(response.status,200);saved=await response.json();
+ assert.equal(saved.workflow[fixture.id].stage,'applied');assert.equal(saved.workflow[fixture.id].events.at(-1).evidence,'user_reported');
+ response=await request('progress',{body:{id:fixture.id,stage:'applied',notes:'Retained application history',version:saved.version}});assert.equal(response.status,200);saved=await response.json();
+ assert.equal(saved.workflow[fixture.id].events.length,4,'notes preserve application history');
+ await request('application',{body:{id:fixture.id,kind:'opened',eventId:'55555555-5555-4555-8555-555555555555'}});
+ await stop();await start();data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].stage,'applied','reopening never downgrades submission');assert.equal(data.workflow[fixture.id].notes,'Retained application history');
  response=await request('profile',{body:{name:'Test Candidate',pitch:'Test introduction',portfolio:'javascript:alert(1)',version:null}});assert.equal(response.status,400);
  const form=new FormData();form.set('file',new Blob(['%PDF-1.4 synthetic test resume'],{type:'application/pdf'}),'test-resume.pdf');
  response=await request('resume',{body:form,form:true});assert.equal(response.status,200);
  response=await request('resume');assert.equal(response.status,200);assert.match(response.headers.get('content-disposition'),/attachment/);assert.ok((await response.text()).startsWith('%PDF-'));
+ const messageId='66666666-6666-4666-8666-666666666666';
+ const outreach={id:fixture.id,messageId,recipient:'recruiter@example.com',subject:'Synthetic contract inquiry',text:'Synthetic reviewed message',attachResume:true};
+ assert.equal((await request('outreach',{body:{...outreach,recipient:'accommodation@example.com'}})).status,400,'accommodation addresses cannot receive outreach');
+ assert.equal((await request('outreach',{body:{...outreach,recipient:'unlisted@example.com'}})).status,400,'unlisted recipient rejected');
+ assert.equal((await request('outreach',{body:outreach,origin:'https://attacker.example'})).status,403);
+ response=await request('outreach',{body:outreach});assert.equal(response.status,200);const prepared=await response.json();assert.equal(prepared.message.status,'prepared');assert.equal(prepared.message.resume_name,'test-resume.pdf');assert.equal(JSON.stringify(prepared).includes('base64'),false,'resume bytes are never returned in draft metadata');
+ response=await request('outreach?lead='+fixture.id);assert.equal((await response.json()).message.id,messageId,'prepared draft survives reload');
+ assert.equal((await request('outreach',{body:{...outreach,text:'changed after review'}})).status,400,'prepared content is immutable');
+ assert.equal((await request('outreach/send',{body:{messageId,approved:false}})).status,400,'explicit approval required');
+ assert.equal((await request('outreach/send',{body:{messageId,approved:true}})).status,400,'unconfigured provider never pretends to send');
+ data=await(await request('data')).json();assert.equal(data.email.configured,false);assert.equal(data.workflow[fixture.id].outreach,undefined,'drafts do not become contacted');
+ const providerMock=path.join(directory,'fake-resend.mjs');
+ await writeFile(providerMock,`import {readFile,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+const original=globalThis.fetch;
+globalThis.fetch=async(url,options)=>{if(url!=='https://api.resend.com/emails')return original(url,options);
+if(options.headers.Authorization!=='Bearer synthetic-resend-key')throw new Error('Synthetic provider requires synthetic key');
+const file=path.join(process.env.DASHBOARD_LOCAL_DIR,'provider-receipts.json');let records={};try{records=JSON.parse(await readFile(file,'utf8'));}catch{}
+const key=options.headers['Idempotency-Key'];if(records[key]&&records[key].body!==options.body)return new Response('{}',{status:409});
+records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFile(file,JSON.stringify(records));return new Response(JSON.stringify({id:records[key].id}));};`);
+ await stop();await start({RESEND_API_KEY:'synthetic-resend-key',NODE_OPTIONS:'--import '+pathToFileURL(providerMock).href});
+ response=await request('outreach/send',{body:{messageId,approved:true}});assert.equal(response.status,200);const delivered=await response.json();assert.equal(delivered.message.status,'accepted');assert.equal(delivered.message.provider_id,'synthetic-provider-receipt');
+ assert.equal(delivered.workflow[fixture.id].stage,'applied','contacting preserves submitted application');assert.equal(delivered.workflow[fixture.id].notes,'Retained application history');assert.equal(delivered.workflow[fixture.id].outreach.length,1);
+ response=await request('outreach/send',{body:{messageId,approved:true}});assert.equal(response.status,200);assert.equal((await response.json()).workflow[fixture.id].outreach.length,1,'retries keep a single receipt');
+ const receipts=JSON.parse(await readFile(path.join(directory,'provider-receipts.json'),'utf8'));assert.equal(Object.keys(receipts).length,1,'one provider delivery');const sentPayload=JSON.parse(Object.values(receipts)[0].body);assert.equal(sentPayload.from,'Matthew Long <mlong@magneton.io>');assert.equal(sentPayload.reply_to,'mlong@magneton.io');assert.equal(Buffer.from(sentPayload.attachments[0].content,'base64').toString(),'%PDF-1.4 synthetic test resume','reviewed resume is frozen in the sent payload');
  execFileSync(process.execPath,['scripts/reset-login.mjs'],{env:{...process.env,VERCEL:'',DASHBOARD_LOCAL_DIR:directory},stdio:'pipe'});
  assert.equal((await request('data')).status,401,'reset revokes old session');
  assert.equal((await request('login',{body:{username:'owner',password:'disposable-http-test-password'}})).status,401,'old password disabled during recovery');
@@ -64,5 +105,5 @@ try {
  const hosted=await(await request('session')).json();assert.equal(hosted.setupAllowed,false);assert.equal(hosted.resetAllowed,false);
  assert.equal((await request('setup',{body:{username:'attacker',password:'synthetic-attacker-password'}})).status,403);
  assert.equal((await request('reset-password',{body:{password:'replacement-hosted-password',confirmation:'replacement-hosted-password'}})).status,403,'local recovery never available on hosted deployment');
- console.log('HTTP integration passed: auth, CSRF, persistent notes, stale-write protection, private resume, recovery, session revocation, rate limits, hosted setup denial.');
+ console.log('HTTP integration passed: auth, CSRF, persistent notes, application history, concurrent updates, private resume, approved email delivery, receipt deduplication, recovery, session revocation, rate limits, hosted setup denial.');
 } finally { await stop();await rm(directory,{recursive:true,force:true}); }

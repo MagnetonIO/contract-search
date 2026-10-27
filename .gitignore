@@ -11,6 +11,7 @@ contract-search-handoff.txt
 node_modules/
 .next/
 .vercel/
+.wrangler/
 web/.local/
 web/next-env.d.ts
 web/tsconfig.tsbuildinfo
