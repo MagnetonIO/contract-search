@@ -1,41 +1,41 @@
 {
   "mode": "daily",
-  "created_at": "2026-10-26T17:41:23.669093+00:00",
-  "raw": 557,
-  "relevant": 434,
-  "duplicates": 16,
-  "stale": 55,
-  "rejected": 123,
-  "new_unique": 363,
-  "new_remote_contracts": 142,
-  "secondary": 220,
-  "published_project_needs": 1,
+  "created_at": "2026-10-27T15:29:15.138003+00:00",
+  "raw": 542,
+  "relevant": 418,
+  "new_unique": 96,
+  "duplicates": 270,
+  "stale": 52,
+  "rejected": 124,
+  "new_remote_contracts": 42,
+  "secondary": 54,
+  "published_project_needs": 0,
   "target": 50,
-  "shortfall": 0,
+  "shortfall": 8,
   "source_coverage": [
     {
       "source": "LinkedIn",
       "status": "ok",
-      "raw": 179,
-      "detail": "Capped run jdgbcnQnZMEokzZUx"
+      "raw": 169,
+      "detail": "Capped run M3vYyhaLsFZXd1Yju"
     },
     {
       "source": "Indeed",
       "status": "ok",
-      "raw": 62,
-      "detail": "Capped run K8vBPiVS3jJOgDetl"
+      "raw": 60,
+      "detail": "Capped run Ur6Hjz4NfwHT5N8Hj"
     },
     {
       "source": "Dice",
       "status": "ok",
       "raw": 120,
-      "detail": "Capped run bKt6EBPq9sqs031VU"
+      "detail": "Capped run 4H7qhbj4WVOhINDid"
     },
     {
       "source": "Employer ATS discovery",
       "status": "ok",
-      "raw": 32,
-      "detail": "Capped run W52p22jW2WRRxnDOu"
+      "raw": 28,
+      "detail": "Capped run v55BabGgrv85cOe8a"
     },
     {
       "source": "Remotive",
@@ -50,7 +50,7 @@
     {
       "source": "We Work Remotely DevOps",
       "status": "ok",
-      "raw": 29
+      "raw": 30
     },
     {
       "source": "UK Find a Tender",
@@ -97,54 +97,54 @@
   "actor_runs": [
     {
       "source": "LinkedIn",
-      "run_id": "jdgbcnQnZMEokzZUx",
+      "run_id": "M3vYyhaLsFZXd1Yju",
       "cap_usd": 0.4,
       "build": "1.7.18",
       "status": "SUCCEEDED",
-      "actual_charge_usd": 0.35805,
+      "actual_charge_usd": 0.33605,
+      "charge_snapshot_at": "2026-10-27T15:31:53.339278+00:00",
       "charged_event_counts": {
-        "apify-default-dataset-item": 179,
+        "apify-default-dataset-item": 168,
         "apify-actor-start": 1
-      },
-      "charge_snapshot_at": "2026-10-26T17:41:12.636427+00:00"
+      }
     },
     {
       "source": "Indeed",
-      "run_id": "K8vBPiVS3jJOgDetl",
+      "run_id": "Ur6Hjz4NfwHT5N8Hj",
       "cap_usd": 0.6,
       "build": "0.0.119",
       "status": "SUCCEEDED",
-      "actual_charge_usd": 0.372,
+      "actual_charge_usd": 0,
+      "charge_snapshot_at": "2026-10-27T15:32:06.059661+00:00",
       "charged_event_counts": {
-        "result": 62
-      },
-      "charge_snapshot_at": "2026-10-26T17:41:13.783640+00:00"
+        "result": 7
+      }
     },
     {
       "source": "Dice",
-      "run_id": "bKt6EBPq9sqs031VU",
+      "run_id": "4H7qhbj4WVOhINDid",
       "cap_usd": 0.2,
       "build": "0.1.58",
       "status": "SUCCEEDED",
-      "actual_charge_usd": 0.109,
+      "actual_charge_usd": 0.0109,
+      "charge_snapshot_at": "2026-10-27T15:37:05.469410+00:00",
       "charged_event_counts": {
-        "job": 120,
+        "job": 71,
         "apify-actor-start": 1
-      },
-      "charge_snapshot_at": "2026-10-26T17:41:14.864160+00:00"
+      }
     },
     {
       "source": "Employer ATS discovery",
-      "run_id": "W52p22jW2WRRxnDOu",
+      "run_id": "v55BabGgrv85cOe8a",
       "cap_usd": 0.8,
-      "build": "0.0.71",
+      "build": "0.0.72",
       "status": "SUCCEEDED",
-      "actual_charge_usd": 0.394,
+      "actual_charge_usd": 0.01,
+      "charge_snapshot_at": "2026-10-27T15:37:12.788182+00:00",
       "charged_event_counts": {
-        "apify-default-dataset-item": 32,
+        "apify-default-dataset-item": 0,
         "apify-actor-start": 1
-      },
-      "charge_snapshot_at": "2026-10-26T17:41:15.878168+00:00"
+      }
     }
   ]
 }

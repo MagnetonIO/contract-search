@@ -1,34 +1,36 @@
-# Contract search — 2026-10-26
+# Contract search — 2026-10-27
 
-Mode: **daily**. New remote contracts: **142 / 50**. Secondary roles: **220**. Published project needs: **1**.
-Raw rows: 557; normalized relevant rows: 434; unique new relevant leads: 363; duplicates: 16; stale: 55; rejected: 123.
+Mode: **daily**. New remote contracts: **42 / 50**. Secondary roles: **54**. Published project needs: **0**.
+Raw rows: 542; normalized relevant rows: 418; unique new relevant leads: 96; duplicates: 270; stale: 52; rejected: 124.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
 
 ## Top 10 remote contracts
 
-1. [Product Engineer](https://www.linkedin.com/jobs/view/4481940306?pageNum=0&position=3) — Retelligence; $110.00/hr - $140.00/hr; 1 - remote C2C USD100+/hr; LinkedIn. unverified employer.
-2. [AEM Technical Architect (Remote, Contract)](https://blueacornici.applytojob.com/apply/wVXGDNRsls/AEM-Technical-Architect-Remote-Contract) — Blue Acorn iCi; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-3. [FCS Solution Architect / Technical Lead](https://inabia.applytojob.com/apply/HfdVhc3M9g/FCS-Solution-Architect-Technical-Lead) — Inabia Software & Consulting Inc.; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-4. [Freelance Mid/Senior Backend Software Engineer](https://careers-leftfieldlabs.icims.com/jobs/9092/freelance-mid-senior-backend-software-engineer/job) — Left Field Labs; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-5. [Marketing Cloud Next Technical Architect](https://mandsc.applytojob.com/apply/UOtR7vSuFK/Marketing-Cloud-Next-Technical-Architect) — M&S Consulting; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-6. [Senior Embedded Software Designer (6+ month Contract)](https://jobs.lever.co/kepler/6eacd495-960d-46aa-8e65-2bddf3393379) — Kepler Communications; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-7. [Senior Flight Software Designer (6+ month Contract)](https://jobs.lever.co/kepler/91eb728b-ada1-4f79-ba89-e10717c69527) — Kepler Communications; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-8. [Software Configuration Management Specialist](https://moriassociates.applytojob.com/apply/cwKCk4nzN9/Software-Configuration-Management-Specialist) — MORI Associates; {"@type": "MonetaryAmount", "currency": "USD", "value": {"@type": "QuantitativeValue", "unitText": "YEAR", "minValue": 108000, "maxValue": 120000}}; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-9. [AGENTIC AI ENGINEER - AI/LLM](https://www.dice.com/job-detail/e0a6e9c4-0b29-468c-a5a9-94410d8021d9) — 3AMIGOSIT LLC; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
-10. [AI Prototyper / Use Case Builder (Interactive Artifacts & Apps)](https://www.linkedin.com/jobs/view/4482399015?pageNum=0&position=5) — INFOTRON; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+1. [Rust Backend Architect - AI Training Projects](https://jobs.workable.com/view/ue9F3TQTvcHxtmNT4AH4HM/remote-rust-backend-architect---ai-training-projects-in-united-states-at-gramian-consulting-group) — Gramian Consulting Group; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
+2. [Azure Databricks Data Engineer](https://www.linkedin.com/jobs/view/4483739295?pageNum=0&position=30) — Algoworks; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+3. [Cloud DevOps Engineer](https://www.linkedin.com/jobs/view/4481492102?pageNum=0&position=26) — Zodiac Solutions, Inc; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+4. [Data Engineer – Snowflake / CRM Data Migration](https://www.linkedin.com/jobs/view/4483255361?pageNum=0&position=29) — Holistic Partners, Inc; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+5. [Machine Learning Engineer | Contract | Remote](https://www.linkedin.com/jobs/view/4478736888?pageNum=0&position=25) — Tech Holding; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+6. [Senior Data Engineer + Snowflake + DBT](https://www.linkedin.com/jobs/view/4483665000?pageNum=0&position=23) — Univedge Consulting LLC; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+7. [Senior ML Ops Engineer](https://www.linkedin.com/jobs/view/4482719554?pageNum=0&position=27) — KellyMitchell Group; unknown; 2 - remote contract; terms to verify; LinkedIn. agency / client unverified.
+8. [Senior Platform Architect – Kubernetes](https://www.linkedin.com/jobs/view/4484056609?pageNum=0&position=10) — Global Applications Solution; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+9. [Software Engineer](https://www.indeed.com/viewjob?jk=f72caea5ba382567) — turing; $200 - $300 an hour; 2 - remote contract; terms to verify; Indeed. unverified employer.
+10. [Software Engineer - Python/Typescript](https://www.indeed.com/viewjob?jk=4862ee33342f30f7) — turing; $170 - $200 an hour; 2 - remote contract; terms to verify; Indeed. unverified employer.
+
+**Shortfall: 8.** Source failures, bounded search limits, stale postings, deduplication and relevance/contract filters constrain the count. Secondary roles and project notices do not fill the contract target. No inferred prospects are counted.
 
 ## Source coverage
 
 | Source | Status | Raw rows | Detail |
 |---|---|---:|---|
-| LinkedIn | ok | 179 | Capped run jdgbcnQnZMEokzZUx |
-| Indeed | ok | 62 | Capped run K8vBPiVS3jJOgDetl |
-| Dice | ok | 120 | Capped run bKt6EBPq9sqs031VU |
-| Employer ATS discovery | ok | 32 | Capped run W52p22jW2WRRxnDOu |
+| LinkedIn | ok | 169 | Capped run M3vYyhaLsFZXd1Yju |
+| Indeed | ok | 60 | Capped run Ur6Hjz4NfwHT5N8Hj |
+| Dice | ok | 120 | Capped run 4H7qhbj4WVOhINDid |
+| Employer ATS discovery | ok | 28 | Capped run v55BabGgrv85cOe8a |
 | Remotive | ok | 10 |  |
 | We Work Remotely | ok | 25 |  |
-| We Work Remotely DevOps | ok | 29 |  |
+| We Work Remotely DevOps | ok | 30 |  |
 | UK Find a Tender | ok | 100 |  |
 | ZipRecruiter | not configured | 0 | No validated collector configured |
 | Glassdoor | not configured | 0 | No validated collector configured |
@@ -40,5 +42,3 @@ First-seen means new to this collector, not newly published. Unknown original da
 Daily actor charge caps total $2; smoke cap $0.15. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
 Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published UK project notices are separate buying opportunities; delivery eligibility must be checked.
-
-Report revalidated against the existing actor datasets after W2 and original-date parsing corrections. No new actors were started for this correction. First-seen timestamps are preserved.
