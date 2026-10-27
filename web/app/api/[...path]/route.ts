@@ -80,7 +80,7 @@ async function handle(request: Request, context: Context) {
   }
   if (action === 'application' && request.method === 'POST') {
     const input = await request.json();
-    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['opened', 'submitted'].includes(input.kind) || typeof input.eventId !== 'string' || !/^[a-f0-9-]{36}$/.test(input.eventId)) return json({ error: 'Choose an opportunity and a valid application action.' }, 400);
+    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['opened', 'submitted', 'cancelled'].includes(input.kind) || typeof input.eventId !== 'string' || !/^[a-f0-9-]{36}$/.test(input.eventId)) return json({ error: 'Choose an opportunity and a valid application action.' }, 400);
     const snapshot = await readJson<Snapshot | null>('leads.json', null);
     const lead = snapshot.value?.leads.find(lead => lead.id === input.id);
     if (!lead) return json({ error: 'Opportunity not found.' }, 404);

@@ -54,6 +54,15 @@ try {
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),true,'started applications remain open opportunities');
  await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId}});
  data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].events.length,1,'retry does not duplicate activity');
+ const cancelledId='77777777-7777-4777-8777-777777777777';
+ response=await request('application',{body:{id:fixture.id,kind:'cancelled',eventId:cancelledId}});assert.equal(response.status,200);saved=await response.json();
+ assert.equal(saved.workflow[fixture.id].stage,'saved','cancellation restores the stage before Apply');
+ assert.equal(saved.workflow[fixture.id].notes,'Synthetic private note');
+ assert.equal(saved.workflow[fixture.id].application.submission_recorded_at,undefined,'cancellation never claims submission');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),true,'cancelled applications remain open opportunities');
+ await request('application',{body:{id:fixture.id,kind:'cancelled',eventId:cancelledId}});
+ data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].events.length,2,'cancellation retries do not duplicate activity');
+ response=await request('application',{body:{id:fixture.id,kind:'opened',eventId:'88888888-8888-4888-8888-888888888888'}});assert.equal(response.status,200);
  const concurrent=await Promise.all(['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(eventId=>request('application',{body:{id:fixture.id,kind:'opened',eventId}})));
  assert.ok(concurrent.every(response=>response.status===200),'concurrent clicks merge safely');
  response=await request('application',{body:{id:fixture.id,kind:'submitted',eventId:'44444444-4444-4444-8444-444444444444'}});assert.equal(response.status,200);saved=await response.json();
@@ -61,8 +70,9 @@ try {
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),false,'submitted jobs leave Opportunities');
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'applied'),true,'submitted jobs remain in Applications');
  response=await request('progress',{body:{id:fixture.id,stage:'applied',notes:'Retained application history',version:saved.version}});assert.equal(response.status,200);saved=await response.json();
- assert.equal(saved.workflow[fixture.id].events.length,4,'notes preserve application history');
+ assert.equal(saved.workflow[fixture.id].events.length,6,'notes preserve application history');
  await request('application',{body:{id:fixture.id,kind:'opened',eventId:'55555555-5555-4555-8555-555555555555'}});
+ await request('application',{body:{id:fixture.id,kind:'cancelled',eventId:'99999999-9999-4999-8999-999999999999'}});
  await stop();await start();data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].stage,'applied','reopening never downgrades submission');assert.equal(data.workflow[fixture.id].notes,'Retained application history');assert.equal(data.snapshot.leads.filter(lead=>leadInView(lead,data.workflow[lead.id],'opportunities')).length,0,'submitted jobs stay out of Opportunities after restart');
  response=await request('profile',{body:{name:'Test Candidate',pitch:'Test introduction',portfolio:'javascript:alert(1)',version:null}});assert.equal(response.status,400);
  const form=new FormData();form.set('file',new Blob(['%PDF-1.4 synthetic test resume'],{type:'application/pdf'}),'test-resume.pdf');

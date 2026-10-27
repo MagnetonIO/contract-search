@@ -9,10 +9,12 @@ export function recordApplication(current: LeadProgress | undefined, lead: Lead,
   const old = current || { stage: 'new', notes: '', updated_at: now };
   const application = { ...old.application };
   if (kind === 'opened') {
+    if (old.stage !== 'applying' && old.stage !== 'applied') application.previous_stage = old.stage;
     application.first_opened_at ||= now;
     application.last_opened_at = now;
-  } else application.submission_recorded_at ||= now;
-  const stage = kind === 'submitted' ? 'applied' : old.stage === 'applied' ? 'applied' : 'applying';
+  } else if (kind === 'submitted') application.submission_recorded_at ||= now;
+  const stage = old.stage === 'applied' || kind === 'submitted' ? 'applied'
+    : kind === 'cancelled' ? old.stage === 'applying' ? application.previous_stage || 'new' : old.stage : 'applying';
   const event: ApplicationEvent = { id: eventId, kind, recorded_at: now, url: applicationUrl(lead), evidence: kind === 'opened' ? 'link_opened' : 'user_reported' };
   return { ...old, stage, updated_at: now, application, events: [...(old.events || []), event].slice(-100) } as LeadProgress;
 }

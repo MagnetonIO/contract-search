@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import type { DashboardData, Lead, LeadProgress, Profile, Stage, Evidence, Contact } from '../lib/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ApplicationEvent, DashboardData, Lead, LeadProgress, Profile, Stage, Evidence, Contact } from '../lib/types';
 import type { OutreachMessage } from '../lib/outreach';
 import { STAGES } from '../lib/types';
 import { safeWebUrl, formatPay, draftEmail, contactEmails, emailHref, applicationUrl, leadInView } from '../lib/shared.mjs';
@@ -35,6 +35,9 @@ function External({href,children,className='',...props}:{href:string;children:Re
 }
 function Badge({children,tone='neutral'}:{children:React.ReactNode;tone?:string}) { return <span className={'badge '+tone}>{children}</span>; }
 
+type PendingApplication = { id:string; submittedId:string; cancelledId:string };
+const pendingKey = 'contract_desk_pending_applications';
+
 export default function Dashboard() {
   const [session,setSession] = useState<{authenticated:boolean;configured:boolean;setupAllowed:boolean;resetAllowed?:boolean;resetPending?:boolean}|null>(null);
   const [data,setData] = useState<DashboardData|null>(null);
@@ -42,10 +45,28 @@ export default function Dashboard() {
   const [view,setView] = useState('opportunities'); const [search,setSearch] = useState('');
   const [filter,setFilter] = useState('all'); const [source,setSource] = useState('all');
   const [sort,setSort] = useState('fit'); const [selected,setSelected] = useState<string|null>(null); const [page,setPage] = useState(0);
+  const pendingRef = useRef<PendingApplication[]>([]);
+  const [pending,setPending] = useState<PendingApplication[]>([]);
+  const [returned,setReturned] = useState(false);
+  const [opening,setOpening] = useState(0);
+  function rememberPending(next:PendingApplication[]) {
+    pendingRef.current=next;setPending(next);
+    try {sessionStorage.setItem(pendingKey,JSON.stringify(next));} catch { /* Tracking still works for this page when browser storage is unavailable. */ }
+  }
+  function dismissPending(id:string){rememberPending(pendingRef.current.filter(item=>item.id!==id));}
+  useEffect(()=>{try {
+    const saved=JSON.parse(sessionStorage.getItem(pendingKey)||'[]');
+    if(Array.isArray(saved))rememberPending(saved.filter(item=>item&&/^[a-f0-9]{20}$/.test(item.id)&&/^[a-f0-9-]{36}$/.test(item.submittedId)&&/^[a-f0-9-]{36}$/.test(item.cancelledId)).slice(-20));
+    setReturned(true);
+  } catch { /* Ignore unavailable or invalid browser storage. */ }},[]);
   const notify = (message:string) => {setToast(message);setTimeout(()=>setToast(''),3500);};
   async function load() { setError(''); try { const current=await api('session');setSession(current);if(current.authenticated){const next=await api('data');setData(next);setSelected(old=>{const id=new URLSearchParams(window.location.search).get('lead');return old||(next.snapshot.leads.some((lead:Lead)=>lead.id===id)?id:null)||(window.innerWidth>=930?next.snapshot.leads.find((lead:Lead)=>leadInView(lead,next.workflow[lead.id],view))?.id:null)||null;});}}catch(e){setError((e as Error).message);} }
   useEffect(()=>{void load();},[]);
-  useEffect(()=>{const refresh=()=>{if(document.visibilityState==='visible')void load();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[view]);
+  useEffect(()=>{
+    const refresh=()=>{if(document.visibilityState==='visible'){setReturned(false);void load().finally(()=>setReturned(true));}};
+    window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
+    return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);};
+  },[view]);
   function selectLead(id:string|null){setSelected(id);const url=new URL(window.location.href);if(id)url.searchParams.set('lead',id);else url.searchParams.delete('lead');window.history.replaceState(null,'',url);}
   function switchView(next:string){setView(next);setFilter('all');setSearch('');setSource('all');selectLead(null);}
   function showApplication(id:string){setView('applied');setFilter('all');setSearch('');setSource('all');setPage(0);selectLead(id);}
@@ -71,7 +92,24 @@ export default function Dashboard() {
   async function progress(lead:Lead,stage:Stage,notes:string) {
     if(!data)return; const updated=await api('progress',{id:lead.id,stage,notes,version:data.version});setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);if(stage==='applied'){showApplication(lead.id);notify('Moved to Applications');}else notify('Pipeline updated');
   }
-  async function application(lead:Lead,kind:'opened'|'submitted'){const updated=await api('application',{id:lead.id,kind,eventId:crypto.randomUUID()});setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);if(kind==='submitted')showApplication(lead.id);notify(kind==='opened'?'Application started. Return here to mark it submitted.':'Submitted — moved to Applications');}
+  async function application(lead:Lead,kind:ApplicationEvent['kind'],eventId:string=crypto.randomUUID()) {
+    if(kind==='opened'){
+      if(data?.workflow[lead.id]?.stage!=='applied'){
+        setReturned(false);
+        rememberPending([...pendingRef.current.filter(item=>item.id!==lead.id),{id:lead.id,submittedId:crypto.randomUUID(),cancelledId:crypto.randomUUID()}]);
+      }
+      setOpening(count=>count+1);
+    }
+    try {
+      const updated=await api('application',{id:lead.id,kind,eventId});
+      setData(old=>old?{...old,workflow:updated.workflow,version:updated.version}:old);
+      if(kind!=='opened')dismissPending(lead.id);
+      if(kind==='submitted')showApplication(lead.id);
+      notify(kind==='opened'?'Application started. Confirm submission when you return.':kind==='submitted'?'Submitted — moved to Applications':'Application cancelled — opportunity stays open');
+    } finally {if(kind==='opened')setOpening(count=>count-1);}
+  }
+  const waiting=pending.find(item=>data?.snapshot.leads.some(lead=>lead.id===item.id)&&data.workflow[item.id]?.stage!=='applied');
+  const returnLead=leads.find(lead=>lead.id===waiting?.id);
   if(!session)return <div className="loading-screen"><div className="brand-mark">C</div><p>{error||'Opening your workspace…'}</p>{error&&<button onClick={load}>Try again</button>}</div>;
   if(!session.authenticated)return <Login setup={!session.configured&&session.setupAllowed} reset={Boolean(session.resetAllowed)} resetPending={Boolean(session.resetPending)} unavailable={(!session.configured&&!session.setupAllowed)||Boolean(session.resetPending&&!session.resetAllowed)} onDone={load}/>;
   const nav:[string,string,IconName,number?][]=[['opportunities','Opportunities','grid',contracts.length],['review','Reviewed leads','shield',leads.filter(lead=>lead.qualification).length],['saved','Saved & ready','bookmark',Object.values(data?.workflow||{}).filter(p=>['saved','ready'].includes(p.stage)).length],['contacted','Contacted','send'],['applied','Applications','briefcase',Object.values(data?.workflow||{}).filter(p=>['applying','applied'].includes(p.stage)).length],['secondary','Secondary roles','filter'],['projects','Project needs','file']];
@@ -79,7 +117,7 @@ export default function Dashboard() {
   return <div className="app-shell">
     <aside className="sidebar"><a href="/" className="brand"><span className="brand-mark">C</span><span>Contract Desk<small>Your next engagement</small></span></a>
       <nav aria-label="Workspace">{nav.map(([key,label,icon,count])=><button key={key} onClick={()=>switchView(key)} className={view===key?'active':''}><Icon name={icon}/><span>{label}</span>{count!==undefined&&<span className="nav-count">{count}</span>}</button>)}</nav>
-      <div className="sidebar-bottom"><div className="schedule"><Icon name="clock"/><div><strong>Weekday search</strong><span>8:07am Chicago</span></div><span className="status-dot"/></div><button className={view==='coverage'?'nav-extra active':'nav-extra'} onClick={()=>setView('coverage')}><Icon name="shield"/>Source coverage</button><button className={view==='profile'?'nav-extra active':'nav-extra'} onClick={()=>setView('profile')}><Icon name="user"/>Profile & resume</button><div className="account"><span className="avatar">ML</span><div><strong>{data?.profile.name||'Your workspace'}</strong><small>Private workspace</small></div><button title="Sign out" aria-label="Sign out" onClick={async()=>{await api('logout',{});setData(null);setSession({...session,authenticated:false});}}><Icon name="logout"/></button></div></div>
+      <div className="sidebar-bottom"><div className="schedule"><Icon name="clock"/><div><strong>Weekday search</strong><span>8:07am Chicago</span></div><span className="status-dot"/></div><button className={view==='coverage'?'nav-extra active':'nav-extra'} onClick={()=>setView('coverage')}><Icon name="shield"/>Source coverage</button><button className={view==='profile'?'nav-extra active':'nav-extra'} onClick={()=>setView('profile')}><Icon name="user"/>Profile & resume</button><div className="account"><span className="avatar">ML</span><div><strong>{data?.profile.name||'Your workspace'}</strong><small>Private workspace</small></div><button title="Sign out" aria-label="Sign out" onClick={async()=>{await api('logout',{});rememberPending([]);setData(null);setSession({...session,authenticated:false});}}><Icon name="logout"/></button></div></div>
     </aside>
     <main className="main"><header className="topbar"><div className="breadcrumb">Workspace <Icon name="chevron" size={12}/> <span>{titles[view]}</span></div><Badge tone="blue"><Icon name="shield" size={13}/> Private</Badge></header>
       <div className="page-content"><div className="page-heading"><div><h1>{titles[view]}</h1><p>{view==='profile'?'Keep your introduction and resume ready for the next conversation.':'Find the right work. Check the terms. Make the next connection.'}</p></div><button className="button secondary" onClick={load}><Icon name="refresh"/>Refresh</button></div>
@@ -96,8 +134,26 @@ export default function Dashboard() {
         </section>{active&&<Detail key={active.id} lead={active} profile={data.profile} progress={data.workflow[active.id]} onSave={progress} onApplication={application} close={()=>selectLead(null)} notify={notify} openProfile={()=>setView('profile')} emailReady={data.email.configured} onContact={()=>void load()}/>}</div>
       </>}
       </div><footer className="page-footer"><Icon name="shield" size={13}/>Your workspace is private. Contact links open drafts or application pages for your review.</footer>
-    </main>{toast&&<div className="toast" role="status"><Icon name="check"/>{toast}</div>}
+    </main>{returned&&!opening&&waiting&&returnLead&&<ApplicationReturn key={waiting.id} lead={returnLead} onAnswer={kind=>application(returnLead,kind,kind==='submitted'?waiting.submittedId:waiting.cancelledId)} onLater={()=>{dismissPending(waiting.id);notify('Still in progress. Use Mark submitted when you finish.');}}/>}{toast&&<div className="toast" role="status"><Icon name="check"/>{toast}</div>}
   </div>;
+}
+
+function ApplicationReturn({lead,onAnswer,onLater}:{lead:Lead;onAnswer:(kind:'submitted'|'cancelled')=>Promise<void>;onLater:()=>void}) {
+  const dialog=useRef<HTMLDialogElement>(null);
+  const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+  useEffect(()=>{dialog.current?.showModal();},[]);
+  async function answer(kind:'submitted'|'cancelled'){
+    setBusy(true);setError('');try{await onAnswer(kind);}catch(e){setError((e as Error).message);setBusy(false);}
+  }
+  return <dialog ref={dialog} className="application-return" aria-labelledby="return-title" aria-describedby="return-job" onCancel={event=>{event.preventDefault();if(!busy)onLater();}}>
+    <div className="return-icon"><Icon name="briefcase" size={24}/></div>
+    <h2 id="return-title">Did you submit your application?</h2>
+    <p id="return-job"><strong>{lead.title}</strong><br/>{lead.company_agency}</p>
+    <p>Confirm submission to move this job from Opportunities to Applications.</p>
+    {error&&<div role="alert" className="alert error">{error}</div>}
+    <div className="return-actions"><button className="button primary" disabled={busy} onClick={()=>void answer('submitted')} autoFocus><Icon name="check"/>Submitted</button><button className="button secondary" disabled={busy} onClick={onLater}>Still working</button><button className="button secondary" disabled={busy} onClick={()=>void answer('cancelled')}>Cancelled</button></div>
+    <small>Still working keeps the application started. Cancelled keeps the opportunity open.</small>
+  </dialog>;
 }
 
 function Login({setup,reset,resetPending,unavailable,onDone}:{setup:boolean;reset:boolean;resetPending:boolean;unavailable:boolean;onDone:()=>void}) {
@@ -116,7 +172,7 @@ function Detail({lead,profile,progress,onSave,onApplication,close,notify,openPro
   async function record(kind:'opened'|'submitted'){setBusy(true);setError('');try{await onApplication(lead,kind);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   const q=lead.qualification;const contacts=contactEmails(lead) as Contact[];const draft=draftEmail(lead,profile);
   async function save(next=stage){setBusy(true);setError('');try{await onSave(lead,next,notes);setStage(next);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <aside className="detail-panel" aria-label="Opportunity details"><div className="detail-top"><span><Icon name="briefcase" size={15}/>Opportunity details</span><button aria-label="Close opportunity details" onClick={close}><Icon name="close" size={17}/></button></div><div className="detail-body"><div className="detail-tags"><Badge tone={q?.verdict==='priority'?'green':'blue'}>{q?.verdict==='priority'?'Priority lead':q?'Reviewed':'Needs verification'}</Badge><span>{lead.source}</span></div><h2>{lead.title}</h2><div className="detail-company">{lead.company_agency}</div><div className="detail-location">{lead.remote_location}</div><div className="detail-pay">{formatPay(lead.pay)}</div><div className="quick-actions"><External className="button primary" href={applicationUrl(lead)} onClick={()=>void record('opened')}><Icon name="briefcase" size={15}/>{progress?.stage==='applied'?'View posting':'Apply'}</External>{contacts[0]&&<a className="button secondary" href={emailHref(contacts[0].email,lead,profile)} title={contacts[0].email}><Icon name="mail" size={15}/>{q?.contact?.email_name?'Email agency':'Draft email'}</a>}</div><section className="application-status" aria-label="Application tracking"><strong>{stageName(progress?.stage||'new')}</strong>{progress?.stage==='applying'&&<p>Finished the application? Mark it submitted so it stays in your Applications list.</p>}{progress?.stage==='applied'?<p>Submission reported by you. Recorded {new Date(progress.application?.submission_recorded_at||progress.updated_at).toLocaleString()}; actual submission date not supplied.</p>:<button className="button primary wide" disabled={busy} onClick={()=>void record('submitted')}><Icon name="check"/>Mark submitted</button>}<button className="button secondary wide" onClick={async()=>{const url=new URL(window.location.href);url.searchParams.set('lead',lead.id);try{await navigator.clipboard.writeText(url.href);notify('Dashboard link copied');}catch{notify('Copy the dashboard URL from your address bar.');}}}><Icon name="link"/>Copy dashboard link</button>{error&&<div role="alert" className="alert error">{error}</div>}<details><summary>Application activity ({progress?.events?.length||0})</summary><ol>{[...(progress?.events||[])].reverse().map(event=><li key={event.id}>{event.kind==='opened'?'Application link opened':'Submission reported by you'}<small>{new Date(event.recorded_at).toLocaleString()}</small><External href={event.url}>Application page</External></li>)}</ol></details></section>{!['applying','applied','contacted'].includes(progress?.stage||'new')&&<button className={'button save-button '+(stage==='saved'?'is-saved':'')} disabled={busy} onClick={()=>save(stage==='saved'?'new':'saved')}><Icon name="bookmark"/>{stage==='saved'?'Saved to your pipeline':'Save opportunity'}</button>}
+  return <aside className="detail-panel" aria-label="Opportunity details"><div className="detail-top"><span><Icon name="briefcase" size={15}/>Opportunity details</span><button aria-label="Close opportunity details" onClick={close}><Icon name="close" size={17}/></button></div><div className="detail-body"><div className="detail-tags"><Badge tone={q?.verdict==='priority'?'green':'blue'}>{q?.verdict==='priority'?'Priority lead':q?'Reviewed':'Needs verification'}</Badge><span>{lead.source}</span></div><h2>{lead.title}</h2><div className="detail-company">{lead.company_agency}</div><div className="detail-location">{lead.remote_location}</div><div className="detail-pay">{formatPay(lead.pay)}</div><div className="quick-actions"><External className="button primary" href={applicationUrl(lead)} onClick={()=>void record('opened')}><Icon name="briefcase" size={15}/>{progress?.stage==='applied'?'View posting':'Apply'}</External>{contacts[0]&&<a className="button secondary" href={emailHref(contacts[0].email,lead,profile)} title={contacts[0].email}><Icon name="mail" size={15}/>{q?.contact?.email_name?'Email agency':'Draft email'}</a>}</div><section className="application-status" aria-label="Application tracking"><strong>{stageName(progress?.stage||'new')}</strong>{progress?.stage==='applying'&&<p>Finished the application? Mark it submitted so it stays in your Applications list.</p>}{progress?.stage==='applied'?<p>Submission reported by you. Recorded {new Date(progress.application?.submission_recorded_at||progress.updated_at).toLocaleString()}; actual submission date not supplied.</p>:<button className="button primary wide" disabled={busy} onClick={()=>void record('submitted')}><Icon name="check"/>Mark submitted</button>}<button className="button secondary wide" onClick={async()=>{const url=new URL(window.location.href);url.searchParams.set('lead',lead.id);try{await navigator.clipboard.writeText(url.href);notify('Dashboard link copied');}catch{notify('Copy the dashboard URL from your address bar.');}}}><Icon name="link"/>Copy dashboard link</button>{error&&<div role="alert" className="alert error">{error}</div>}<details><summary>Application activity ({progress?.events?.length||0})</summary><ol>{[...(progress?.events||[])].reverse().map(event=><li key={event.id}>{event.kind==='opened'?'Application link opened':event.kind==='cancelled'?'Application cancelled by you':'Submission reported by you'}<small>{new Date(event.recorded_at).toLocaleString()}</small><External href={event.url}>Application page</External></li>)}</ol></details></section>{!['applying','applied','contacted'].includes(progress?.stage||'new')&&<button className={'button save-button '+(stage==='saved'?'is-saved':'')} disabled={busy} onClick={()=>save(stage==='saved'?'new':'saved')}><Icon name="bookmark"/>{stage==='saved'?'Saved to your pipeline':'Save opportunity'}</button>}
       {q&&<div className={'review-summary '+(q.verdict==='secondary'?'caution':'')}><Icon name="shield" size={18}/><div><strong>{q.verdict==='priority'?'Worth prioritizing':q.verdict==='secondary'?'Secondary after review':q.verdict==='not_a_fit'?'Not a fit after review':'Terms to confirm'}</strong><p>{q.summary}</p><small>Reviewed {q.reviewed_at}</small></div></div>}
       <section className="detail-section"><h3>Qualification evidence</h3><EvidenceRow label="Rate" evidence={q?.pay||{status:lead.hourly_min_usd?'advertised':'unknown',detail:formatPay(lead.pay),source_url:lead.source_url}}/><EvidenceRow label="C2C & duration" evidence={q?.c2c||{status:lead.c2c_status==='explicitly accepted'?'confirmed':'unknown',detail:`${lead.c2c_status}. Duration: ${lead.duration}.`,source_url:lead.source_url}}/><EvidenceRow label="Location & restrictions" evidence={q?.location||{status:'to_verify',detail:`${lead.remote_location}. ${lead.work_abroad_restrictions}`,source_url:lead.source_url}}/><EvidenceRow label="Hiring client" evidence={q?.client||{status:'unverified',detail:`${lead.direct_client_classification}. ${lead.direct_client_evidence}`,source_url:lead.official_employer_url||lead.source_url}}/></section>
       <section className="detail-section contact-section"><h3>How to contact</h3><External className="button primary wide" href={applicationUrl(lead)} onClick={()=>void record('opened')}><Icon name="briefcase"/>Open application<Icon name="arrow" size={15}/></External>{q?.contact?.url&&q.contact.url.includes('linkedin.com/in/')&&<External className="button secondary wide" href={q.contact.url}><Icon name="user"/>View {q.contact.name||'recruiter'}’s profile</External>}
