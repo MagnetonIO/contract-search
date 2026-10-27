@@ -1,5 +1,6 @@
 """Provider adapters and durable, conservative paid-run reservations."""
 from copy import deepcopy
+from contextlib import closing
 import sqlite3
 import uuid
 import threading
@@ -15,7 +16,7 @@ class Budget:
     def __init__(self, path, cap, day, persist=None):
         self.path, self.cap, self.day = str(path), cap, day
         self.persist = persist
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute('CREATE TABLE IF NOT EXISTS budget (id TEXT PRIMARY KEY, day TEXT, source TEXT, reserved REAL)')
 
     def reserve(self, amount, source):
@@ -23,7 +24,7 @@ class Budget:
             return self._reserve(amount, source)
 
     def _reserve(self, amount, source):
-        with sqlite3.connect(self.path, timeout=30) as db:
+        with closing(sqlite3.connect(self.path, timeout=30)) as db, db:
             db.execute('BEGIN IMMEDIATE')
             spent = db.execute('SELECT COALESCE(SUM(reserved),0) FROM budget WHERE day=?', (self.day,)).fetchone()[0]
             if amount <= 0 or spent + amount > self.cap + 1e-9:
@@ -36,7 +37,7 @@ class Budget:
 
     def settle(self, key, final_charge):
         # Only for reconciled final billing, never provisional usage snapshots.
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute('UPDATE budget SET reserved=? WHERE id=?', (final_charge,key))
 
 
@@ -62,8 +63,8 @@ def coverage_for_config(previous, config):
         row=old.get(spec['name'])
         if row is None or row.get('status') in ('not configured','not validated'):
             validation=spec.get('validation',{})
-            row={'source':spec['name'], 'status':validation.get('status','not validated'),
-                 'raw':validation.get('raw',0), 'detail':validation.get('detail','Configured; awaiting a validated collection')}
+            row={'source':spec['name'], 'status':validation.get('status','not run'),
+                 'raw':validation.get('raw',0), 'detail':validation.get('detail','Configured; not included in the latest collection')}
             if validation.get('run_id'):
                 row['detail'] += '; validation run '+validation['run_id']+' at '+str(validation.get('checked_at'))
         result.append(row)

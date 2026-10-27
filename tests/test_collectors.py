@@ -62,7 +62,7 @@ class CollectorTests(unittest.TestCase):
         result=coverage_for_config(old,config)
         self.assertEqual([c['source'] for c in result],['LinkedIn','Built In'])
         self.assertEqual(result[0]['raw'],20)
-        self.assertEqual(result[1]['status'],'not validated')
+        self.assertEqual(result[1]['status'],'not run')
 
     def test_config_allocations(self):
         config=json.loads(Path('config.json').read_text(encoding='utf-8'))
@@ -102,3 +102,12 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(job['hourly_min_usd'],120)
         row['pay']['source']='ESTIMATED'
         self.assertEqual(normalize(adapt(row,'glassdoor'),'Glassdoor',datetime.now(timezone.utc))['hourly_min_usd'],'')
+
+    def test_budget_closes_connections_after_commit(self):
+        from unittest.mock import patch, MagicMock
+        connection=MagicMock()
+        connection.execute.return_value.fetchone.return_value=[0]
+        with patch('collectors.sqlite3.connect',return_value=connection):
+            budget=Budget('unused.sqlite3',4,'2026-10-27')
+            budget.reserve(.15,'test')
+        self.assertEqual(connection.close.call_count,2)
