@@ -11,3 +11,5 @@
 .application-status{padding:16px;background:#f2f6fc;border:1px solid #d9e3f0;border-radius:10px;margin:16px 0;display:grid;gap:10px}.application-status p{font-size:13px;line-height:1.6;margin:0}.application-status summary{cursor:pointer;font-size:13px}.application-status ol{padding-left:20px;font-size:13px;display:grid;gap:12px}.application-status li small,.application-status li a{display:block;font-size:12px;margin-top:4px}
 
 .outreach-composer{padding:16px;border:1px solid #d9e3f0;border-radius:10px;margin:18px 0;display:grid;gap:12px}.outreach-composer p{font-size:13px;line-height:1.6}.outreach-composer form{display:grid;gap:12px}.email-review pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 inherit;max-height:360px;overflow:auto}.attachment-choice{display:flex;gap:8px;align-items:center;font-size:13px}.attachment-choice input{width:auto}
+
+.row-stage.submitted{color:var(--green);background:#e5f5ee;border-radius:5px;padding:3px 6px;font-weight:600}

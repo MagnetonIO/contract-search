@@ -7,6 +7,7 @@ import { createServer } from 'node:net';
 import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import { makeAuthConfig } from '../lib/auth-core.mjs';
+import { leadInView } from '../lib/shared.mjs';
 
 const directory = await mkdtemp(path.join(tmpdir(),'contract-dashboard-test-'));
 const port = await new Promise(resolve=>{const socket=createServer();socket.listen(0,'127.0.0.1',()=>{const port=socket.address().port;socket.close(()=>resolve(port));});});
@@ -50,16 +51,19 @@ try {
  response=await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId}});assert.equal(response.status,200);saved=await response.json();
  assert.equal(saved.workflow[fixture.id].stage,'applying');assert.equal(saved.workflow[fixture.id].notes,'Synthetic private note');
  assert.equal(saved.workflow[fixture.id].application.submission_recorded_at,undefined,'opening is not submission');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),true,'started applications remain open opportunities');
  await request('application',{body:{id:fixture.id,kind:'opened',eventId:openedId}});
  data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].events.length,1,'retry does not duplicate activity');
  const concurrent=await Promise.all(['22222222-2222-4222-8222-222222222222','33333333-3333-4333-8333-333333333333'].map(eventId=>request('application',{body:{id:fixture.id,kind:'opened',eventId}})));
  assert.ok(concurrent.every(response=>response.status===200),'concurrent clicks merge safely');
  response=await request('application',{body:{id:fixture.id,kind:'submitted',eventId:'44444444-4444-4444-8444-444444444444'}});assert.equal(response.status,200);saved=await response.json();
  assert.equal(saved.workflow[fixture.id].stage,'applied');assert.equal(saved.workflow[fixture.id].events.at(-1).evidence,'user_reported');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),false,'submitted jobs leave Opportunities');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'applied'),true,'submitted jobs remain in Applications');
  response=await request('progress',{body:{id:fixture.id,stage:'applied',notes:'Retained application history',version:saved.version}});assert.equal(response.status,200);saved=await response.json();
  assert.equal(saved.workflow[fixture.id].events.length,4,'notes preserve application history');
  await request('application',{body:{id:fixture.id,kind:'opened',eventId:'55555555-5555-4555-8555-555555555555'}});
- await stop();await start();data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].stage,'applied','reopening never downgrades submission');assert.equal(data.workflow[fixture.id].notes,'Retained application history');
+ await stop();await start();data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].stage,'applied','reopening never downgrades submission');assert.equal(data.workflow[fixture.id].notes,'Retained application history');assert.equal(data.snapshot.leads.filter(lead=>leadInView(lead,data.workflow[lead.id],'opportunities')).length,0,'submitted jobs stay out of Opportunities after restart');
  response=await request('profile',{body:{name:'Test Candidate',pitch:'Test introduction',portfolio:'javascript:alert(1)',version:null}});assert.equal(response.status,400);
  const form=new FormData();form.set('file',new Blob(['%PDF-1.4 synthetic test resume'],{type:'application/pdf'}),'test-resume.pdf');
  response=await request('resume',{body:form,form:true});assert.equal(response.status,200);

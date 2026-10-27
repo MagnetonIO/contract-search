@@ -10,6 +10,19 @@ export function safeWebUrl(value) {
   }
   catch { return ''; }
 }
+export function leadInView(lead, progress, view) {
+  const stage = progress?.stage || 'new';
+  switch (view) {
+    case 'opportunities': return lead.pipeline === 'contract' && stage !== 'applied';
+    case 'review': return Boolean(lead.qualification);
+    case 'saved': return ['saved','ready'].includes(stage);
+    case 'contacted': return stage === 'contacted' || Boolean(progress?.outreach?.length);
+    case 'applied': return ['applying','applied'].includes(stage);
+    case 'secondary': return lead.pipeline === 'secondary';
+    case 'projects': return lead.pipeline === 'published_project_need';
+    default: return true;
+  }
+}
 export function formatPay(value) {
   if (!value || value === 'unknown') return 'Rate not published';
   if (value.startsWith('{')) {
