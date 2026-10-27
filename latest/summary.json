@@ -1,42 +1,18 @@
 {
-  "mode": "daily",
-  "created_at": "2026-10-27T15:29:15.138003+00:00",
-  "raw": 542,
-  "relevant": 418,
-  "new_unique": 96,
-  "duplicates": 270,
-  "stale": 52,
-  "rejected": 124,
-  "new_remote_contracts": 42,
-  "secondary": 54,
-  "published_project_needs": 0,
+  "mode": "public",
+  "created_at": "2026-10-27T17:29:44.409862+00:00",
+  "raw": 73,
+  "relevant": 63,
+  "new_unique": 9,
+  "duplicates": 10,
+  "stale": 44,
+  "rejected": 10,
+  "new_remote_contracts": 0,
+  "secondary": 2,
+  "published_project_needs": 7,
   "target": 50,
-  "shortfall": 8,
+  "shortfall": 50,
   "source_coverage": [
-    {
-      "source": "LinkedIn",
-      "status": "ok",
-      "raw": 169,
-      "detail": "Capped run M3vYyhaLsFZXd1Yju"
-    },
-    {
-      "source": "Indeed",
-      "status": "ok",
-      "raw": 60,
-      "detail": "Capped run Ur6Hjz4NfwHT5N8Hj"
-    },
-    {
-      "source": "Dice",
-      "status": "ok",
-      "raw": 120,
-      "detail": "Capped run 4H7qhbj4WVOhINDid"
-    },
-    {
-      "source": "Employer ATS discovery",
-      "status": "ok",
-      "raw": 28,
-      "detail": "Capped run v55BabGgrv85cOe8a"
-    },
     {
       "source": "Remotive",
       "status": "ok",
@@ -54,8 +30,15 @@
     },
     {
       "source": "UK Find a Tender",
+      "status": "disabled",
+      "raw": 0,
+      "detail": "UK procurement is outside the default US search; retained as an optional source"
+    },
+    {
+      "source": "US SAM.gov solicitations",
       "status": "ok",
-      "raw": 100
+      "raw": 8,
+      "detail": "Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; federal projects, not individual jobs"
     },
     {
       "source": "ZipRecruiter",
@@ -86,65 +69,7 @@
       "status": "not configured",
       "raw": 0,
       "detail": "Agency postings may appear on boards; no separate firm feeds configured"
-    },
-    {
-      "source": "US SAM.gov project opportunities",
-      "status": "not configured",
-      "raw": 0,
-      "detail": "Requires a separate SAM API key and validated adapter"
     }
   ],
-  "actor_runs": [
-    {
-      "source": "LinkedIn",
-      "run_id": "M3vYyhaLsFZXd1Yju",
-      "cap_usd": 0.4,
-      "build": "1.7.18",
-      "status": "SUCCEEDED",
-      "actual_charge_usd": 0.33605,
-      "charge_snapshot_at": "2026-10-27T15:31:53.339278+00:00",
-      "charged_event_counts": {
-        "apify-default-dataset-item": 168,
-        "apify-actor-start": 1
-      }
-    },
-    {
-      "source": "Indeed",
-      "run_id": "Ur6Hjz4NfwHT5N8Hj",
-      "cap_usd": 0.6,
-      "build": "0.0.119",
-      "status": "SUCCEEDED",
-      "actual_charge_usd": 0,
-      "charge_snapshot_at": "2026-10-27T15:32:06.059661+00:00",
-      "charged_event_counts": {
-        "result": 7
-      }
-    },
-    {
-      "source": "Dice",
-      "run_id": "4H7qhbj4WVOhINDid",
-      "cap_usd": 0.2,
-      "build": "0.1.58",
-      "status": "SUCCEEDED",
-      "actual_charge_usd": 0.0109,
-      "charge_snapshot_at": "2026-10-27T15:37:05.469410+00:00",
-      "charged_event_counts": {
-        "job": 71,
-        "apify-actor-start": 1
-      }
-    },
-    {
-      "source": "Employer ATS discovery",
-      "run_id": "v55BabGgrv85cOe8a",
-      "cap_usd": 0.8,
-      "build": "0.0.72",
-      "status": "SUCCEEDED",
-      "actual_charge_usd": 0.01,
-      "charge_snapshot_at": "2026-10-27T15:37:12.788182+00:00",
-      "charged_event_counts": {
-        "apify-default-dataset-item": 0,
-        "apify-actor-start": 1
-      }
-    }
-  ]
+  "actor_runs": []
 }
