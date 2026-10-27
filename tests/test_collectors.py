@@ -111,3 +111,17 @@ class CollectorTests(unittest.TestCase):
             budget=Budget('unused.sqlite3',4,'2026-10-27')
             budget.reserve(.15,'test')
         self.assertEqual(connection.close.call_count,2)
+
+    def test_rate_limited_feed_keeps_actionable_status(self):
+        from unittest.mock import patch
+        from runner import main
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            config={'actors':[],'feeds':[{'name':'SAM','kind':'sam'}],'daily_cap_usd':4,'target':50,'max_age_days':7}
+            (root/'config.json').write_text(json.dumps(config),encoding='utf-8')
+            with patch('runner.collect_feed',side_effect=SourceError('HTTP 429')), patch('runner.token_from_local',return_value=''), contextlib.redirect_stdout(io.StringIO()):
+                code=main(['--mode','public','--config',str(root/'config.json'),'--state',str(root/'seen.sqlite3'),'--output',str(root/'out')])
+            self.assertEqual(code,2)
+            self.assertEqual(json.loads((root/'out/summary.json').read_text(encoding='utf-8'))['source_coverage'][0]['detail'],'HTTP 429')

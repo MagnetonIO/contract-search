@@ -631,8 +631,9 @@ def main(argv=None):
                 coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), **({'detail': 'Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; federal projects, not individual jobs'} if spec['kind'] == 'sam' else {})})
             except CredentialMissing as exc:
                 coverage.append({'source': spec['name'], 'status': 'not configured', 'raw': 0, 'detail': str(exc)})
-            except (SourceError, ValueError, KeyError, ET.ParseError, TypeError):
-                coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': 'Feed unavailable or schema changed'})
+            except (SourceError, ValueError, KeyError, ET.ParseError, TypeError) as exc:
+                detail = str(exc) if isinstance(exc, SourceError) else 'Feed unavailable or schema changed'
+                coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': detail})
         coverage.extend({'source': k, 'status': 'not configured', 'raw': 0, 'detail': v} for k, v in config.get('unconfigured_sources', {}).items())
     counts = dict(raw=len(rows), relevant=0, new_unique=0, duplicates=0, stale=0, rejected=0)
     jobs, candidates = [], []
