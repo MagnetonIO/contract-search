@@ -94,7 +94,7 @@ class CollectorTests(unittest.TestCase):
         config=json.loads(Path('config.json').read_text(encoding='utf-8'))
         for spec in config['actors'][1:]:
             self.assertNotIn('limitPerSource', variants(spec,True)[0]['input'])
-        self.assertEqual(variants(config['actors'][-1],True)[0]['max_items'],10)
+        self.assertEqual(variants(next(s for s in config['actors'] if s['name']=='Employer ATS discovery'),True)[0]['max_items'],10)
 
     def test_glassdoor_employer_pay_and_estimate_are_separate(self):
         row={'title':'Python Engineer','url':'https://glassdoor.com/job-listing/j?jl=123','employer':{'name':'Example'},'description':'Remote United States contract role C2C accepted','pay':{'source':'EMPLOYER_PROVIDED','currency':'USD','period':'HOURLY','min':120,'max':150}}
@@ -125,3 +125,10 @@ class CollectorTests(unittest.TestCase):
                 code=main(['--mode','public','--config',str(root/'config.json'),'--state',str(root/'seen.sqlite3'),'--output',str(root/'out')])
             self.assertEqual(code,2)
             self.assertEqual(json.loads((root/'out/summary.json').read_text(encoding='utf-8'))['source_coverage'][0]['detail'],'HTTP 429')
+
+    def test_staffing_structured_salary_and_derived_geography(self):
+        row={'title':'Python Engineer','url':'https://careers.teksystems.com/job/1','organization':'TEKsystems','locations':[{'address':{'addressCountry':'USA'}}], 'locations_derived':['Chicago, Illinois, United States'], 'salary':{'currency':'USD','value':{'minValue':120,'maxValue':140,'unitText':'hour'}},'employment_type':['CONTRACTOR'],'ai_work_arrangement':'Remote','description_text':'Contract role; C2C accepted.'}
+        job=normalize(adapt(row,'staffing'),'Staffing firm career feeds',datetime.now(timezone.utc))
+        self.assertEqual(job['hourly_min_usd'],120)
+        self.assertEqual(job['geography'],'US')
+        self.assertEqual(job['direct_client_classification'],'agency / client unverified')

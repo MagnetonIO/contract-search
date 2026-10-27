@@ -7,6 +7,7 @@ import threading
 import os
 import subprocess
 from collectors import SourceError, Budget, adapt, variants
+from sam_quota import SamQuota, SamDeferred
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import email.utils
@@ -96,7 +97,17 @@ def fetch(url, *, token='', payload=None, method=None, raw=False, timeout=30, at
             if data is None and exc.code in (429, 500, 502, 503, 504) and attempt < tries-1:
                 time.sleep(2 ** attempt)
                 continue
-            raise SourceError(f'HTTP {exc.code}') from None
+            error = SourceError(f'HTTP {exc.code}')
+            if exc.code == 429:
+                value = exc.headers.get('Retry-After', '') if exc.headers else ''
+                try:
+                    error.retry_after_seconds = max(0, int(value))
+                except ValueError:
+                    try:
+                        error.retry_after_seconds = max(0, (email.utils.parsedate_to_datetime(value)-datetime.now(UTC)).total_seconds())
+                    except (ValueError, TypeError):
+                        error.retry_after_seconds = 3600
+            raise error from None
         except (URLError, TimeoutError, json.JSONDecodeError):
             if data is None and attempt < tries-1:
                 time.sleep(2 ** attempt)
@@ -262,7 +273,7 @@ def normalize(row, source, now, project=False):
     skills = sorted(set(m.group().lower() for m in re.finditer(SKILLS, title+' '+desc, re.I)))
     if not skills:
         return None
-    agency = bool(re.search(AGENCIES, str(company), re.I) or re.search(r'our (?:client|customer)\b|on behalf of (?:our|a) client', desc, re.I))
+    agency = bool(row.get('_agency')) or bool(re.search(AGENCIES, str(company), re.I) or re.search(r'our (?:client|customer)\b|on behalf of (?:our|a) client', desc, re.I))
     classification = 'agency / client unverified' if agency else 'unverified employer'
     evidence = 'Posting names agency or describes its client; no confidential client inferred' if agency else 'Employer identity not independently verified'
     if project:
@@ -295,7 +306,34 @@ def normalize(row, source, now, project=False):
                 direct_client_evidence=evidence, official_employer_url='', _description=desc)
 
 
+def collect_staffing(spec):
+    rows = []
+    for site in spec['sites'][:10]:
+        data = fetch(site['url'], attempts=1)
+        if not isinstance(data, list):
+            raise SourceError('Staffing career feed schema changed')
+        host = urlsplit(site['url']).hostname
+        for post in data[:30]:
+            if not isinstance(post, dict) or post.get('status') != 'publish':
+                continue
+            link = canonical(post.get('link'))
+            if not link or urlsplit(link).hostname != host:
+                raise SourceError('Staffing posting link does not belong to its career site')
+            terms = [term for group in post.get('_embedded', {}).get('wp:term', []) if isinstance(group, list) for term in group]
+            locations = [term.get('name', '') for term in terms if term.get('taxonomy') == 'matador-locations']
+            types = [term.get('name', '') for term in terms if term.get('taxonomy') == 'matador-types']
+            description = plain(post.get('content', {}).get('rendered', ''))
+            excerpt = plain(post.get('excerpt', {}).get('rendered', ''))
+            date = post.get('date_gmt', '')
+            rows.append({'id':post.get('id'), 'title':plain(post.get('title', {}).get('rendered', '')), 'companyName':site['company'],
+                         'url':link, 'applyUrl':link, 'description':excerpt+' '+description, 'location':', '.join(locations),
+                         'jobType':', '.join(types), 'postedDate':date+'Z' if date and not date.endswith('Z') else date, '_agency':True})
+    return rows
+
+
 def collect_feed(spec):
+    if spec['kind'] == 'staffing':
+        return collect_staffing(spec)
     if spec['kind'] == 'sam':
         return collect_sam(spec)
     raw = fetch(spec['url'], raw=True)
@@ -344,13 +382,20 @@ def collect_sam(spec):
         raise SourceError('Refused SAM credential use outside the official API')
     now = datetime.now(UTC)
     rows = {}
+    quota = SamQuota(spec.get('state_path', str(Path(__file__).resolve().parent/'state/sam.sqlite3')), key, spec.get('max_requests_per_day', 10), spec.get('_persist'))
     # Deliberately bounded, title-based discovery; not an exhaustive procurement search.
     for title in spec.get('titles', ['software', 'cloud', 'artificial intelligence'])[:3]:
         for notice_type in ('o', 'k'):
             query = urlencode({'api_key': key, 'postedFrom': (now-timedelta(days=7)).strftime('%m/%d/%Y'),
                                'postedTo': now.strftime('%m/%d/%Y'), 'ptype': notice_type,
                                'title': title, 'limit': 100, 'offset': 0})
-            data = fetch(spec['url']+'?'+query, attempts=1)
+            params = dict(parse_qsl(query)); params.pop('api_key')
+            def send():
+                payload = fetch(spec['url']+'?'+query, attempts=1)
+                if not isinstance(payload, dict) or not isinstance(payload.get('opportunitiesData'), list):
+                    raise SourceError('SAM opportunities schema changed')
+                return json.loads(json.dumps(payload).replace(key, '[REDACTED]'))
+            data = quota.query(params, send)
             # Query-string authentication is required by SAM; never persist a key
             # echoed in a provider response or its pagination links.
             data = json.loads(json.dumps(data).replace(key, '[REDACTED]'))
@@ -380,6 +425,7 @@ def collect_sam(spec):
                     'location': (country_name or 'US federal procurement; place of performance unconfirmed')+'; vendor eligibility must be verified',
                     'description': f"US federal solicitation. Response deadline {deadline}. Set-aside: {plain(notice.get('typeOfSetAsideDescription')) or 'verify in notice'}. Public procurement contacts: {contact_text}",
                     'isExpired': False}
+    spec['_sam_cache_hits'] = quota.cache_hits
     return list(rows.values())
 
 
@@ -579,11 +625,11 @@ def main(argv=None):
     token = token_from_local()
     budget_path = Path(args.state).with_name('budget.sqlite3')
     persist_lock = threading.Lock()
-    def persist_budget():
+    def persist_budget(filename='budget.sqlite3'):
         if os.environ.get('CONTRACT_BUDGET_GIT_SYNC') == '1':
             with persist_lock:
                 directory = str(budget_path.parent.resolve())
-                for command in (['add', 'budget.sqlite3'], ['-c','user.name=contract-search runner','-c','user.email=contract-search@users.noreply.github.com','commit','-m','Reserve paid collection allowance'], ['push','origin','HEAD:runner-state']):
+                for command in (['add', filename], ['-c','user.name=contract-search runner','-c','user.email=contract-search@users.noreply.github.com','commit','-m','Reserve paid collection allowance'], ['push','origin','HEAD:runner-state']):
                     result = subprocess.run(['git','-C',directory]+command, capture_output=True)
                     if result.returncode:
                         raise SourceError('Could not persist paid allowance; no actor started')
@@ -626,9 +672,13 @@ def main(argv=None):
                 coverage.append({'source': spec['name'], 'status': 'disabled', 'raw': 0, 'detail': spec.get('reason', 'Disabled by configuration')})
                 continue
             try:
+                if spec['kind'] == 'sam':
+                    spec = {**spec, 'state_path': str(Path(args.state).with_name('sam.sqlite3')), '_persist': lambda: persist_budget('sam.sqlite3')}
                 batch = collect_feed(spec)
                 rows.extend((spec['name'], r, spec['kind'] in ('ocds', 'sam')) for r in batch)
-                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), **({'detail': 'Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; federal projects, not individual jobs'} if spec['kind'] == 'sam' else {})})
+                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), **({'detail': 'Direct agency career feeds: '+', '.join(site['company'] for site in spec['sites'])+'; hiring client unverified'} if spec['kind'] == 'staffing' else {'detail': f"Bounded discovery: 3 titles, 2 solicitation types, first 100 results per query; {spec.get('_sam_cache_hits',0)} cached queries; 10 requests per rolling 24h; federal projects, not individual jobs"} if spec['kind'] == 'sam' else {})})
+            except SamDeferred as exc:
+                coverage.append({'source':spec['name'], 'status':'rate limited', 'raw':0, 'detail':str(exc)+'; previous leads preserved'})
             except CredentialMissing as exc:
                 coverage.append({'source': spec['name'], 'status': 'not configured', 'raw': 0, 'detail': str(exc)})
             except (SourceError, ValueError, KeyError, ET.ParseError, TypeError) as exc:

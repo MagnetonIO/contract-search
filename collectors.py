@@ -85,7 +85,7 @@ def adapt(row, kind):
     r['jobUrl']=first('jobUrl','jobURL','url','link','job_url','listingUrl')
     r['applyUrl']=first('applyUrl','applicationUrl','apply_url','externalApplyUrl','application_url')
     r['description']=first('description','jobDescription','descriptionText','descriptionHtml','description_text','description_html')
-    location=first('location','locations','jobLocation','locationName','locations_derived')
+    location=first('locations_derived','location','locations','jobLocation','locationName')
     if isinstance(location,dict):
         location=', '.join(str(location[k]) for k in ('city','state','country','name') if location.get(k))
     elif isinstance(location,list):
@@ -99,16 +99,19 @@ def adapt(row, kind):
     estimate = kind=='glassdoor'  # Do not promote board estimates into verified advertised pay.
     if isinstance(salary,dict):
         estimate = (kind=='glassdoor' and salary.get('source') != 'EMPLOYER_PROVIDED') or bool(salary.get('isEstimate') or salary.get('isEstimated'))
-        low=salary.get('min',salary.get('minimum',salary.get('minSalary','')))
-        high=salary.get('max',salary.get('maximum',''))
+        money=salary.get('value',salary)
+        if not isinstance(money,dict): money={}
+        low=money.get('min',money.get('minimum',money.get('minSalary',money.get('minValue',''))))
+        high=money.get('max',money.get('maximum',money.get('maxValue','')))
         currency=salary.get('currency','')
-        period=salary.get('period',salary.get('unit',salary.get('salaryType','')))
-        period={'HOURLY':'hour','ANNUAL':'year','YEARLY':'year','MONTHLY':'month'}.get(str(period).upper(),period)
+        period=salary.get('period',salary.get('unit',salary.get('salaryType',money.get('unitText',''))))
+        period={'HOUR':'hour','HOURLY':'hour','YEAR':'year','ANNUAL':'year','YEARLY':'year','MONTHLY':'month'}.get(str(period).upper(),period)
         salary=f'{currency} {low}' + (f' - {high}' if high else '') + f' per {period}'
     if not salary and r.get('salaryMin') is not None:
         salary=f"{r.get('salaryCurrency','')} {r['salaryMin']} - {r.get('salaryMax','')} per {r.get('salaryPeriod','')}"
     if salary:
         r['salaryInfo']=('Provider estimate / unverified: ' if estimate else '')+str(salary)
         r['_salary_estimate']=estimate
+    if kind=='staffing':r['_agency']=True
     r['postedDate']=first('postedDate','datePosted','postedAt','posted_at','publicationDate','date_posted')
     return r

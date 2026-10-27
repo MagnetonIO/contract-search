@@ -212,12 +212,12 @@
       },
       "enabled": false,
       "validation": {
-        "status": "empty / not validated",
+        "status": "provider issue",
         "raw": 0,
         "valid_records": 0,
         "run_id": "fdd5VPuohsIO8DD79",
         "checked_at": "2026-10-27T22:28:24.580Z",
-        "detail": "Live query returned zero records; kept disabled pending usable sample"
+        "detail": "Two collectors produced no usable records despite reported matches; direct source returned HTTP 403. Disabled pending a working collector; today's paid allowance is fully reserved."
       }
     },
     {
@@ -354,86 +354,48 @@
       "input": {
         "timeRange": "7d",
         "limit": 40,
-        "titleSearch": [
-          "Software",
-          "Architect",
-          "DevOps",
-          "Data Engineer",
-          "Platform Engineer",
-          "AI Engineer"
-        ],
-        "locationSearch": [
-          "United States"
-        ],
-        "aiEmploymentTypeFilter": [
-          "CONTRACTOR",
-          "TEMPORARY"
-        ],
-        "aiWorkArrangementFilter": [
-          "Remote OK",
-          "Remote Solely"
+        "organizationSearch": [
+          "TEKsystems:*",
+          "Insight Global:*",
+          "Kforce:*",
+          "Apex Systems:*",
+          "Robert Half:*",
+          "Randstad:*",
+          "Artmac:*",
+          "Myticas:*",
+          "Global Applications Solution:*",
+          "Motion Recruitment:*"
         ],
         "removeAgency": false,
         "descriptionType": "text",
-        "organizationSearch": [
-          "TEKsystems",
-          "Insight Global",
-          "Kforce",
-          "Apex Systems",
-          "Robert Half",
-          "Randstad",
-          "Artmac",
-          "Myticas",
-          "Global Applications Solution",
-          "Motion Recruitment"
+        "titleSearch": [
+          "Software:*",
+          "Architect:*",
+          "DevOps:*",
+          "Data:*",
+          "Platform:*",
+          "AI:*",
+          "Cloud:*",
+          "Backend:*"
         ]
       },
+      "enabled": true,
       "smoke_input": {
         "timeRange": "7d",
         "limit": 10,
-        "titleSearch": [
-          "Software",
-          "Architect",
-          "DevOps",
-          "Data Engineer",
-          "Platform Engineer",
-          "AI Engineer"
-        ],
-        "locationSearch": [
-          "United States"
-        ],
-        "aiEmploymentTypeFilter": [
-          "CONTRACTOR",
-          "TEMPORARY"
-        ],
-        "aiWorkArrangementFilter": [
-          "Remote OK",
-          "Remote Solely"
+        "organizationSearch": [
+          "TEKsystems:*"
         ],
         "removeAgency": false,
         "descriptionType": "text",
-        "organizationSearch": [
-          "TEKsystems",
-          "Insight Global",
-          "Kforce",
-          "Apex Systems",
-          "Robert Half",
-          "Randstad",
-          "Artmac",
-          "Myticas",
-          "Global Applications Solution",
-          "Motion Recruitment"
-        ]
+        "titleSearch": []
       },
       "smoke_max_items": 10,
-      "enabled": false,
       "validation": {
-        "status": "empty / not validated",
-        "raw": 0,
-        "valid_records": 0,
-        "run_id": "lLQRfaXNc124vLbOL",
-        "checked_at": "2026-10-27T22:29:28.818Z",
-        "detail": "Live query returned zero records; kept disabled pending usable sample"
+        "status": "validated",
+        "raw": 10,
+        "run_id": "gSahFnZSwsMZXD6MG",
+        "detail": "Validated real TEKsystems ATS postings; discovery filters relaxed; geography, contract and remote eligibility evaluated locally"
       }
     }
   ],
@@ -461,6 +423,17 @@
         "software",
         "cloud",
         "artificial intelligence"
+      ],
+      "max_requests_per_day": 10
+    },
+    {
+      "name": "Myticas direct career feed",
+      "kind": "staffing",
+      "sites": [
+        {
+          "company": "Myticas Consulting",
+          "url": "https://myticas.com/wp-json/wp/v2/matador-job-listings?per_page=30&orderby=date&order=desc&_embed=wp%3Aterm"
+        }
       ]
     }
   ],

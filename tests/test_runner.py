@@ -165,6 +165,9 @@ class ProviderTests(unittest.TestCase):
     @patch.dict('os.environ', {'SAM_API_KEY': 'synthetic-sam-test-only'})
     @patch('runner.fetch')
     def test_sam_only_active_open_solicitations_and_public_contacts(self, fetch):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        sam_state = str(Path(temporary.name)/'sam.sqlite3')
         notice = {'noticeId': 'abc', 'title': 'Software platform engineering', 'active': 'Yes',
                   'type': 'Solicitation', 'postedDate': '2026-10-26 12:00:00',
                   'responseDeadLine': '2099-01-01T00:00:00Z', 'fullParentPathName': 'US Federal Buyer',
@@ -174,7 +177,7 @@ class ProviderTests(unittest.TestCase):
         fetch.return_value = {'opportunitiesData': [notice, {**notice, 'noticeId': 'award', 'type': 'Award Notice'},
             {**notice, 'noticeId': 'expired', 'responseDeadLine': '2020-01-01T00:00:00Z'},
             {**notice, 'noticeId': 'inactive', 'active': 'No'}]}
-        rows = r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search'})
+        rows = r.collect_feed({'kind': 'sam', 'url': 'https://api.sam.gov/opportunities/v2/search', 'state_path':sam_state})
         self.assertEqual(len(rows), 1)
         self.assertEqual(fetch.call_count, 6)
         self.assertNotIn('synthetic-sam-test-only', json.dumps(rows))
@@ -183,7 +186,7 @@ class ProviderTests(unittest.TestCase):
         self.assertEqual(job['geography'], 'US')
         self.assertIn('buyer@example.gov', job['public_recruiter_contact'])
         fetch.return_value = {'opportunitiesData': [{**notice, 'placeOfPerformance': None}]}
-        unknown = r.collect_sam({'url': 'https://api.sam.gov/opportunities/v2/search'})
+        unknown = r.collect_sam({'url': 'https://api.sam.gov/opportunities/v2/search', 'state_path':str(Path(temporary.name)/'second.sqlite3')})
         self.assertNotEqual(r.normalize(unknown[0], 'US SAM.gov solicitations', NOW, True)['geography'], 'US')
         with self.assertRaises(r.SourceError):
             r.collect_sam({'url': 'https://other.example/search'})
