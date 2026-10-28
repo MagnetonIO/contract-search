@@ -19,7 +19,7 @@ export type Lead = {
 };
 export type Snapshot = {
   generated_at: string; collected_at: string; leads: Lead[];
-  summary: { budget?: {daily_cap_usd:number; monthly_cap_usd:number; reserved_usd:number; remaining_usd:number; cycle:{startAt:string;endAt:string};paced_daily_allowance:number}; new_remote_contracts: number; secondary: number; published_project_needs: number; raw: number; duplicates: number; target: number; source_coverage: { source: string; status: string; raw: number; retained?: number; saved_count?: number; last_success_at?: string; next_check_at?: string; detail?: string }[] };
+  summary: { budget?: {daily_cap_usd:number; monthly_cap_usd:number; reserved_usd:number; remaining_usd:number; cycle:{startAt:string;endAt:string};paced_daily_allowance:number}; new_remote_contracts: number; secondary: number; published_project_needs: number; raw: number; duplicates: number; target: number; source_coverage: { source: string; status: string; raw: number; retained?: number; saved_count?: number; last_success_at?: string; last_attempt_detail?: string; next_check_at?: string; detail?: string }[] };
 };
 export const STAGES = ['new', 'saved', 'ready', 'contacted', 'applying', 'applied', 'not_a_fit'] as const;
 export type Stage = typeof STAGES[number];
