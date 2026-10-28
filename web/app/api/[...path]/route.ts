@@ -5,7 +5,9 @@ import type { Snapshot, Profile, LeadProgress } from '../../../lib/types';
 import { STAGES } from '../../../lib/types';
 import { safeWebUrl } from '../../../lib/auth-core.mjs';
 import { recordApplication, saveApplication } from '../../../lib/workflow';
-import { randomUUID } from 'node:crypto';
+import { readSnapshot } from '../../../lib/snapshot.mjs';
+import { scriptTemplate, scriptManifest } from '../../../lib/gmail-script.mjs';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { mailKey, prepareOutreach, latestOutreach, sendOutreach } from '../../../lib/outreach';
 import { MailError, MAIL_FROM, DIGEST_TO } from '../../../lib/mail.mjs';
 
@@ -52,10 +54,20 @@ async function handle(request: Request, context: Context) {
     return json({ success: true });
   }
   if (!await isLoggedIn(config)) return json({ error: 'Sign in to continue.' }, 401);
+  if (action === 'email-import-script' && request.method === 'POST') {
+    let stored = await readJson<{token:string}|null>('email-import-config.json',null);
+    if (!stored.value) {
+      try { await writeJson('email-import-config.json',{token:randomBytes(32).toString('hex')},stored.version); }
+      catch (error) { if (!(error instanceof ConflictError)) throw error; }
+      stored = await readJson('email-import-config.json',null);
+    }
+    const endpoint = new URL('/api/import/catalant',request.url).href;
+    return json({script:scriptTemplate.replace('__ENDPOINT__',endpoint).replace('__TOKEN__',stored.value!.token),manifest:scriptManifest});
+  }
   if (action === 'logout' && request.method === 'POST') { (await sessionFor(config)).destroy(); return json({ success: true }); }
   if (action === 'data' && request.method === 'GET') {
     const [snapshot, workflow, profile] = await Promise.all([
-      readJson<Snapshot | null>('leads.json', null), readJson<Record<string, LeadProgress>>('workflow.json', {}), readJson<Profile>('profile.json', defaultProfile),
+      readSnapshot(), readJson<Record<string, LeadProgress>>('workflow.json', {}), readJson<Profile>('profile.json', defaultProfile),
     ]);
     if (!snapshot.value) return json({ error: 'No collected leads have been loaded yet.' }, 503);
     const digest = await readJson<{status:string;accepted_at?:string;meta?:{count:number}}|null>('digest-state.json',null);
@@ -68,7 +80,7 @@ async function handle(request: Request, context: Context) {
   }
   if (action === 'outreach' && request.method === 'POST') {
     const input = await request.json();
-    const snapshot = await readJson<Snapshot|null>('leads.json',null);
+    const snapshot = await readSnapshot();
     const lead = snapshot.value?.leads.find(lead=>lead.id===input.id);
     if (!lead) return json({error:'Opportunity not found.'},404);
     return json({message:await prepareOutreach(lead,input)});
@@ -81,7 +93,7 @@ async function handle(request: Request, context: Context) {
   if (action === 'application' && request.method === 'POST') {
     const input = await request.json();
     if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['opened', 'submitted', 'cancelled'].includes(input.kind) || typeof input.eventId !== 'string' || !/^[a-f0-9-]{36}$/.test(input.eventId)) return json({ error: 'Choose an opportunity and a valid application action.' }, 400);
-    const snapshot = await readJson<Snapshot | null>('leads.json', null);
+    const snapshot = await readSnapshot();
     const lead = snapshot.value?.leads.find(lead => lead.id === input.id);
     if (!lead) return json({ error: 'Opportunity not found.' }, 404);
     return json(await saveApplication(lead, input.kind, input.eventId));
@@ -89,7 +101,7 @@ async function handle(request: Request, context: Context) {
   if (action === 'progress' && request.method === 'POST') {
     const input = await request.json();
     if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !STAGES.includes(input.stage) || typeof input.notes !== 'string' || input.notes.length > 10000) return json({ error: 'Choose a valid stage and a note under 10,000 characters.' }, 400);
-    const [snapshot, workflow] = await Promise.all([readJson<Snapshot | null>('leads.json', null), readJson<Record<string, LeadProgress>>('workflow.json', {})]);
+    const [snapshot, workflow] = await Promise.all([readSnapshot(), readJson<Record<string, LeadProgress>>('workflow.json', {})]);
     if (!snapshot.value?.leads.some(lead => lead.id === input.id)) return json({ error: 'Opportunity not found.' }, 404);
     if (input.version !== workflow.version) throw new ConflictError('Another session updated your pipeline. Refresh and try again.');
     let progress: LeadProgress = { ...workflow.value[input.id], stage: input.stage, notes: input.notes, updated_at: new Date().toISOString() };

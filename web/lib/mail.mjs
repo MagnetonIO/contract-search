@@ -52,14 +52,14 @@ export async function deliverStored(store, key, identity, create, send, now = ()
 }
 
 export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
-  const cutoff = snapshot.collected_at;
+  const cutoff = snapshot.digest_cutoff || snapshot.collected_at;
   if (!Number.isFinite(Date.parse(cutoff))) throw new MailError('The collection timestamp is invalid.');
   const since = previousCutoff || new Date(now.getTime()-86400000).toISOString();
   const rows = snapshot.leads.filter(lead => lead.pipeline === 'contract' && Date.parse(lead.first_seen) > Date.parse(since) && Date.parse(lead.first_seen) <= Date.parse(cutoff));
   rows.sort((a,b) => b.review_score-a.review_score);
   const failures = snapshot.summary.source_coverage.filter(source => source.status === 'failed');
   const pending = snapshot.summary.source_coverage.filter(source => source.status === 'not configured');
-  const stale = now.getTime()-Date.parse(cutoff) > 26*3600000;
+  const stale = now.getTime()-Date.parse(snapshot.collected_at) > 26*3600000;
   const heading = `${rows.length} new contract candidate${rows.length===1?'':'s'} — ${day}`;
   const lines = [heading, '', `Collected: ${cutoff}`, `New since: ${since}`, 'Rates, C2C eligibility, location restrictions, and client identity still require confirmation.'];
   if (stale) lines.push('Collection is over 26 hours old. The daily collector may need attention.');
@@ -71,6 +71,8 @@ export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
     if (safeWebUrl(lead.source_url)) lines.push('Posting: '+safeWebUrl(lead.source_url));
   }
   if (rows.length > 50) lines.push('', `${rows.length-50} more candidates are available in your dashboard.`);
+  const emails = snapshot.leads.filter(lead=>lead.pipeline==='email_review' && Date.parse(lead.first_seen)>Date.parse(since) && Date.parse(lead.first_seen)<=Date.parse(cutoff));
+  if (emails.length) { lines.push('', `Catalant projects to review: ${emails.length}`); for(const lead of emails.slice(0,25)) lines.push(lead.title, DASHBOARD_URL+'/?lead='+encodeURIComponent(lead.id)); }
   if (failures.length) lines.push('', 'Source failures: '+failures.map(source=>source.source).join(', '));
   if (pending.length) lines.push('Sources awaiting setup: '+pending.map(source=>source.source).join(', '));
   lines.push('', 'Open Contract Desk: '+DASHBOARD_URL, 'This digest contains individual contract candidates. Procurement notices and secondary roles are separate dashboard views.');

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { readJson, writeJson, ConflictError, localDir } from '../lib/store.ts';
+import { readSnapshot } from '../lib/snapshot.mjs';
 import { deliverStored, sendMail, digestPayload } from '../lib/mail.mjs';
 
 // Production runs use the private Blob store; local runs use the same local
@@ -12,7 +13,7 @@ if (!apiKey && !process.env.VERCEL) {
   try { apiKey = JSON.parse(await readFile(path.join(localDir(),'mail.json'),'utf8')).apiKey; } catch {}
 }
 if (!apiKey) throw new Error('RESEND_API_KEY is missing. Run scripts/configure_email.py locally to connect sending.');
-const snapshot = (await readJson('leads.json',null)).value;
+const snapshot = (await readSnapshot()).value;
 if (!snapshot) throw new Error('No collected leads are available.');
 const store = {read:key=>readJson(key,null),write:writeJson,conflict:error=>error instanceof ConflictError};
 const record = await deliverStored(store,'digest-state.json','digest/'+day,async previous=>digestPayload(snapshot,previous?.meta?.cutoff,day,now),(payload,identity)=>sendMail(payload,identity,{apiKey}));

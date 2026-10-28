@@ -7,6 +7,7 @@ export type Qualification = {
 };
 export type Contact = { email: string; kind: 'hiring' | 'unverified' | 'accessibility_only'; detail: string };
 export type Lead = {
+  email_origin?: {excerpt?:string; sender:string; subject:string; received_at:string; message_id:string; gmail_url:string};
   id: string; title: string; company_agency: string; source: string; source_job_id: string;
   source_posted_at: string; source_date_text: string; first_seen: string; pay: string;
   hourly_min_usd: number | ''; contract_status: string; c2c_status: string; duration: string;
