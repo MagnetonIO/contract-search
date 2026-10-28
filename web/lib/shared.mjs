@@ -11,6 +11,7 @@ export function safeWebUrl(value) {
   catch { return ''; }
 }
 export function leadInView(lead, progress, view) {
+  if (progress?.disposition?.status === 'purged') return false;
   if (progress?.disposition) return view === 'removed';
   if (view === 'removed') return false;
   const stage = progress?.stage || 'new';

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { recordDisposition } from '../lib/disposition.mjs';
+import { recordDisposition, purgeRemoved } from '../lib/disposition.mjs';
 import { leadInView } from '../lib/shared.mjs';
 
 test('closed and deleted records stay hidden after recollection and preserve submission history', () => {
@@ -28,4 +28,22 @@ test('removing an untouched opportunity does not report an application', () => {
   assert.equal(removed.application, undefined);
   assert.equal(removed.events, undefined);
   assert.ok(leadInView({ pipeline: 'contract' }, recordDisposition(removed, 'restore'), 'opportunities'));
+});
+
+test('delete all clears only the selected removed records and keeps suppression after recollection', () => {
+  const workflow = {
+    a: recordDisposition({ stage: 'applied', notes: 'history', events: [{ id: 'submitted' }] }, 'closed'),
+    b: recordDisposition(undefined, 'deleted'),
+    restored: { stage: 'saved', notes: 'keep' },
+    later: recordDisposition(undefined, 'closed'),
+  };
+  const result = purgeRemoved(workflow, ['a', 'a', 'b', 'restored', 'unknown']);
+  assert.equal(result.count, 2);
+  assert.equal(workflow.a.disposition.status, 'closed', 'input is not mutated');
+  assert.equal(result.workflow.restored, workflow.restored, 'concurrently restored records are protected');
+  assert.equal(result.workflow.later, workflow.later, 'newly removed records outside selection are protected');
+  assert.deepEqual(result.workflow.a.events, workflow.a.events);
+  assert.equal(result.workflow.a.stage, 'applied');
+  for (const view of ['opportunities', 'removed', 'applied', 'review']) assert.equal(leadInView({ id: 'a', pipeline: 'contract' }, result.workflow.a, view), false);
+  assert.equal(purgeRemoved(result.workflow, ['a', 'b']).count, 0, 'retry is idempotent');
 });

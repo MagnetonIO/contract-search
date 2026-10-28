@@ -2,7 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { readJson, writeJson, ConflictError } from './store';
 import { applicationUrl } from './shared.mjs';
 import type { Lead, LeadProgress, ApplicationEvent } from './types';
-import { recordDisposition } from './disposition.mjs';
+import { recordDisposition, purgeRemoved } from './disposition.mjs';
+
+export async function deleteRemoved(ids: string[]) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const current = await readJson<Record<string, LeadProgress>>('workflow.json', {});
+    const result = purgeRemoved(current.value, ids);
+    try { return { ...result, version: await writeJson('workflow.json', result.workflow, current.version) }; }
+    catch (error) { if (!(error instanceof ConflictError) || attempt === 4) throw error; }
+  }
+  throw new ConflictError('Removed opportunities changed. Please try again.');
+}
 
 export async function saveDisposition(id: string, action: 'closed' | 'deleted' | 'restore') {
   for (let attempt = 0; attempt < 5; attempt++) {

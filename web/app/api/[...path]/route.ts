@@ -4,7 +4,7 @@ import { readBytes, writeBytes, readJson, writeJson, ConflictError } from '../..
 import type { Snapshot, Profile, LeadProgress } from '../../../lib/types';
 import { STAGES } from '../../../lib/types';
 import { safeWebUrl } from '../../../lib/auth-core.mjs';
-import { recordApplication, saveApplication, saveDisposition } from '../../../lib/workflow';
+import { recordApplication, saveApplication, saveDisposition, deleteRemoved } from '../../../lib/workflow';
 import { readSnapshot } from '../../../lib/snapshot.mjs';
 import { scriptTemplate, scriptManifest } from '../../../lib/gmail-script.mjs';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -90,6 +90,11 @@ async function handle(request: Request, context: Context) {
     const input = await request.json();
     if (input.approved !== true) return json({error:'Review the recipient, message, and attachment before sending.'},400);
     return json(await sendOutreach(input.messageId));
+  }
+  if (action === 'purge-removed' && request.method === 'POST') {
+    const input = await request.json();
+    if (!Array.isArray(input.ids) || !input.ids.length || input.ids.length > 5000 || input.ids.some((id: unknown) => typeof id !== 'string' || !/^[a-f0-9]{20}$/.test(id))) return json({ error: 'Choose valid removed opportunities.' }, 400);
+    return json(await deleteRemoved(input.ids));
   }
   if (action === 'disposition' && request.method === 'POST') {
     const input = await request.json();

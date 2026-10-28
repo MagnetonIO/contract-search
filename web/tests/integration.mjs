@@ -140,6 +140,19 @@ records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFi
  saved=await response.json();assert.equal(saved.workflow[fixture.id].disposition,undefined);
  assert.equal(saved.workflow[fixture.id].stage,'applied','restore retains submitted stage');
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'applied'),true);
+
+ assert.equal((await request('purge-removed',{body:{ids:[fixture.id]},authenticated:false})).status,401);
+ assert.equal((await request('purge-removed',{body:{ids:[fixture.id]},origin:'https://attacker.example'})).status,403);
+ assert.equal((await request('purge-removed',{body:{ids:['bad']}})).status,400);
+ response=await request('purge-removed',{body:{ids:[fixture.id]}});assert.equal((await response.json()).count,0,'active records cannot be bulk deleted');
+ await request('disposition',{body:{id:fixture.id,action:'closed'}});
+ response=await request('purge-removed',{body:{ids:[fixture.id,fixture.id]}});assert.equal(response.status,200);
+ saved=await response.json();assert.equal(saved.count,1);assert.equal(saved.workflow[fixture.id].disposition.status,'purged');
+ assert.equal(saved.workflow[fixture.id].notes,'Retained application history');
+ await stop();await start();
+ data=await(await request('data')).json();assert.equal(leadInView(fixture,data.workflow[fixture.id],'removed'),false,'bulk deletion persists across restart');
+ assert.equal(leadInView(fixture,data.workflow[fixture.id],'opportunities'),false,'purged records never reappear in active lists');
+ response=await request('purge-removed',{body:{ids:[fixture.id]}});assert.equal((await response.json()).count,0,'repeat delete is safe');
  execFileSync(process.execPath,['scripts/reset-login.mjs'],{env:{...process.env,VERCEL:'',DASHBOARD_LOCAL_DIR:directory},stdio:'pipe'});
  assert.equal((await request('data')).status,401,'reset revokes old session');
  assert.equal((await request('login',{body:{username:'owner',password:'disposable-http-test-password'}})).status,401,'old password disabled during recovery');
