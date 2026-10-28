@@ -51,3 +51,16 @@ test('primary and backup send once; late trigger preserves the cutoff for tomorr
   assert.equal(reads, before);
   assert.deepEqual(value, saved);
 });
+
+test('daily email excludes closed and deleted opportunities', async () => {
+  let record = null, version = 0, sent;
+  const store = {
+    read: async key => key === 'workflow.json' ? { value: { closed: { disposition: { status: 'closed' } }, deleted: { disposition: { status: 'deleted' } } } } : { value: structuredClone(record), version: version || null },
+    write: async (_key, value) => { record = structuredClone(value); return ++version; }, conflict: () => false,
+  };
+  const snapshotReader = async () => ({ value: { collected_at: '2026-10-28T13:00:00Z', leads: ['open', 'closed', 'deleted'].map(id => ({ id, title: id, pipeline: 'contract', first_seen: '2026-10-28T12:00:00Z', pay: 'unknown', review_score: 0 })), summary: { target: 50, source_coverage: [] } } });
+  const result = await sendDailyDigest({ now: new Date('2026-10-28T14:17:00Z'), apiKey: 'test', store, snapshotReader, send: async payload => { sent = payload; return 'receipt'; } });
+  assert.equal(result.count, 1);
+  assert.match(sent.text, /1\. open/);
+  assert.doesNotMatch(sent.text, /\?lead=(closed|deleted)/);
+});

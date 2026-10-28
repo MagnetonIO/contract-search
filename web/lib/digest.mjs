@@ -12,8 +12,10 @@ export async function sendDailyDigest({ now = new Date(), apiKey = process.env.R
   if (!apiKey) throw new Error('Daily email sending is not configured.');
   const snapshot = (await snapshotReader()).value;
   if (!snapshot) throw new Error('No collected leads are available.');
+  const workflow = (await store.read('workflow.json')).value || {};
+  const activeSnapshot = { ...snapshot, leads: snapshot.leads.filter(lead => !workflow[lead.id]?.disposition) };
   const record = await deliverStored(store, 'digest-state.json', 'digest/' + window.day,
-    async previous => digestPayload(snapshot, previous?.meta?.cutoff, window.day, now),
+    async previous => digestPayload(activeSnapshot, previous?.meta?.cutoff, window.day, now),
     (payload, identity) => send(payload, identity, { apiKey }));
   return { status: 'accepted', day: record.meta.day, count: record.meta.count, accepted_at: record.accepted_at };
 }

@@ -11,6 +11,8 @@ export function safeWebUrl(value) {
   catch { return ''; }
 }
 export function leadInView(lead, progress, view) {
+  if (progress?.disposition) return view === 'removed';
+  if (view === 'removed') return false;
   const stage = progress?.stage || 'new';
   switch (view) {
     case 'opportunities': return lead.pipeline === 'contract' && stage !== 'applied';

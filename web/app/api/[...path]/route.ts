@@ -4,7 +4,7 @@ import { readBytes, writeBytes, readJson, writeJson, ConflictError } from '../..
 import type { Snapshot, Profile, LeadProgress } from '../../../lib/types';
 import { STAGES } from '../../../lib/types';
 import { safeWebUrl } from '../../../lib/auth-core.mjs';
-import { recordApplication, saveApplication } from '../../../lib/workflow';
+import { recordApplication, saveApplication, saveDisposition } from '../../../lib/workflow';
 import { readSnapshot } from '../../../lib/snapshot.mjs';
 import { scriptTemplate, scriptManifest } from '../../../lib/gmail-script.mjs';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -90,6 +90,13 @@ async function handle(request: Request, context: Context) {
     const input = await request.json();
     if (input.approved !== true) return json({error:'Review the recipient, message, and attachment before sending.'},400);
     return json(await sendOutreach(input.messageId));
+  }
+  if (action === 'disposition' && request.method === 'POST') {
+    const input = await request.json();
+    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['closed', 'deleted', 'restore'].includes(input.action)) return json({ error: 'Choose an opportunity and a valid removal action.' }, 400);
+    const snapshot = await readSnapshot();
+    if (!snapshot.value?.leads.some(lead => lead.id === input.id)) return json({ error: 'Opportunity not found.' }, 404);
+    return json(await saveDisposition(input.id, input.action));
   }
   if (action === 'application' && request.method === 'POST') {
     const input = await request.json();

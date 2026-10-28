@@ -119,6 +119,27 @@ records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFi
  assert.equal(delivered.workflow[fixture.id].stage,'applied','contacting preserves submitted application');assert.equal(delivered.workflow[fixture.id].notes,'Retained application history');assert.equal(delivered.workflow[fixture.id].outreach.length,1);
  response=await request('outreach/send',{body:{messageId,approved:true}});assert.equal(response.status,200);assert.equal((await response.json()).workflow[fixture.id].outreach.length,1,'retries keep a single receipt');
  const receipts=JSON.parse(await readFile(path.join(directory,'provider-receipts.json'),'utf8'));assert.equal(Object.keys(receipts).length,1,'one provider delivery');const sentPayload=JSON.parse(Object.values(receipts)[0].body);assert.equal(sentPayload.from,'Matthew Long <mlong@magneton.io>');assert.equal(sentPayload.reply_to,'mlong@magneton.io');assert.equal(Buffer.from(sentPayload.attachments[0].content,'base64').toString(),'%PDF-1.4 synthetic test resume','reviewed resume is frozen in the sent payload');
+
+ assert.equal((await request('disposition',{body:{id:fixture.id,action:'deleted'},authenticated:false})).status,401);
+ assert.equal((await request('disposition',{body:{id:fixture.id,action:'closed'},origin:'https://attacker.example'})).status,403);
+ assert.equal((await request('disposition',{body:{id:fixture.id,action:'invalid'}})).status,400);
+ assert.equal((await request('disposition',{body:{id:'b'.repeat(20),action:'closed'}})).status,404);
+ for(const action of ['closed','deleted']){
+   response=await request('disposition',{body:{id:fixture.id,action}});assert.equal(response.status,200);
+   saved=await response.json();
+   assert.equal(saved.workflow[fixture.id].disposition.status,action);
+   assert.equal(saved.workflow[fixture.id].stage,'applied');
+   assert.equal(saved.workflow[fixture.id].notes,'Retained application history');
+   assert.equal(saved.workflow[fixture.id].outreach.length,1);
+   assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),false);
+   assert.equal(leadInView(fixture,saved.workflow[fixture.id],'removed'),true);
+ }
+ await stop();await start();
+ data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].disposition.status,'deleted','deletion survives restart and the same collected record');
+ response=await request('disposition',{body:{id:fixture.id,action:'restore'}});assert.equal(response.status,200);
+ saved=await response.json();assert.equal(saved.workflow[fixture.id].disposition,undefined);
+ assert.equal(saved.workflow[fixture.id].stage,'applied','restore retains submitted stage');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'applied'),true);
  execFileSync(process.execPath,['scripts/reset-login.mjs'],{env:{...process.env,VERCEL:'',DASHBOARD_LOCAL_DIR:directory},stdio:'pipe'});
  assert.equal((await request('data')).status,401,'reset revokes old session');
  assert.equal((await request('login',{body:{username:'owner',password:'disposable-http-test-password'}})).status,401,'old password disabled during recovery');

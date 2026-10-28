@@ -2,6 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { readJson, writeJson, ConflictError } from './store';
 import { applicationUrl } from './shared.mjs';
 import type { Lead, LeadProgress, ApplicationEvent } from './types';
+import { recordDisposition } from './disposition.mjs';
+
+export async function saveDisposition(id: string, action: 'closed' | 'deleted' | 'restore') {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const current = await readJson<Record<string, LeadProgress>>('workflow.json', {});
+    const progress = recordDisposition(current.value[id], action) as LeadProgress;
+    const next = { ...current.value, [id]: progress };
+    try { return { workflow: next, version: await writeJson('workflow.json', next, current.version) }; }
+    catch (error) { if (!(error instanceof ConflictError) || attempt === 4) throw error; }
+  }
+  throw new ConflictError('Opportunity changed. Please try again.');
+}
 
 export function recordApplication(current: LeadProgress | undefined, lead: Lead, kind: ApplicationEvent['kind'], eventId: string) {
   if (current?.events?.some(event => event.id === eventId)) return current;
