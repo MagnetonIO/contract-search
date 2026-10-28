@@ -55,3 +55,6 @@ export function emailHref(email, lead, profile) {
   if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) return '';
   return `mailto:${email}?subject=${encodeURIComponent('Contract inquiry: '+lead.title)}&body=${encodeURIComponent(draftEmail(lead, profile))}`;
 }
+
+export function usLocation(lead) { return ['us_remote_advertised','us_remote_restricted','worldwide_remote_advertised'].includes(lead.location_assessment?.status) && lead.work_arrangement==='remote'; }
+export function locationLabel(lead) {return ({us_remote_advertised:'US remote advertised',us_remote_restricted:'US remote — restrictions apply',worldwide_remote_advertised:'Worldwide remote advertised',us_excluded:'US excluded',not_remote:'Hybrid / onsite'})[lead.location_assessment?.status] || 'US eligibility unclear';}

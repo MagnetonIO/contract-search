@@ -7,6 +7,7 @@ import threading
 import os
 import subprocess
 from collectors import SourceError, Budget, adapt, variants
+from location_rules import reassess
 from sam_quota import SamQuota, SamDeferred, search_queries
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -152,7 +153,7 @@ def collect_actor(spec, token, smoke=False, journal=None, budget=None):
         raise SourceError('Unsupported pricing; refusing a potentially uncapped rental/run')
     build = fetch(f'{API}/acts/{actor}/builds/default', token=token)['data']
     body = json.loads(json.dumps(spec['input']))
-    cap = 0.15 if smoke else spec['cap_usd']
+    cap = spec['cap_usd']
     max_items = spec['max_items']
     validate_input(build.get('actorDefinition', {}).get('input'), body)
     if pricing.get('minimalMaxTotalChargeUsd') and pricing['minimalMaxTotalChargeUsd'] > cap:
@@ -253,7 +254,8 @@ def normalize(row, source, now, project=False):
     if w2_only:
         c2c = 'not accepted'
     remote = bool(re.search(r'\bremote\b|work from (?:home|anywhere)', location+' '+setting+' '+title+' '+desc, re.I))
-    hybrid = bool(re.search(r'\bhybrid\b|\b\d+ days? (?:in.{0,10}office|onsite|on.site)', low))
+    mode_text=re.sub(r'\bhybrid (?:connectivity|cloud|networks?|infrastructure|environments?|identity|architectures?|solutions?|deployment)\b','',low)
+    hybrid = bool(re.search(r'\bhybrid\b|\b\d+ days? (?:in.{0,10}office|onsite|on.site)', mode_text))
     onsite = bool(re.search(r'\b(?:on.site|onsite) (?:only|required)\b|\bnot remote\b', low))
     arrangement = 'hybrid' if hybrid else ('on-site' if onsite else ('remote' if remote else 'unknown'))
     us = bool(re.search(r'\b(?:united states|usa|u\.s\.|us only|us remote|us-based|us based|cst|est|pst|america)\b', low))
@@ -291,7 +293,7 @@ def normalize(row, source, now, project=False):
     duration = re.search(r'\b\d+\s*(?:[-–]\s*\d+\s*)?(?:month|week|year)s?\b', desc, re.I)
     contact = sorted(set(re.findall(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b', desc, re.I)))
     source_date = pick(row, 'postingDateParsed', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate', 'postedAt')
-    return dict(title=title, company_agency=plain(company), source=source,
+    return reassess(dict(title=title, company_agency=plain(company), source=source,
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
                 source_posted_at=parse_date(source_date, now), source_date_text=plain(row.get('postedAt') or source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),
@@ -303,7 +305,7 @@ def normalize(row, source, now, project=False):
                 public_recruiter_contact='; '.join(contact), fit_tier=tier,
                 fit_reason='Skills: '+', '.join(skills)+f'; {arrangement}; {geography}; C2C {c2c}',
                 pipeline=pipeline, direct_client_classification=classification,
-                direct_client_evidence=evidence, official_employer_url='', _description=desc)
+                direct_client_evidence=evidence, official_employer_url='', _description=desc))
 
 
 def collect_staffing(spec):
@@ -332,6 +334,9 @@ def collect_staffing(spec):
 
 
 def collect_feed(spec):
+    if spec['kind']=='techfetch':
+        from techfetch import collect
+        return collect(spec,spec.get('_smoke',False))
     if spec['kind'] == 'staffing':
         return collect_staffing(spec)
     if spec['kind'] == 'sam':
@@ -491,6 +496,9 @@ class State:
         else:
             job['first_seen'] = self.db.execute('SELECT first_seen FROM jobs WHERE id=?', (existing,)).fetchone()[0]
             self.db.execute('UPDATE jobs SET last_seen=? WHERE id=?', (datetime.now(UTC).isoformat(), existing))
+            previous=json.loads(self.db.execute('SELECT data FROM jobs WHERE id=?',(existing,)).fetchone()[0])
+            if canonical(previous.get('source_url',''))==canonical(job['source_url']):
+                self.db.execute('UPDATE jobs SET data=? WHERE id=?',(json.dumps(job),existing))
         for alias in self.aliases(job):
             self.db.execute('INSERT OR IGNORE INTO aliases VALUES (?,?)', (alias, existing))
         return new
@@ -596,7 +604,7 @@ def report(out, jobs, coverage, counts, runs, config, now, mode):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--mode', choices=['smoke', 'daily', 'public'], default='smoke', help='smoke: selected source, $0.15 cap; daily: configured sources, $4 Chicago-day allowance; public: no paid actors')
+    p.add_argument('--mode', choices=['smoke', 'daily', 'public'], default='smoke', help='smoke: selected source, $0.15 cap; daily: configured sources, $6 Chicago-day and $50 billing-cycle allowance; public: no paid actors')
     p.add_argument('--config', default=str(Path(__file__).resolve().with_name('config.json')))
     p.add_argument('--state', default='state/seen.sqlite3')
     p.add_argument('--output', default='output/latest')
@@ -608,7 +616,7 @@ def main(argv=None):
         p.error('Actor caps and item limits must be positive and bounded')
     if sum(s['cap_usd'] for s in config['actors']) > config['daily_cap_usd'] + 1e-9:
         p.error('Actor caps exceed daily budget')
-    if args.source and (args.mode != 'smoke' or args.source not in {s['name'] for s in config['actors']}):
+    if args.source and (args.mode != 'smoke' or args.source not in {s['name'] for s in config['actors']+config['feeds']}):
         p.error('--source must name a configured actor and requires smoke mode')
     now = datetime.now(UTC)
     day = str(now.astimezone(ZoneInfo('America/Chicago')).date())
@@ -632,7 +640,23 @@ def main(argv=None):
                     result = subprocess.run(['git','-C',directory]+command, capture_output=True)
                     if result.returncode:
                         raise SourceError('Could not persist paid allowance; no actor started')
-    budget = Budget(budget_path, config['daily_cap_usd'], day, persist_budget)
+    cycle=None
+    paid_blocked=''
+    if config.get('monthly_cap_usd') and args.mode in ('daily','smoke') and not (args.source and any(s['name']==args.source for s in config['feeds'])):
+        try:
+            if not token: raise SourceError('Apify connection required for billing-cycle limits')
+            cycle=fetch(f'{API}/users/me/limits',token=token)['data']['monthlyUsageCycle']
+        except (SourceError,KeyError):paid_blocked='Billing-cycle limits unavailable; paid collection deferred'
+    budget = Budget(budget_path, config['daily_cap_usd'], day, persist_budget,cycle,config.get('monthly_cap_usd',50))
+    if cycle:
+        end=datetime.fromisoformat(cycle['endAt'].replace('Z','+00:00')).astimezone(ZoneInfo('America/Chicago')).date()
+        today=now.astimezone(ZoneInfo('America/Chicago')).date()
+        weekdays=sum((today+timedelta(days=i)).weekday()<5 for i in range(max(0,(end-today).days)+1)) or 1
+        envelope=min(config['daily_cap_usd'],budget.remaining()/weekdays)
+        if args.mode=='daily':
+            scale=min(1,envelope/max(.000001,sum(s['cap_usd'] for s in config['actors'])))
+            for spec in config['actors']:spec['cap_usd']=int(spec['cap_usd']*scale*1000000)/1000000
+        (out/'budget.json').write_text(json.dumps({'daily_cap_usd':config['daily_cap_usd'],'monthly_cap_usd':config['monthly_cap_usd'],'cycle':cycle,'reserved_usd':config['monthly_cap_usd']-budget.remaining(),'remaining_usd':budget.remaining(),'paced_daily_allowance':envelope}),encoding='utf-8')
 
     journal_lock = threading.Lock()
     def journal(record):
@@ -644,7 +668,11 @@ def main(argv=None):
             else:
                 runs.append(dict(record))
             (out/'actor-runs.json').write_text(json.dumps(runs, indent=2)+'\n', encoding='utf-8')
-    selected = ([next(s for s in config['actors'] if s['name'] == args.source)] if args.source else config['actors'][:1]) if args.mode == 'smoke' else config['actors'] if args.mode == 'daily' else []
+    selected = ([next(s for s in config['actors'] if s['name'] == args.source)] if args.source and any(s['name']==args.source for s in config['actors']) else config['actors'][:1]) if args.mode == 'smoke' else config['actors'] if args.mode == 'daily' else []
+    if args.source and any(s['name']==args.source for s in config['feeds']):selected=[]
+    if paid_blocked:
+        coverage.extend({'source':s['name'],'status':'scheduled','raw':0,'detail':paid_blocked} for s in selected)
+        selected=[]
     def collect_source(spec):
         batch, errors, records = [], [], []
         if spec.get('enabled') is False and args.mode != 'smoke':
@@ -661,13 +689,16 @@ def main(argv=None):
     with ThreadPoolExecutor(max_workers=3) as pool:
         for spec, batch, records, errors in pool.map(collect_source, selected):
             rows.extend((spec['name'], r, False) for r in batch)
-            status = 'not validated' if spec.get('enabled') is False and args.mode != 'smoke' else 'failed' if errors else 'ok'
+            status = 'scheduled' if errors and any('allowance' in e or 'budget' in e.lower() for e in errors) else 'not validated' if spec.get('enabled') is False and args.mode != 'smoke' else 'failed' if errors else 'ok'
             detail = '; '.join(errors) if errors else 'Capped runs '+', '.join(r['run_id'] for r in records)
             if spec.get('adapter') == 'staffing': detail += '; provider ATS index; end client unverified'
+            if len(batch)>=spec['max_items'] or any(r.get('actual_charge_usd',0)>=(r.get('cap_usd',1)*.9) for r in records):detail+='; configured result ceiling reached; coverage is partial'
             coverage.append({'source':spec['name'], 'status':status, 'raw':len(batch), 'detail':detail})
-    if args.mode != 'smoke':
+    if args.mode != 'smoke' or args.source:
         for spec in config['feeds']:
-            if spec.get('enabled') is False:
+            if args.mode=='smoke' and spec['name']!=args.source:continue
+            spec={**spec,'_smoke':args.mode=='smoke'}
+            if spec.get('enabled') is False and args.mode!='smoke':
                 coverage.append({'source': spec['name'], 'status': 'disabled', 'raw': 0, 'detail': spec.get('reason', 'Disabled by configuration')})
                 continue
             try:
@@ -684,6 +715,12 @@ def main(argv=None):
                 detail = str(exc) if isinstance(exc, SourceError) else 'Feed unavailable or schema changed'
                 coverage.append({'source': spec['name'], 'status': 'failed', 'raw': 0, 'detail': detail})
         coverage.extend({'source': k, 'status': 'not configured', 'raw': 0, 'detail': v} for k, v in config.get('unconfigured_sources', {}).items())
+    for item in coverage:
+        if item['source']=='TechFetch' and item['status']=='ok':item['detail']='Public results only; pagination requires login; bounded posting details'
+    if cycle:
+        budget_report=json.loads((out/'budget.json').read_text(encoding='utf-8'))
+        budget_report.update(reserved_usd=config['monthly_cap_usd']-budget.remaining(),remaining_usd=budget.remaining())
+        (out/'budget.json').write_text(json.dumps(budget_report),encoding='utf-8')
     counts = dict(raw=len(rows), relevant=0, new_unique=0, duplicates=0, stale=0, rejected=0)
     jobs, candidates = [], []
     for source, row, project in rows:

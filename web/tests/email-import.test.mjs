@@ -30,3 +30,11 @@ test('Google script pads Gmail base64url bodies before using the strict Apps Scr
  const originalGet=context.Gmail.Users.Messages.get;context.Gmail.Users.Messages.get=()=>{const message=originalGet();message.payload.body.data=Array.from(Buffer.from(html));return message;};context.Utilities.newBlob=bytes=>({getDataAsString:()=>Buffer.from(bytes).toString('utf8')});
  runInNewContext('syncCatalant();',context);assert.equal(sent[1].messages[0].html,html,'advanced service byte arrays are already decoded');
 });
+
+test('US filter requires posting location evidence instead of legacy geography tags',async()=>{
+ const {usLocation,locationLabel}=await import('../lib/shared.mjs');
+ assert.equal(usLocation({geography:'US',work_arrangement:'remote'}),false);
+ assert.equal(usLocation({work_arrangement:'remote',location_assessment:{status:'us_remote_restricted'}}),true);
+ assert.equal(usLocation({work_arrangement:'hybrid',location_assessment:{status:'us_remote_advertised'}}),false);
+ assert.equal(locationLabel({geography:'US'}),'US eligibility unclear');
+});

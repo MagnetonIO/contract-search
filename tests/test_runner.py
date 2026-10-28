@@ -228,7 +228,7 @@ class ProviderTests(unittest.TestCase):
         fetch.side_effect = [meta, build, start, finish, [{'title': 'one'}]*100, [{'title': 'two'}]*80]
         rows, record = r.collect_actor(spec, 'fake-token')
         self.assertEqual(len(rows), 180)
-        self.assertIn('maxTotalChargeUsd=0.4', fetch.call_args_list[2].args[0])
+        self.assertIn('maxTotalChargeUsd=0.8', fetch.call_args_list[2].args[0])
         self.assertIn('offset=100', fetch.call_args_list[-1].args[0])
         self.assertEqual(record['actual_charge_usd'], .01)
 

@@ -66,8 +66,8 @@ class CollectorTests(unittest.TestCase):
 
     def test_config_allocations(self):
         config=json.loads(Path('config.json').read_text(encoding='utf-8'))
-        self.assertEqual(config['daily_cap_usd'],4)
-        self.assertLessEqual(sum(s['cap_usd'] for s in config['actors']),4)
+        self.assertEqual(config['daily_cap_usd'],6)
+        self.assertLessEqual(sum(s['cap_usd'] for s in config['actors']),6)
         self.assertFalse(any(s['name']=='UK Find a Tender' for s in config['feeds']))
 
     def test_budget_concurrent_reservations_cannot_overspend(self):

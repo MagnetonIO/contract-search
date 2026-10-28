@@ -7,6 +7,7 @@ export type Qualification = {
 };
 export type Contact = { email: string; kind: 'hiring' | 'unverified' | 'accessibility_only'; detail: string };
 export type Lead = {
+  location_assessment?: {status:string; restrictions:string[]; evidence:string[]; source_url:string; assessed_at:string};
   email_origin?: {excerpt?:string; sender:string; subject:string; received_at:string; message_id:string; gmail_url:string};
   id: string; title: string; company_agency: string; source: string; source_job_id: string;
   source_posted_at: string; source_date_text: string; first_seen: string; pay: string;
@@ -18,7 +19,7 @@ export type Lead = {
 };
 export type Snapshot = {
   generated_at: string; collected_at: string; leads: Lead[];
-  summary: { new_remote_contracts: number; secondary: number; published_project_needs: number; raw: number; duplicates: number; target: number; source_coverage: { source: string; status: string; raw: number; retained?: number; saved_count?: number; last_success_at?: string; next_check_at?: string; detail?: string }[] };
+  summary: { budget?: {daily_cap_usd:number; monthly_cap_usd:number; reserved_usd:number; remaining_usd:number; cycle:{startAt:string;endAt:string};paced_daily_allowance:number}; new_remote_contracts: number; secondary: number; published_project_needs: number; raw: number; duplicates: number; target: number; source_coverage: { source: string; status: string; raw: number; retained?: number; saved_count?: number; last_success_at?: string; next_check_at?: string; detail?: string }[] };
 };
 export const STAGES = ['new', 'saved', 'ready', 'contacted', 'applying', 'applied', 'not_a_fit'] as const;
 export type Stage = typeof STAGES[number];

@@ -1,13 +1,13 @@
 {
   "target": 50,
   "max_age_days": 7,
-  "daily_cap_usd": 4,
+  "daily_cap_usd": 6,
   "actors": [
     {
       "name": "LinkedIn",
       "actor": "curious_coder~linkedin-jobs-scraper",
-      "cap_usd": 0.4,
-      "max_items": 180,
+      "cap_usd": 0.8,
+      "max_items": 300,
       "input": {
         "urls": [
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20software%20architect&location=United%20States&f_TPR=r604800",
@@ -18,7 +18,7 @@
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20Golang%20Java%20Rust&location=United%20States&f_TPR=r604800"
         ],
         "datePosted": "pastWeek",
-        "limitPerSource": 30,
+        "limitPerSource": 50,
         "scrapeCompany": false,
         "autoConvertToAiSearch": true
       },
@@ -35,8 +35,8 @@
     {
       "name": "Indeed",
       "actor": "misceres~indeed-scraper",
-      "cap_usd": 0.6,
-      "max_items": 100,
+      "cap_usd": 0.8,
+      "max_items": 200,
       "input": {
         "startUrls": [
           {
@@ -52,7 +52,7 @@
             "url": "https://www.indeed.com/jobs?q=cloud+architect+contract&l=Remote&fromage=7"
           }
         ],
-        "maxItemsPerSearch": 25,
+        "maxItemsPerSearch": 50,
         "country": "US",
         "saveOnlyUniqueItems": true,
         "parseCompanyDetails": true
@@ -72,8 +72,8 @@
     {
       "name": "Dice",
       "actor": "dami_studio~dice-jobs-scraper",
-      "cap_usd": 0.2,
-      "max_items": 120,
+      "cap_usd": 0.35,
+      "max_items": 240,
       "input": {
         "searchQueries": [
           "software architect",
@@ -93,8 +93,8 @@
           "THIRD_PARTY"
         ],
         "includeDetails": true,
-        "maxItems": 120,
-        "maxPagesPerSearch": 2,
+        "maxItems": 240,
+        "maxPagesPerSearch": 4,
         "maxProxyRetries": 1
       },
       "smoke_input": {
@@ -350,6 +350,53 @@
         "run_id": "gSahFnZSwsMZXD6MG",
         "detail": "Validated real TEKsystems ATS postings; discovery filters relaxed; geography, contract and remote eligibility evaluated locally"
       }
+    },
+    {
+      "name": "JobServe US",
+      "actor": "solidcode~jobserve-scraper",
+      "adapter": "jobserve",
+      "cap_usd": 0.35,
+      "max_items": 80,
+      "input": {
+        "country": "us",
+        "location": "",
+        "jobType": "2",
+        "postedSince": "7",
+        "remoteOnly": true,
+        "includeDescription": true,
+        "onlyUniqueJobs": true,
+        "maxResults": 80,
+        "keywords": [
+          "software engineer",
+          "software architect",
+          "cloud architect",
+          "DevOps",
+          "data engineer",
+          "AI engineer",
+          "platform engineer",
+          "SRE"
+        ]
+      },
+      "smoke_input": {
+        "country": "us",
+        "location": "",
+        "jobType": "2",
+        "postedSince": "7",
+        "remoteOnly": true,
+        "includeDescription": true,
+        "onlyUniqueJobs": true,
+        "maxResults": 3,
+        "keywords": [
+          "software engineer"
+        ]
+      },
+      "validation": {
+        "status": "validated",
+        "raw": 3,
+        "run_id": "faFFCK65dPakFz7dM",
+        "checked_at": "2026-10-28T04:52:53Z",
+        "detail": "Live US postings and full descriptions validated; remote and contract claims checked locally"
+      }
     }
   ],
   "feeds": [
@@ -388,7 +435,25 @@
           "url": "https://myticas.com/wp-json/wp/v2/matador-job-listings?per_page=30&orderby=date&order=desc&_embed=wp%3Aterm"
         }
       ]
+    },
+    {
+      "name": "TechFetch",
+      "kind": "techfetch",
+      "max_items": 80,
+      "queries": [
+        "software engineer",
+        "software architect",
+        "cloud architect",
+        "DevOps",
+        "data engineer",
+        "AI engineer",
+        "platform engineer",
+        "SRE"
+      ],
+      "enabled": false,
+      "reason": "Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access"
     }
   ],
-  "unconfigured_sources": {}
+  "unconfigured_sources": {},
+  "monthly_cap_usd": 50
 }

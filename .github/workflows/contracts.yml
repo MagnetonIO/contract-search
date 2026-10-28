@@ -11,7 +11,7 @@ on:
         type: string
         default: ""
       mode:
-        description: 'smoke: $0.15 cap; daily: $4 allowance; public: feeds only; publish: saved leads only'
+        description: 'smoke: $0.15 cap; daily: $6/day and $50/cycle allowance; public: feeds only; publish: saved leads only'
         type: choice
         options: [smoke, daily, public, publish]
         default: smoke
@@ -47,6 +47,9 @@ jobs:
         with:
           ref: runner-state
           path: durable-state
+      - name: Install public collector browser
+        working-directory: code
+        run: python -m playwright install --with-deps chromium
       - name: Collect with durable state
         working-directory: code
         env:

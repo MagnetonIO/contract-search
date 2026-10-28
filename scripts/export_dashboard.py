@@ -13,6 +13,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from location_rules import reassess
 from collectors import coverage_for_config
 from sam_quota import next_eligible_from_file
 
@@ -115,10 +116,15 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
     finally:
         connection.close()
     display_sam_history(summary,config,jobs,history,Path(state_path).with_name('sam.sqlite3'),datetime.now(timezone.utc))
+    for row in summary['source_coverage']:
+        if row.get('status')=='scheduled':
+            count=sum(j.get('source')==row['source'] and bool(j.get('pipeline')) for j in jobs)
+            if count:row.update(status='saved',saved_count=count,detail='Saved results; '+row.get('detail','refresh scheduled'))
     leads = []
     for job in jobs:
         if not job.get('pipeline'):
             continue  # The seed identifies a previously reported job, not a current collected lead.
+        job=reassess(job)
         lead = {k: v for k, v in job.items() if not k.startswith('_') and k != 'public_recruiter_contact'}
         lead['id'] = lead_id(job)
         lead['contacts'] = classify_contacts(job)
@@ -130,6 +136,8 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
         lead['review_score'] = review_score(lead)
         leads.append(lead)
     leads.sort(key=lambda lead: (-lead['review_score'], lead['title']))
+    budget_path=Path(summary_path).with_name('budget.json')
+    if budget_path.exists():summary['budget']=json.loads(budget_path.read_text(encoding='utf-8'))
     payload = {'generated_at': datetime.now(timezone.utc).isoformat(), 'collected_at': summary['created_at'],
                'summary': summary, 'leads': leads}
     path = Path(output)
