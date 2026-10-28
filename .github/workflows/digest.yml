@@ -1,7 +1,11 @@
-name: Daily contract email
+name: Daily contract email backup
 on:
   schedule:
-    - cron: '17 9 * * *'
+    # Primary delivery is Vercel Cron. These are morning-only fallbacks;
+    # all triggers share one persisted daily idempotency record.
+    - cron: '37 9 * * *'
+      timezone: America/Chicago
+    - cron: '17 10 * * *'
       timezone: America/Chicago
   workflow_dispatch:
 permissions:
