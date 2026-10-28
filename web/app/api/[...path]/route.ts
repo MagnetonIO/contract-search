@@ -70,8 +70,9 @@ async function handle(request: Request, context: Context) {
       readSnapshot(), readJson<Record<string, LeadProgress>>('workflow.json', {}), readJson<Profile>('profile.json', defaultProfile),
     ]);
     if (!snapshot.value) return json({ error: 'No collected leads have been loaded yet.' }, 503);
+    const collection=await readJson('collection-state.json',null);
     const digest = await readJson<{status:string;accepted_at?:string;meta?:{count:number}}|null>('digest-state.json',null);
-    return json({ snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version, email:{configured:Boolean(await mailKey()),from:MAIL_FROM,recipient:DIGEST_TO,last_digest:digest.value?.status==='accepted'?digest.value.accepted_at:undefined,digest_count:digest.value?.meta?.count} });
+    return json({ collection:collection.value, snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version, email:{configured:Boolean(await mailKey()),from:MAIL_FROM,recipient:DIGEST_TO,last_digest:digest.value?.status==='accepted'?digest.value.accepted_at:undefined,digest_count:digest.value?.meta?.count} });
   }
   if (action === 'outreach' && request.method === 'GET') {
     const id = new URL(request.url).searchParams.get('lead');
