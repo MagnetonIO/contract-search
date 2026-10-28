@@ -91,10 +91,10 @@ async function handle(request: Request, context: Context) {
     if (input.approved !== true) return json({error:'Review the recipient, message, and attachment before sending.'},400);
     return json(await sendOutreach(input.messageId));
   }
-  if (action === 'purge-removed' && request.method === 'POST') {
+  if (['purge-removed', 'purge-not-fit'].includes(action) && request.method === 'POST') {
     const input = await request.json();
     if (!Array.isArray(input.ids) || !input.ids.length || input.ids.length > 5000 || input.ids.some((id: unknown) => typeof id !== 'string' || !/^[a-f0-9]{20}$/.test(id))) return json({ error: 'Choose valid removed opportunities.' }, 400);
-    return json(await deleteRemoved(input.ids));
+    return json(await deleteRemoved(input.ids, action === 'purge-not-fit' ? 'not_a_fit' : 'removed'));
   }
   if (action === 'disposition' && request.method === 'POST') {
     const input = await request.json();

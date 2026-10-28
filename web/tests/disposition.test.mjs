@@ -68,3 +68,24 @@ test('delete all clears only the selected removed records and keeps suppression 
   for (const view of ['opportunities', 'removed', 'applied', 'review']) assert.equal(leadInView({ id: 'a', pipeline: 'contract' }, result.workflow.a, view), false);
   assert.equal(purgeRemoved(result.workflow, ['a', 'b']).count, 0, 'retry is idempotent');
 });
+
+test('Not a fit bulk deletion includes legacy decisions but protects Removed and restored jobs', () => {
+  const workflow = {
+    decision: recordDisposition({ stage: 'applying', notes: 'Keep history' }, 'not_a_fit'),
+    legacy: { stage: 'not_a_fit', notes: 'Old decision' },
+    closed: recordDisposition(undefined, 'closed'),
+    active: { stage: 'new' },
+  };
+  const result = purgeRemoved(workflow, Object.keys(workflow), undefined, 'not_a_fit');
+  assert.equal(result.count, 2);
+  assert.equal(result.workflow.closed, workflow.closed);
+  assert.equal(result.workflow.active, workflow.active);
+  assert.equal(result.workflow.decision.notes, 'Keep history');
+  for (const id of ['decision', 'legacy']) {
+    for (const pipeline of ['contract', 'email_review', 'secondary']) {
+      const recollected = { id, pipeline, title: 'Updated listing', pay: '$140/hr' };
+      for (const view of ['opportunities', 'not_a_fit', 'removed', 'saved', 'applied', 'review']) assert.equal(leadInView(recollected, result.workflow[id], view), false);
+    }
+  }
+  assert.equal(purgeRemoved(result.workflow, ['decision', 'legacy'], undefined, 'not_a_fit').count, 0);
+});

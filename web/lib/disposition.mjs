@@ -8,11 +8,15 @@ export function recordDisposition(current, action, now = new Date().toISOString(
   return { ...old, disposition: { status: action, recorded_at: now }, updated_at: now };
 }
 
-export function purgeRemoved(workflow, ids, now = new Date().toISOString()) {
+export function purgeRemoved(workflow, ids, now = new Date().toISOString(), section = 'removed') {
   const next = { ...workflow };
   let count = 0;
   for (const id of new Set(ids)) {
-    if (!['closed', 'deleted'].includes(workflow[id]?.disposition?.status)) continue;
+    const progress = workflow[id];
+    const eligible = section === 'not_a_fit'
+      ? progress?.disposition?.status === 'not_a_fit' || (!progress?.disposition && progress?.stage === 'not_a_fit')
+      : ['closed', 'deleted'].includes(progress?.disposition?.status);
+    if (!eligible) continue;
     next[id] = recordDisposition(workflow[id], 'purged', now);
     count++;
   }

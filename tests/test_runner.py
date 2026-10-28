@@ -138,6 +138,20 @@ class DedupTests(unittest.TestCase):
         self.assertTrue(self.state.observe(a))
         self.assertFalse(self.state.observe(b))
 
+    def test_tracking_changes_keep_dashboard_identity_for_saved_decisions(self):
+        from scripts.export_dashboard import lead_id
+        original = job(link='https://www.linkedin.com/jobs/view/123?pageNum=0&position=2')
+        self.assertTrue(self.state.observe(original))
+        self.state.db.commit()
+        original_id = lead_id(original)
+        self.state.db.close()
+        self.state = r.State(Path(self.tmp.name)/'seen.sqlite3')
+        refreshed = job(link='https://www.linkedin.com/jobs/view/123?pageNum=4&position=29')
+        self.assertFalse(self.state.observe(refreshed))
+        saved = json.loads(self.state.db.execute('SELECT data FROM jobs').fetchone()[0])
+        self.assertEqual(lead_id(saved), original_id, 'collector preserves identity used by deleted/not-fit decisions')
+        self.assertEqual(self.state.db.execute('SELECT COUNT(*) FROM jobs').fetchone()[0], 1)
+
     def test_shared_title_distinct_requisitions_survive(self):
         self.assertTrue(self.state.observe(job(description='Python cloud infrastructure contract position.')))
         self.assertTrue(self.state.observe(job(id='456', link='https://x/jobs/456', description='Python data pipelines contract position.')))

@@ -149,6 +149,21 @@ records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFi
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),false);
  await stop();await start();
  data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].disposition.status,'not_a_fit');
+
+ assert.equal((await request('purge-not-fit',{body:{ids:[fixture.id]},authenticated:false})).status,401);
+ assert.equal((await request('purge-not-fit',{body:{ids:[fixture.id]},origin:'https://attacker.example'})).status,403);
+ assert.equal((await request('purge-not-fit',{body:{ids:['bad']}})).status,400);
+ response=await request('purge-not-fit',{body:{ids:[fixture.id]}});assert.equal(response.status,200);
+ saved=await response.json();assert.equal(saved.count,1);
+ assert.equal(saved.workflow[fixture.id].disposition.status,'purged');
+ const refreshedSnapshot=JSON.parse(await readFile(path.join(directory,'leads.json'),'utf8'));
+ refreshedSnapshot.collected_at=new Date().toISOString();
+ refreshedSnapshot.leads=refreshedSnapshot.leads.map(lead=>({...lead,title:lead.title+' refreshed',pay:'$140/hr'}));
+ await writeFile(path.join(directory,'leads.json'),JSON.stringify(refreshedSnapshot));
+ await stop();await start();
+ data=await(await request('data')).json();
+ const refreshedLead=data.snapshot.leads.find(lead=>lead.id===fixture.id);
+ for(const view of ['opportunities','not_a_fit','removed'])assert.equal(leadInView(refreshedLead,data.workflow[fixture.id],view),false,'recollection never restores a purged listing');
  response=await request('disposition',{body:{id:fixture.id,action:'restore'}});assert.equal(response.status,200);
  saved=await response.json();assert.equal(saved.workflow[fixture.id].stage,'applied');assert.equal(saved.workflow[fixture.id].notes,'Retained application history');
  assert.equal((await request('purge-removed',{body:{ids:[fixture.id]},authenticated:false})).status,401);

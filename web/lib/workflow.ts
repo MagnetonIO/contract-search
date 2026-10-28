@@ -4,10 +4,10 @@ import { applicationUrl } from './shared.mjs';
 import type { Lead, LeadProgress, ApplicationEvent } from './types';
 import { recordDisposition, purgeRemoved } from './disposition.mjs';
 
-export async function deleteRemoved(ids: string[]) {
+export async function deleteRemoved(ids: string[], section: 'removed' | 'not_a_fit' = 'removed') {
   for (let attempt = 0; attempt < 5; attempt++) {
     const current = await readJson<Record<string, LeadProgress>>('workflow.json', {});
-    const result = purgeRemoved(current.value, ids);
+    const result = purgeRemoved(current.value, ids, undefined, section);
     try { return { ...result, version: await writeJson('workflow.json', result.workflow, current.version) }; }
     catch (error) { if (!(error instanceof ConflictError) || attempt === 4) throw error; }
   }
