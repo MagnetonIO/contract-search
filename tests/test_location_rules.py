@@ -1,4 +1,5 @@
 import unittest,tempfile,sqlite3
+from contextlib import closing
 from pathlib import Path
 from location_rules import assess,reassess
 from collectors import Budget,SourceError
@@ -27,7 +28,7 @@ class LocationTests(unittest.TestCase):
     def test_legacy_reservations_include_cycle_overlap(self):
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'budget.sqlite3';b=Budget(path,6,'2026-10-27',cycle={'startAt':'2026-10-28T00:00:00Z'},monthly_cap=50)
-            with sqlite3.connect(path) as db:db.execute("INSERT INTO budget (id,day,source,reserved) VALUES ('old','2026-10-27','a',4)")
+            with closing(sqlite3.connect(path)) as db, db:db.execute("INSERT INTO budget (id,day,source,reserved) VALUES ('old','2026-10-27','a',4)")
             self.assertEqual(b.remaining(),46)
     def test_techfetch_posting_excludes_suggested_jobs(self):
         html='<h1>Remote Python engineer</h1><h2>Remote Work from Home</h2><h3>Example Staffing</h3><p>Today (Oct-27-26)</p><p>Consulting / Contract</p><p>Rate/Salary ($) : 120/hr corp to corp Duration : 6 months</p><p>Job Description : Python AWS. Remote contract role.</p><p>Similar Jobs</p><p>No C2C. Onsite required.</p>'
