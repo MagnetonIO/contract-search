@@ -17,3 +17,27 @@
 .application-return{border:1px solid var(--line);border-radius:12px;padding:28px;width:min(480px,calc(100vw - 32px));max-height:calc(100dvh - 40px);overflow:auto;color:var(--ink);background:#fff;box-shadow:0 20px 80px #10273f40}.application-return::backdrop{background:#10273f80}.return-icon{color:var(--blue);margin-bottom:16px}.application-return h2{font-size:23px;line-height:1.25;margin:0 0 16px}.application-return p{font-size:14px;line-height:1.6;margin:0 0 18px;overflow-wrap:anywhere}.application-return small{display:block;font-size:12px;line-height:1.6;color:#627a96;margin-top:16px}.return-actions{display:flex;flex-wrap:wrap;gap:8px}.return-actions .button{flex:1;white-space:nowrap;min-height:42px}.application-return .button:focus-visible{outline:3px solid #99b8ff;outline-offset:3px}
 
 .removal-actions{display:grid;gap:8px;margin-top:12px}.removal-actions p{font-size:12px;color:var(--muted);margin:0}.button.danger{color:#b42318;background:#fff;border:1px solid #f2b8b2}.button.danger:hover{background:#fff1f0}
+
+/* Compact navigation: primary views stay visible; supporting views fold away. */
+.mobile-navigation{display:none}
+@media(min-width:651px){
+.sidebar{overflow-y:auto}
+.sidebar .brand,.sidebar-bottom,.sidebar nav{flex-shrink:0}
+.sidebar .brand{padding-top:24px;padding-bottom:24px}
+.sidebar nav button{padding-top:9px;padding-bottom:9px}
+.sidebar .sidebar-bottom{padding-top:14px}
+.nav-group{margin-top:5px}
+.nav-group summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:7px;padding:10px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:#9eb5ce}
+.nav-group summary::-webkit-details-marker{display:none}
+.nav-group summary:hover{background:#1f3c59}
+.nav-group.has-active summary{color:#fff}
+.nav-group summary svg{transition:transform .15s}
+.nav-group[open] summary svg{transform:rotate(90deg)}
+.nav-group-items{display:flex;flex-direction:column;gap:3px;margin:2px 0 6px;padding-left:7px;border-left:1px solid #36526c}
+.nav-group-items button{font-size:11px}
+}
+@media(max-width:650px){
+.sidebar .desktop-navigation{display:none}
+.mobile-navigation{display:flex;align-items:center;gap:10px;color:#b7c9dc;font-size:11px;padding:2px 0 12px}
+.mobile-navigation select{width:100%;min-width:0;min-height:36px;padding:8px 10px;border:1px solid #42617f;border-radius:5px;background:#1c3955;color:#fff}
+}

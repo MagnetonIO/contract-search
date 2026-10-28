@@ -37,6 +37,36 @@ function External({href,children,className='',...props}:{href:string;children:Re
 }
 function Badge({children,tone='neutral'}:{children:React.ReactNode;tone?:string}) { return <span className={'badge '+tone}>{children}</span>; }
 
+type NavItem = [string,string,IconName,number?];
+const navGroups = [
+  {key:'review',label:'Review & follow-up',items:['email_review','review','saved','contacted']},
+  {key:'more',label:'More opportunities',items:['secondary','projects']},
+  {key:'dismissed',label:'Dismissed',items:['not_a_fit','removed']},
+];
+function SidebarNavigation({items,view,onSelect}:{items:NavItem[];view:string;onSelect:(view:string)=>void}) {
+  const [expanded,setExpanded]=useState<Record<string,boolean>>({});
+  useEffect(()=>{
+    const group=navGroups.find(group=>group.items.includes(view));
+    if(group)setExpanded(old=>({...old,[group.key]:true}));
+  },[view]);
+  const itemButton=([key,label,icon,count]:NavItem)=><button key={key} onClick={()=>onSelect(key)} className={view===key?'active':''} aria-current={view===key?'page':undefined}><Icon name={icon}/><span>{label}</span>{count!==undefined&&<span className="nav-count">{count}</span>}</button>;
+  const option=([key,label,,count]:NavItem)=><option key={key} value={key}>{label}{count!==undefined?` (${count})`:''}</option>;
+  return <>
+    <nav aria-label="Workspace" className="desktop-navigation">
+      {items.filter(([key])=>['opportunities','applied'].includes(key)).map(itemButton)}
+      {navGroups.map(group=><details key={group.key} className={'nav-group '+(group.items.includes(view)?'has-active':'')} open={Boolean(expanded[group.key])} onToggle={event=>{const open=event.currentTarget.open;setExpanded(old=>old[group.key]===open?old:{...old,[group.key]:open});}}>
+        <summary>{group.label}<Icon name="chevron" size={13}/></summary>
+        <div className="nav-group-items">{items.filter(([key])=>group.items.includes(key)).map(itemButton)}</div>
+      </details>)}
+    </nav>
+    <label className="mobile-navigation"><span>View</span><select aria-label="Workspace view" value={items.some(([key])=>key===view)?view:''} onChange={event=>onSelect(event.target.value)}>
+      <option value="" disabled>Choose a view</option>
+      {items.filter(([key])=>['opportunities','applied'].includes(key)).map(option)}
+      {navGroups.map(group=><optgroup key={group.key} label={group.label}>{items.filter(([key])=>group.items.includes(key)).map(option)}</optgroup>)}
+    </select></label>
+  </>;
+}
+
 type PendingApplication = { id:string; submittedId:string; cancelledId:string };
 const pendingKey = 'contract_desk_pending_applications';
 
@@ -138,11 +168,11 @@ export default function Dashboard() {
   const returnLead=leads.find(lead=>lead.id===waiting?.id);
   if(!session)return <div className="loading-screen"><div className="brand-mark">C</div><p>{error||'Opening your workspace…'}</p>{error&&<button onClick={load}>Try again</button>}</div>;
   if(!session.authenticated)return <Login setup={!session.configured&&session.setupAllowed} reset={Boolean(session.resetAllowed)} resetPending={Boolean(session.resetPending)} unavailable={(!session.configured&&!session.setupAllowed)||Boolean(session.resetPending&&!session.resetAllowed)} onDone={load}/>;
-  const nav:[string,string,IconName,number?][]=[['opportunities','Opportunities','grid',contracts.length],['email_review','Needs review','mail',leads.filter(l=>leadInView(l,data?.workflow[l.id],'email_review')).length],['review','Reviewed leads','shield',leads.filter(lead=>leadInView(lead,data?.workflow[lead.id],'review')).length],['saved','Saved & ready','bookmark',leads.filter(l=>leadInView(l,data?.workflow[l.id],'saved')).length],['contacted','Contacted','send'],['applied','Applications','briefcase',leads.filter(l=>leadInView(l,data?.workflow[l.id],'applied')).length],['secondary','Secondary roles','filter'],['projects','Project needs','file'],['not_a_fit','Not a fit','filter',leads.filter(l=>leadInView(l,data?.workflow[l.id],'not_a_fit')).length],['removed','Removed','close',leads.filter(l=>leadInView(l,data?.workflow[l.id],'removed')).length]];
+  const nav:NavItem[]=[['opportunities','Opportunities','grid',contracts.length],['email_review','Needs review','mail',leads.filter(l=>leadInView(l,data?.workflow[l.id],'email_review')).length],['review','Reviewed leads','shield',leads.filter(lead=>leadInView(lead,data?.workflow[lead.id],'review')).length],['saved','Saved & ready','bookmark',leads.filter(l=>leadInView(l,data?.workflow[l.id],'saved')).length],['contacted','Contacted','send'],['applied','Applications','briefcase',leads.filter(l=>leadInView(l,data?.workflow[l.id],'applied')).length],['secondary','Secondary roles','filter'],['projects','Project needs','file'],['not_a_fit','Not a fit','filter',leads.filter(l=>leadInView(l,data?.workflow[l.id],'not_a_fit')).length],['removed','Removed','close',leads.filter(l=>leadInView(l,data?.workflow[l.id],'removed')).length]];
   const titles:Record<string,string>={opportunities:'Contract opportunities',email_review:'Email leads — needs review',review:'Reviewed leads',saved:'Saved & ready',contacted:'Contact history',applied:'Your applications',secondary:'Secondary opportunities',projects:'Published project needs',removed:'Removed opportunities',not_a_fit:'Not a fit',profile:'Your profile & resume',coverage:'Search coverage'};
   return <div className="app-shell">
     <aside className="sidebar"><a href="/" className="brand"><span className="brand-mark">C</span><span>Contract Desk<small>Your next engagement</small></span></a>
-      <nav aria-label="Workspace">{nav.map(([key,label,icon,count])=><button key={key} onClick={()=>switchView(key)} className={view===key?'active':''}><Icon name={icon}/><span>{label}</span>{count!==undefined&&<span className="nav-count">{count}</span>}</button>)}</nav>
+      <SidebarNavigation items={nav} view={view} onSelect={switchView}/>
       <div className="sidebar-bottom"><div className="schedule"><Icon name="clock"/><div><strong>Weekday search</strong><span>8:07am Chicago</span></div><span className="status-dot"/></div><button className={view==='coverage'?'nav-extra active':'nav-extra'} onClick={()=>setView('coverage')}><Icon name="shield"/>Source coverage</button><button className={view==='profile'?'nav-extra active':'nav-extra'} onClick={()=>setView('profile')}><Icon name="user"/>Profile & resume</button><div className="account"><span className="avatar">ML</span><div><strong>{data?.profile.name||'Your workspace'}</strong><small>Private workspace</small></div><button title="Sign out" aria-label="Sign out" onClick={async()=>{await api('logout',{});openedInitialLink.current=false;rememberPending([]);setData(null);setSession({...session,authenticated:false});}}><Icon name="logout"/></button></div></div>
     </aside>
     <main className="main"><header className="topbar"><div className="breadcrumb">Workspace <Icon name="chevron" size={12}/> <span>{titles[view]}</span></div><Badge tone="blue"><Icon name="shield" size={13}/> Private</Badge></header>
