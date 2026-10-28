@@ -21,3 +21,10 @@ test('merged snapshot preserves collector coverage and email leads through later
  const merged=mergeSnapshot(base,imported,now);assert.equal(merged.leads.length,2);assert.equal(base.leads.length,0);assert(leadInView(merged.leads[0],{},'email_review'));assert(!leadInView(merged.leads[0],{},'opportunities'));assert(!leadInView(merged.leads[0],{stage:'applied'},'email_review'));const digest=digestPayload(merged,'2026-10-27T00:00:00Z','2026-10-28',now);assert.match(digest.payload.text,/Catalant projects to review: 2/);assert.equal(digest.meta.count,0);
 });
 test('ingest token cannot authenticate without the configured secret',()=>{const token='a'.repeat(64);assert(validImportToken(token,token));assert(!validImportToken('bad',token));assert(!validImportToken('',undefined));});
+
+test('Google script pads Gmail base64url bodies before using the strict Apps Script decoder',async()=>{
+ const {runInNewContext}=await import('node:vm');const {scriptTemplate}=await import('../lib/gmail-script.mjs');
+ const html='<b>AI Cloud Architecture</b>';const sent=[];let released=false;
+ const context={LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{released=true;}})},Gmail:{Users:{getProfile:()=>({emailAddress:'mlong@magneton.io'}),Messages:{list:()=>({messages:[{id:'abcdef123456'}]}),get:()=>({id:'abcdef123456',threadId:'abcdef123456',internalDate:String(Date.now()),payload:{headers:[{name:'From',value:'donotreply@gocatalant.com'},{name:'Subject',value:'Catalant Opportunity Digest'}],mimeType:'text/html',body:{data:Buffer.from(html).toString('base64url')}}})}}},Utilities:{base64DecodeWebSafe:value=>{assert.equal(value.length%4,0,'Apps Script decoder requires padding');return Buffer.from(value,'base64url');},newBlob:bytes=>({getDataAsString:()=>bytes.toString('utf8')})},UrlFetchApp:{fetch:(_url,options)=>{sent.push(JSON.parse(options.payload));return {getResponseCode:()=>200};}}};
+ runInNewContext(scriptTemplate+'\nsyncCatalant();',context);assert.equal(sent[0].messages[0].html,html);assert.equal(released,true);
+});
