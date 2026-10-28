@@ -98,7 +98,7 @@ async function handle(request: Request, context: Context) {
   }
   if (action === 'disposition' && request.method === 'POST') {
     const input = await request.json();
-    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['closed', 'deleted', 'restore'].includes(input.action)) return json({ error: 'Choose an opportunity and a valid removal action.' }, 400);
+    if (typeof input.id !== 'string' || !/^[a-f0-9]{20}$/.test(input.id) || !['closed', 'deleted', 'not_a_fit', 'restore'].includes(input.action)) return json({ error: 'Choose an opportunity and a valid removal action.' }, 400);
     const snapshot = await readSnapshot();
     if (!snapshot.value?.leads.some(lead => lead.id === input.id)) return json({ error: 'Opportunity not found.' }, 404);
     return json(await saveDisposition(input.id, input.action));

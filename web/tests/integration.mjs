@@ -141,6 +141,16 @@ records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFi
  assert.equal(saved.workflow[fixture.id].stage,'applied','restore retains submitted stage');
  assert.equal(leadInView(fixture,saved.workflow[fixture.id],'applied'),true);
 
+
+ response=await request('disposition',{body:{id:fixture.id,action:'not_a_fit'}});assert.equal(response.status,200);
+ saved=await response.json();assert.equal(saved.workflow[fixture.id].stage,'applied');
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'not_a_fit'),true);
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'removed'),false);
+ assert.equal(leadInView(fixture,saved.workflow[fixture.id],'opportunities'),false);
+ await stop();await start();
+ data=await(await request('data')).json();assert.equal(data.workflow[fixture.id].disposition.status,'not_a_fit');
+ response=await request('disposition',{body:{id:fixture.id,action:'restore'}});assert.equal(response.status,200);
+ saved=await response.json();assert.equal(saved.workflow[fixture.id].stage,'applied');assert.equal(saved.workflow[fixture.id].notes,'Retained application history');
  assert.equal((await request('purge-removed',{body:{ids:[fixture.id]},authenticated:false})).status,401);
  assert.equal((await request('purge-removed',{body:{ids:[fixture.id]},origin:'https://attacker.example'})).status,403);
  assert.equal((await request('purge-removed',{body:{ids:['bad']}})).status,400);

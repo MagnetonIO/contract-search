@@ -30,6 +30,27 @@ test('removing an untouched opportunity does not report an application', () => {
   assert.ok(leadInView({ pipeline: 'contract' }, recordDisposition(removed, 'restore'), 'opportunities'));
 });
 
+test('not a fit is separate from Removed and restores the original application history', () => {
+  const lead = { pipeline: 'contract' };
+  const current = { stage: 'applied', notes: 'Prior submission', events: [{ id: 'receipt' }] };
+  const rejected = recordDisposition(current, 'not_a_fit');
+  assert.ok(leadInView(lead, rejected, 'not_a_fit'));
+  for (const view of ['opportunities', 'removed', 'applied', 'saved', 'review']) assert.equal(leadInView(lead, rejected, view), false);
+  assert.equal(purgeRemoved({ job: rejected }, ['job']).count, 0, 'Delete all Removed does not clear Not a fit');
+  assert.deepEqual(recordDisposition(rejected, 'restore').events, current.events);
+  assert.ok(leadInView(lead, recordDisposition(rejected, 'restore'), 'applied'));
+});
+
+test('existing Not a fit stages move into the dedicated section without migration', () => {
+  const lead = { pipeline: 'contract' }, old = { stage: 'not_a_fit', notes: 'Legacy decision' };
+  assert.ok(leadInView(lead, old, 'not_a_fit'));
+  assert.equal(leadInView(lead, old, 'opportunities'), false);
+  assert.equal(leadInView(lead, old, 'removed'), false);
+  const restored = recordDisposition(old, 'restore');
+  assert.equal(restored.notes, old.notes);
+  assert.ok(leadInView(lead, restored, 'opportunities'));
+});
+
 test('delete all clears only the selected removed records and keeps suppression after recollection', () => {
   const workflow = {
     a: recordDisposition({ stage: 'applied', notes: 'history', events: [{ id: 'submitted' }] }, 'closed'),

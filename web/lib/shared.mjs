@@ -12,7 +12,10 @@ export function safeWebUrl(value) {
 }
 export function leadInView(lead, progress, view) {
   if (progress?.disposition?.status === 'purged') return false;
+  if (progress?.disposition?.status === 'not_a_fit') return view === 'not_a_fit';
   if (progress?.disposition) return view === 'removed';
+  if (progress?.stage === 'not_a_fit') return view === 'not_a_fit';
+  if (view === 'not_a_fit') return false;
   if (view === 'removed') return false;
   const stage = progress?.stage || 'new';
   switch (view) {

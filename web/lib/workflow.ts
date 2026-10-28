@@ -14,7 +14,7 @@ export async function deleteRemoved(ids: string[]) {
   throw new ConflictError('Removed opportunities changed. Please try again.');
 }
 
-export async function saveDisposition(id: string, action: 'closed' | 'deleted' | 'restore') {
+export async function saveDisposition(id: string, action: 'closed' | 'deleted' | 'not_a_fit' | 'restore') {
   for (let attempt = 0; attempt < 5; attempt++) {
     const current = await readJson<Record<string, LeadProgress>>('workflow.json', {});
     const progress = recordDisposition(current.value[id], action) as LeadProgress;
