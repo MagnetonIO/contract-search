@@ -1,83 +1,54 @@
 [
   {
     "source": "Dice",
-    "run_id": "u3OAblfQGKLxzW6ut",
-    "cap_usd": 0.2,
+    "run_id": "ROfL42m6WlCoCteVn",
+    "cap_usd": 0.164172,
     "build": "0.1.58",
     "status": "SUCCEEDED",
-    "reservation_id": "cb63a0d3344a4d4aa671fb48fe90c97c",
-    "actual_charge_usd": 0.0883,
-    "charge_snapshot_at": "2026-10-27T22:58:08.746418+00:00",
+    "reservation_id": "b15ccd6e8e9347e7a7e7729d33d8c743",
+    "actual_charge_usd": 0.10779999999999999,
+    "charge_snapshot_at": "2026-10-28T15:29:25.177170+00:00",
     "charged_event_counts": {
-      "job": 97,
+      "job": 179,
       "apify-actor-start": 1
     }
   },
   {
     "source": "LinkedIn",
-    "run_id": "nLRbaxlUSfcpbdhT6",
-    "cap_usd": 0.4,
+    "run_id": "D4E51S7nWhbX237fe",
+    "cap_usd": 0.37525,
     "build": "1.7.18",
     "status": "SUCCEEDED",
-    "reservation_id": "06017cba7e7545ef99c99fe74022772b",
-    "actual_charge_usd": 0.34605,
-    "charge_snapshot_at": "2026-10-27T22:55:12.763427+00:00",
+    "reservation_id": "3ad36eb5ed8d475fb05c2cfd21c19591",
+    "actual_charge_usd": 0.28105,
+    "charge_snapshot_at": "2026-10-28T15:24:06.938524+00:00",
     "charged_event_counts": {
-      "apify-default-dataset-item": 173,
+      "apify-default-dataset-item": 297,
       "apify-actor-start": 1
     }
   },
   {
     "source": "Indeed",
-    "run_id": "wSe63utEFS7Nopiah",
-    "cap_usd": 0.6,
+    "run_id": "82aJnoV2olHTLwr3s",
+    "cap_usd": 0.37525,
     "build": "0.0.119",
     "status": "SUCCEEDED",
-    "reservation_id": "2ed9a3539740465f996f2caab1034391",
+    "reservation_id": "3b66a30e6ece49b69580c40dc40c5b68",
     "actual_charge_usd": 0,
-    "charge_snapshot_at": "2026-10-27T22:53:07.648942+00:00",
+    "charge_snapshot_at": "2026-10-28T15:21:43.340620+00:00",
     "charged_event_counts": {
-      "result": 61
+      "result": 16
     }
   },
   {
     "source": "Employer ATS discovery",
-    "run_id": "6L1AdaphyLAk27QID",
-    "cap_usd": 0.2,
+    "run_id": "iqLjgOKFhN4EmRjca",
+    "cap_usd": 0.37525,
     "build": "0.0.72",
     "status": "SUCCEEDED",
-    "reservation_id": "ea3f0d4935de4548a65bc0764c608cef",
-    "actual_charge_usd": 0.01,
-    "charge_snapshot_at": "2026-10-27T22:53:16.168962+00:00",
-    "charged_event_counts": {
-      "apify-default-dataset-item": 0,
-      "apify-actor-start": 1
-    }
-  },
-  {
-    "source": "ZipRecruiter",
-    "run_id": "FntMsO7EO3FcfHreg",
-    "cap_usd": 0.05,
-    "build": "1.0.5",
-    "status": "SUCCEEDED",
-    "reservation_id": "be9d3046cff1438e892e0e2f94181131",
-    "actual_charge_usd": 5e-05,
-    "charge_snapshot_at": "2026-10-27T22:53:40.157655+00:00",
-    "charged_event_counts": {
-      "apify-actor-start": 1,
-      "job-scraped": 0,
-      "job-details": 0
-    }
-  },
-  {
-    "source": "Glassdoor",
-    "run_id": "2Ry5lYfdB45C82x1h",
-    "cap_usd": 0.026666,
-    "build": "0.0.10",
-    "status": "SUCCEEDED",
-    "reservation_id": "38424b6723ec4647bb28f5cab01dc525",
-    "actual_charge_usd": 0.001,
-    "charge_snapshot_at": "2026-10-27T22:53:48.072223+00:00",
+    "reservation_id": "86f3304b3c80456c8a6e97ef5012d34e",
+    "actual_charge_usd": 0,
+    "charge_snapshot_at": "2026-10-28T15:21:52.913360+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -85,13 +56,13 @@
   },
   {
     "source": "Glassdoor",
-    "run_id": "0yDCNq6TDCaHVrPPn",
-    "cap_usd": 0.026666,
-    "build": "0.0.10",
+    "run_id": "c0eyCUbsmV1pwyev3",
+    "cap_usd": 0.015635,
+    "build": "0.0.11",
     "status": "SUCCEEDED",
-    "reservation_id": "0fef7bbcec2b40c0a3334d79a873e193",
-    "actual_charge_usd": 0.001,
-    "charge_snapshot_at": "2026-10-27T22:53:56.643363+00:00",
+    "reservation_id": "93cce64811f64b878cf3940a5e14920c",
+    "actual_charge_usd": 0.0009,
+    "charge_snapshot_at": "2026-10-28T15:22:06.571169+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -99,13 +70,27 @@
   },
   {
     "source": "Glassdoor",
-    "run_id": "zkOqEtf9NOntW1LrV",
-    "cap_usd": 0.026666,
-    "build": "0.0.10",
+    "run_id": "ek96H6iR6ZuwQUnAv",
+    "cap_usd": 0.015635,
+    "build": "0.0.11",
     "status": "SUCCEEDED",
-    "reservation_id": "8215bb6ca50f4e5dbbd7dddfc5a3521b",
-    "actual_charge_usd": 0.001,
-    "charge_snapshot_at": "2026-10-27T22:54:05.381500+00:00",
+    "reservation_id": "e3fc4fa1050d495cb842d01440058e54",
+    "actual_charge_usd": 0.0009,
+    "charge_snapshot_at": "2026-10-28T15:22:19.532958+00:00",
+    "charged_event_counts": {
+      "apify-default-dataset-item": 0,
+      "apify-actor-start": 1
+    }
+  },
+  {
+    "source": "Glassdoor",
+    "run_id": "8o74R77chySWbEC2s",
+    "cap_usd": 0.015635,
+    "build": "0.0.11",
+    "status": "SUCCEEDED",
+    "reservation_id": "982e2fbd55c148a6a29057fa566fb997",
+    "actual_charge_usd": 0,
+    "charge_snapshot_at": "2026-10-28T15:22:27.308338+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -113,86 +98,58 @@
   },
   {
     "source": "Wellfound",
-    "run_id": "U5TXuBSfpFmiCmbdt",
-    "cap_usd": 0.1,
+    "run_id": "bfEKDPVQ6SVNF7WXp",
+    "cap_usd": 0.117265,
     "build": "0.1.5",
     "status": "SUCCEEDED",
-    "reservation_id": "88f13fbaacb341b7955b58e10455d6ae",
-    "actual_charge_usd": 0.095606,
-    "charge_snapshot_at": "2026-10-27T22:56:56.795521+00:00",
+    "reservation_id": "93db14da7e5f45c7b8d0037a90c90958",
+    "actual_charge_usd": 0.0299489,
+    "charge_snapshot_at": "2026-10-28T15:24:45.378028+00:00",
     "charged_event_counts": {
       "start": 1,
-      "item": 60
+      "item": 59
     }
   },
   {
     "source": "Built In",
-    "run_id": "tati7BI2U8mUvnsm3",
-    "cap_usd": 0.17,
+    "run_id": "jz9zQeuuBSZCLeiIa",
+    "cap_usd": 0.093812,
     "build": "1.0.9",
     "status": "SUCCEEDED",
-    "reservation_id": "692372f0d7ee4e99b1a73164bc0dea57",
-    "actual_charge_usd": 0.03508,
-    "charge_snapshot_at": "2026-10-27T22:57:28.563892+00:00",
+    "reservation_id": "22613b7c17f74f65a8acac376e1d8253",
+    "actual_charge_usd": 0.030010000000000002,
+    "charge_snapshot_at": "2026-10-28T15:25:40.248525+00:00",
     "charged_event_counts": {
       "apify-actor-start": 1,
-      "apify-default-dataset-item": 31
+      "apify-default-dataset-item": 28
     }
   },
   {
     "source": "Staffing firm career feeds",
-    "run_id": "lxfAwIasR43G0u5T8",
-    "cap_usd": 0.15,
+    "run_id": "GdYvA8mfpJMRBrmTW",
+    "cap_usd": 0.281438,
     "build": "0.0.72",
     "status": "SUCCEEDED",
-    "reservation_id": "fa9e43f6ecee4732a98be37a02000eae",
-    "actual_charge_usd": 0.01,
-    "charge_snapshot_at": "2026-10-27T22:57:05.503457+00:00",
+    "reservation_id": "ee788f24cc42402c955389e889236394",
+    "actual_charge_usd": 0.0001,
+    "charge_snapshot_at": "2026-10-28T15:24:53.659981+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
     }
   },
   {
-    "source": "ZipRecruiter",
-    "run_id": "bSxRaskEUZA3yyfTb",
-    "cap_usd": 0.05,
-    "build": "1.0.23",
+    "source": "JobServe US",
+    "run_id": "UWczOEQzdhPcr8Wkd",
+    "cap_usd": 0.164172,
+    "build": "1.0.5",
     "status": "SUCCEEDED",
-    "reservation_id": "5fadc119549643ad94381f24ea5c5435",
-    "actual_charge_usd": 0,
-    "charge_snapshot_at": "2026-10-27T23:11:23.926360+00:00",
-    "charged_event_counts": {
-      "job": 0,
-      "employer": 0
-    }
-  },
-  {
-    "source": "Staffing firm career feeds",
-    "run_id": "gSahFnZSwsMZXD6MG",
-    "cap_usd": 0.09,
-    "build": "0.0.72",
-    "status": "SUCCEEDED",
-    "reservation_id": "292e853c064945209d7c68a83b36e4b7",
-    "actual_charge_usd": 0.01,
-    "charge_snapshot_at": "2026-10-27T23:11:32.423690+00:00",
+    "reservation_id": "bd623a3205fd4e4f8f50fa3aa52284f1",
+    "actual_charge_usd": 0.0335,
+    "charge_snapshot_at": "2026-10-28T15:26:57.278579+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 10,
       "apify-actor-start": 1
-    }
-  },
-  {
-    "source": "ZipRecruiter",
-    "run_id": "PzbgnV2tU02BsY2Qe",
-    "cap_usd": 0.006,
-    "build": "1.0.23",
-    "status": "SUCCEEDED",
-    "reservation_id": "d0d33a86922246588e71b2772693d101",
-    "actual_charge_usd": 0,
-    "charge_snapshot_at": "2026-10-27T23:14:27.858213+00:00",
-    "charged_event_counts": {
-      "job": 0,
-      "employer": 0
     }
   }
 ]
