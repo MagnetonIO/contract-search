@@ -23,7 +23,7 @@ test('saving a site login resumes authentication-only pauses once, never uncerta
   await writeJson('application-attempts.json',Object.fromEntries(['a','b','c'].map(id=>[id,{id,lead_id:id,status:'needs_input',reason:id==='c'?'Missing required experience answer':'LinkedIn sign-in required',updated_at:before,...(id==='b'?{submission_intent_at:before}:{})}])));
   await writeJson('browser-sites.json',{linkedin:{status:'signed_in',checked_at:new Date().toISOString()}});
   assert.equal(await resumeAfterSiteLogin(),1);assert.equal(await resumeAfterSiteLogin(),0);
-  const {value}=await readJson('application-attempts.json',{});assert.equal(value.a.status,'queued');assert.equal(value.b.status,'needs_input');assert.equal(value.c.status,'needs_input');
+  const {value}=await readJson('application-attempts.json',{});assert.equal(value.a.status,'queued');assert.equal(value.a.reason,null,'resumed work does not display a stale exception');assert.equal(value.b.status,'needs_input');assert.equal(value.c.status,'needs_input');
   assert.equal((await readJson('automation-budget.json',{})).value.charges.length,1);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });

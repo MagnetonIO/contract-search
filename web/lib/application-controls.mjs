@@ -1,4 +1,6 @@
 const normalized=value=>String(value||'').replace(/\s+/g,' ').trim();
+export const CONFIRMATION_PATTERN=/your application (?:has been |was |is )?(?:submitted|received|sent)|thank you for applying|successfully applied|application submitted|application received/i;
+export function applicationReceipt(text){return String(text).match(CONFIRMATION_PATTERN)?.[0]||null;}
 export function applicationControlKind({text='',label='',type='',inForm=false}={}){
  const name=normalized(text||label).toLowerCase();
  if(/submit|send application|complete application/.test(name))return 'submission';
@@ -13,7 +15,7 @@ export async function applicationScope(page){
  const main=page.getByRole('main').filter({visible:true});return await main.count()===1?main:page.locator('body');
 }
 export async function applicationButtons(scope){
- return scope.getByRole('button').filter({visible:true}).evaluateAll(items=>items.map(e=>({text:(e.innerText||'').replace(/\s+/g,' ').trim(),label:(e.getAttribute('aria-label')||e.innerText||'').replace(/\s+/g,' ').trim(),type:e.getAttribute('type')||'',inForm:Boolean(e.closest('form,[role=dialog]')),disabled:e.disabled||e.getAttribute('aria-disabled')==='true'})));
+ return scope.getByRole('button').filter({visible:true}).evaluateAll(items=>items.map(e=>({text:(e.innerText||'').replace(/\s+/g,' ').trim(),label:(e.getAttribute('aria-label')||e.innerText||'').replace(/\s+/g,' ').trim(),type:e.getAttribute('type')||'',inForm:Boolean(e.closest('form,[role=dialog],dialog')),disabled:e.disabled||e.getAttribute('aria-disabled')==='true',bounds:{x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}})));
 }
 export async function clickApplicationStep(page,label){
  const scope=await applicationScope(page),buttons=await applicationButtons(scope),requested=normalized(label);

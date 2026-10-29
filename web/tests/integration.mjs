@@ -43,7 +43,7 @@ try {
  response=await request('data');assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);
  let data=await response.json();assert.equal(data.snapshot.leads.length,1);
  assert.equal((await request('automation',{authenticated:false})).status,401);
- assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');
+ assert.equal((await request('automation-screenshot?id=invalid',{authenticated:false})).status,401);assert.equal((await request('automation-screenshot?id=invalid')).status,400);assert.equal((await request('automation-screenshot?id=11111111-1111-4111-8111-111111111111')).status,404);assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');
  const automation=await(await request('automation')).json();assert.equal(automation.audit.total,1);assert.equal(automation.audit.rows[0].title,fixture.title);assert.equal(automation.live_browser,null);assert.deepEqual(automation.activity,[]);
  assert.equal((await request('automation-settings',{body:{enabled:true},origin:'https://attacker.example'})).status,403);
  response=await request('progress',{body:{id:fixture.id,stage:'saved',notes:'Synthetic private note',version:null},origin:'https://attacker.example'});assert.equal(response.status,403);
@@ -182,6 +182,11 @@ records[key]||={body:options.body,id:'synthetic-provider-receipt'};await writeFi
  data=await(await request('data')).json();assert.equal(leadInView(fixture,data.workflow[fixture.id],'removed'),false,'bulk deletion persists across restart');
  assert.equal(leadInView(fixture,data.workflow[fixture.id],'opportunities'),false,'purged records never reappear in active lists');
  response=await request('purge-removed',{body:{ids:[fixture.id]}});assert.equal((await response.json()).count,0,'repeat delete is safe');
+ const visualId='12345678-1234-4234-8234-123456789abc';
+ await writeFile(path.join(directory,'visual-fixture.jpg'),Buffer.from([0xff,0xd8,0xff,0xd9]));
+ await writeFile(path.join(directory,'application-attempts.json'),JSON.stringify({[visualId]:{id:visualId,status:'needs_input',visual_screenshot_key:'visual-fixture.jpg'}}));
+ response=await request('automation-screenshot?id='+visualId);assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/jpeg');assert.match(response.headers.get('cache-control'),/private, no-store/);assert.equal(Buffer.from(await response.arrayBuffer()).toString('hex'),'ffd8ffd9');
+ assert.equal((await request('automation-screenshot?id='+visualId,{authenticated:false})).status,401,'private screenshot requires the owner session');
  execFileSync(process.execPath,['scripts/reset-login.mjs'],{env:{...process.env,VERCEL:'',DASHBOARD_LOCAL_DIR:directory},stdio:'pipe'});
  assert.equal((await request('data')).status,401,'reset revokes old session');
  assert.equal((await request('login',{body:{username:'owner',password:'disposable-http-test-password'}})).status,401,'old password disabled during recovery');

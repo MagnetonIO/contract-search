@@ -1,5 +1,11 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {applicationControlKind} from '../lib/application-controls.mjs';
+import {applicationControlKind,applicationReceipt} from '../lib/application-controls.mjs';
+test('actual sent/received confirmations are distinct from drafts and future submission',()=>{
+ assert.equal(applicationReceipt('Your application was sent to Example Company.'),'Your application was sent');
+ assert.ok(applicationReceipt('Thank you for applying'));
+ assert.equal(applicationReceipt('Your application will be sent after review.'),null);
+ assert.equal(applicationReceipt('Your application was saved as a draft.'),null);
+});
 test('LinkedIn accessible labels preserve Easy Apply entry and Next step semantics',()=>{
  assert.equal(applicationControlKind({text:'Easy Apply',label:'Easy Apply to this job'}),'entry');
  assert.equal(applicationControlKind({text:'Next',label:'Continue to next step',inForm:true}),'step');

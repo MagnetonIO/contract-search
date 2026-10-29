@@ -68,6 +68,12 @@ async function handle(request: Request, context: Context) {
     const endpoint = new URL('/api/import/catalant',request.url).href;
     return json({script:scriptTemplate.replace('__ENDPOINT__',endpoint).replace('__TOKEN__',stored.value!.token),manifest:scriptManifest});
   }
+  if (action === 'automation-screenshot' && request.method === 'GET') {
+    const id=new URL(request.url).searchParams.get('id');if(!id||! /^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid attempt'},400);
+    const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];if(!a?.visual_screenshot_key)return json({error:'Screenshot unavailable'},404);
+    const file=await readBytes(a.visual_screenshot_key);if(!file)return json({error:'Screenshot unavailable'},404);
+    return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'image/jpeg','Content-Disposition':'inline','Cache-Control':'private, no-store'}});
+  }
   if (action === 'automation-resume' && request.method === 'GET') {
     const id=new URL(request.url).searchParams.get('id');if(!id||! /^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];if(!a?.resume_key)return json({error:'Resume unavailable'},404);
