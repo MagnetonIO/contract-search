@@ -68,7 +68,8 @@ test('empty digest retains collection warnings and separates Catalant review lin
   const snapshot={collected_at:'2026-10-27T12:00:00Z',leads:[{id:'project',title:'Project <review>',first_seen:'2026-10-27T11:00:00Z',pipeline:'email_review'}],summary:{target:50,source_coverage:[{source:'Board <offline>',status:'failed'},{source:'SAM',status:'not configured'}]}};
   const {payload}=digestPayload(snapshot,'2026-10-26T12:00:00Z','2026-10-28',new Date('2026-10-28T15:00:00Z'));
   const $=load(payload.html);
-  assert.ok($.text().includes('No new contract candidates'));
+  assert.ok($.text().includes('New job counts are unavailable'));
+  assert.match(payload.subject,/Collection delayed/);
   assert.ok($.text().includes('Collection is over 26 hours old'));
   assert.ok($.text().includes('Below the target of 50'));
   assert.ok($.text().includes('Source failures: Board <offline>'));

@@ -1,4 +1,6 @@
 import { cronAuthorized } from '../../../../lib/digest-schedule.mjs';
+import { writeJson } from '../../../../lib/store';
+import { ensureCollection } from '../../../../lib/collector-scheduler.mjs';
 import { sendDailyDigest } from '../../../../lib/digest.mjs';
 
 export const runtime = 'nodejs';
@@ -7,12 +9,17 @@ export const maxDuration = 60;
 
 export async function GET(request: Request, context: { params: Promise<{ task: string[] }> }) {
   const task = (await context.params).task.join('/');
-  if (!['digest', 'digest-backup'].includes(task)) return new Response('Not found', { status: 404 });
+  if (!['digest', 'digest-backup', 'digest-final', 'collect', 'collect-backup', 'collect-watch', 'collect-watch-backup', 'collect-final', 'collect-final-backup'].includes(task)) return new Response('Not found', { status: 404 });
   if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) return new Response('Unauthorized', { status: 401 });
   try {
-    return Response.json(await sendDailyDigest(), { headers: { 'Cache-Control': 'private, no-store' } });
+    const result = task.startsWith('collect') ? await ensureCollection() : await sendDailyDigest();
+    if (task.startsWith('collect')) await writeJson('scheduler-state.json',{...result,checked_at:new Date().toISOString()});
+    return Response.json(result, { status: result.status === 'configuration_required' ? 503 : 200, headers: { 'Cache-Control': 'private, no-store' } });
   } catch {
-    console.error('Scheduled digest failed; check the persisted send record and provider receipt before retrying.');
-    return Response.json({ error: 'Digest delivery could not be confirmed.' }, { status: 503 });
+    if (task.startsWith('collect')) {
+      try { await writeJson('scheduler-state.json',{status:'failed',checked_at:new Date().toISOString()}); } catch {}
+    }
+    console.error('Scheduled task failed: '+task+'. Check runner status or persisted email receipt before retrying.');
+    return Response.json({ error: 'Scheduled task could not be confirmed.', task }, { status: 503 });
   }
 }

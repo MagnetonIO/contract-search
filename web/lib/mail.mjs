@@ -1,3 +1,4 @@
+import { collectionHealth } from './collection-status.mjs';
 import { safeWebUrl, formatPay } from './shared.mjs';
 
 export const MAIL_FROM = 'Matthew Long <mlong@magneton.io>';
@@ -21,7 +22,7 @@ function digestLocation(value) {
   } catch { /* Most sources already provide readable text. */ }
   return value || 'Location not published';
 }
-function digestHtml(heading, rows, emails, notices, cutoff, since) {
+function digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, collectedAt) {
   const link = (url, label) => `<a href="${escapeHtml(url)}" style="color:#175cd3;text-decoration:underline;">${escapeHtml(label)}</a>`;
   const paragraph = text => `<p style="margin:0 0 12px;">${escapeHtml(text)}</p>`;
   const job = (lead, index) => {
@@ -42,14 +43,14 @@ function digestHtml(heading, rows, emails, notices, cutoff, since) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#101828;"><tr><td style="padding:24px;">
         <p style="margin:0 0 8px;font-size:13px;font-weight:bold;">CONTRACT DESK</p>
         <h1 style="font-size:24px;line-height:1.3;margin:0 0 16px;">${escapeHtml(heading)}</h1>
-        ${paragraph(rows.length?`Showing ${Math.min(rows.length,DIGEST_PREVIEW_LIMIT)} candidates, highest review score first.`:'No new contract candidates in this digest window.')}
+        ${paragraph(rows.length?`Showing ${Math.min(rows.length,DIGEST_PREVIEW_LIMIT)} candidates, highest review score first.`:(collectionPending?'New job counts are unavailable until the scheduled scan publishes.':'No new contract candidates in this digest window.'))}
         <p style="margin:0 0 20px;">${link(DASHBOARD_URL,`Open Contract Desk${rows.length?' — all '+rows.length+' new candidates':''}`)}</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows.slice(0,DIGEST_PREVIEW_LIMIT).map(job).join('')}</table>
         ${remaining>0?paragraph(`${remaining} more candidates are available in your dashboard.`):''}
         ${emails.length?`<h2 style="font-size:18px;margin:24px 0 12px;">Catalant projects to review: ${emails.length}</h2><ul>${emails.slice(0,25).map(lead=>`<li style="margin-bottom:12px;">${link(digestLink(lead),lead.title)}</li>`).join('')}</ul>${emails.length>25?paragraph(`${emails.length-25} more Catalant projects are available in your dashboard.`):''}`:''}
         <hr style="border:0;border-top:1px solid #d0d5dd;margin:24px 0;">
         <h2 style="font-size:16px;margin:0 0 12px;">Collection notes</h2>
-        ${paragraph('Collected: '+digestDate(cutoff))}${paragraph('New since: '+digestDate(since))}
+        ${paragraph('Last job scan: '+digestDate(collectedAt))}${paragraph('New since: '+digestDate(since))}
         ${notices.map(paragraph).join('')}
         ${paragraph('Rates, C2C eligibility, location restrictions, and client identity still require confirmation.')}
         <p style="margin:0;">${link(DASHBOARD_URL,'Open Contract Desk')}</p>
@@ -103,6 +104,7 @@ export async function deliverStored(store, key, identity, create, send, now = ()
 
 export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
   const cutoff = snapshot.digest_cutoff || snapshot.collected_at;
+  const collectionPending = Date.parse(snapshot.collected_at) < Date.parse(collectionHealth(snapshot,null,now).expected_at);
   if (!Number.isFinite(Date.parse(cutoff))) throw new MailError('The collection timestamp is invalid.');
   const since = previousCutoff || new Date(now.getTime()-86400000).toISOString();
   const rows = snapshot.leads.filter(lead => lead.pipeline === 'contract' && Date.parse(lead.first_seen) > Date.parse(since) && Date.parse(lead.first_seen) <= Date.parse(cutoff));
@@ -110,12 +112,13 @@ export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
   const failures = snapshot.summary.source_coverage.filter(source => source.status === 'failed');
   const pending = snapshot.summary.source_coverage.filter(source => source.status === 'not configured');
   const stale = now.getTime()-Date.parse(snapshot.collected_at) > 26*3600000;
-  const heading = `${rows.length} new contract candidate${rows.length===1?'':'s'} — ${day}`;
+  const heading = collectionPending ? `Collection delayed — ${day}` : `${rows.length} new contract candidate${rows.length===1?'':'s'} — ${day}`;
   const notices = [];
+  if (collectionPending) notices.push('Today’s scheduled job scan has not published. These are saved results, not a completed scan with zero matches. Last job scan: '+digestDate(snapshot.collected_at)+'. Email-import updates do not refresh job-board results.');
   if (stale) notices.push('Collection is over 26 hours old. The daily collector may need attention.');
   if (rows.length < snapshot.summary.target) notices.push(`Below the target of ${snapshot.summary.target}; no older leads added to fill the count.`);
-  const lines = [heading, '', `Collected: ${digestDate(cutoff)}`, `New since: ${digestDate(since)}`, 'Rates, C2C eligibility, location restrictions, and client identity still require confirmation.', ...notices];
-  if (!rows.length) lines.push('No new contract candidates in this digest window.');
+  const lines = [heading, '', `Last job scan: ${digestDate(snapshot.collected_at)}`, `Latest data/import: ${digestDate(cutoff)}`, `New since: ${digestDate(since)}`, 'Rates, C2C eligibility, location restrictions, and client identity still require confirmation.', ...notices];
+  if (!rows.length) lines.push((collectionPending?'New job counts are unavailable until the scheduled scan publishes.':'No new contract candidates in this digest window.'));
   if (rows.length) lines.push(`Showing ${Math.min(rows.length,DIGEST_PREVIEW_LIMIT)} candidates, highest review score first.`);
   for (const [index, lead] of rows.slice(0,DIGEST_PREVIEW_LIMIT).entries()) {
     lines.push('', `${index+1}. ${lead.title}`, lead.company_agency || 'Company not published', `Rate: ${formatPay(lead.pay)}`, `Location: ${digestLocation(lead.remote_location)}`, `C2C: ${lead.c2c_status || 'unknown'}`, 'Review: '+digestLink(lead));
@@ -130,6 +133,6 @@ export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
   if (pending.length) notices.push('Sources awaiting setup: '+pending.map(source=>source.source).join(', '));
   lines.push('', 'Open Contract Desk: '+DASHBOARD_URL, 'This digest contains individual contract candidates. Procurement notices and secondary roles are separate dashboard views.');
   const text = lines.join('\n');
-  return { payload: { from: MAIL_FROM, to: [DIGEST_TO], reply_to: MAIL_REPLY_TO, subject: '[Contract Desk] '+heading, text, html: digestHtml(heading, rows, emails, notices, cutoff, since) },
+  return { payload: { from: MAIL_FROM, to: [DIGEST_TO], reply_to: MAIL_REPLY_TO, subject: '[Contract Desk] '+heading, text, html: digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, snapshot.collected_at) },
     meta: { day, count: rows.length, cutoff: Date.parse(cutoff)>Date.parse(since)?cutoff:since } };
 }

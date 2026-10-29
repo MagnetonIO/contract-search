@@ -132,6 +132,14 @@ jobs:
           fi
           npm ci --omit=dev
           node scripts/publish-data.mjs ../output/dashboard.json
+      - name: Send morning digest after fresh results publish
+        if: steps.dashboard.outcome == 'success' && env.MODE == 'daily'
+        working-directory: code/web
+        env:
+          DASHBOARD_STORAGE: blob
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.DASHBOARD_BLOB_TOKEN }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: node scripts/send-digest.mjs
       - name: Record collection completion
         if: always() && steps.heartbeat.outcome == 'success'
         working-directory: code/web
