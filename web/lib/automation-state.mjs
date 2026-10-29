@@ -66,3 +66,17 @@ export async function reviseAttempt(id,action){
  const costId=id+'-resume-'+randomUUID();if(action==='resume')await reserve(costId,2.5,true);
  await mutate('application-attempts.json',old=>{const prior=old[id];if(!prior||prior.submission_intent_at||!['needs_input','failed','queued','running'].includes(prior.status))throw Error('Application cannot be changed without reconciliation');if(action==='resume'&&!['needs_input','failed'].includes(prior.status))throw Error('Only paused applications can resume');return {...old,[id]:{...prior,status:action==='resume'?'queued':'cancelled',profile_version:state.facts?.version,resume_hash:state.resume_hash,cost_reservation_id:action==='resume'?costId:prior.cost_reservation_id,updated_at:new Date().toISOString()}};});
 }
+export async function resumeAfterSiteLogin(){
+ const state=await automationSettings();const {value:sites}=await readJson('browser-sites.json',{});const {value:snapshot}=await readSnapshot();let count=0;
+ for(const attempt of Object.values(state.attempts)){
+  if(attempt.status!=='needs_input'||attempt.submission_intent_at||!/sign.?in|log.?in|authentication|MFA/i.test(attempt.reason||''))continue;
+  const lead=snapshot?.leads.find(l=>l.id===attempt.lead_id);let host='';try{host=new URL(lead?.application_url||lead?.source_url).hostname;}catch{continue;}
+  const site=host==='linkedin.com'||host.endsWith('.linkedin.com')?'linkedin':host==='dice.com'||host.endsWith('.dice.com')?'dice':null;
+  const account=site&&sites[site];
+  // A fresh save can safely retry an authentication-only pause once. It does
+  // not establish verified sign-in and never retries a submission intent.
+  if(!account||!(Date.parse(account.checked_at)>Date.parse(attempt.updated_at))||!['signed_in','unverified'].includes(account.status))continue;
+  try{await reviseAttempt(attempt.id,'resume');count++;}catch(error){if(/allowance exhausted|Daily submission limit/.test(error.message))break;throw error;}
+ }
+ return count;
+}

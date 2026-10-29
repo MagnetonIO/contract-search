@@ -84,7 +84,7 @@ async function handle(request: Request, context: Context) {
     const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];
     if(!attempt)return json({error:'Attempt missing'},404);
-    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
+    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await setEnabled(true);await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
     if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
     return json({error:'An uncertain submission must be reconciled before another attempt.'},409);
   }

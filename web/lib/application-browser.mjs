@@ -40,7 +40,8 @@ export async function finishLogin(){
     const browser=await chromium.connectOverCDP(session.connectUrl);
     try {
      for(const page of browser.contexts()[0].pages()){
-      const observed=observedLogin(value.site,{url:page.url(),passwordVisible:await page.locator('input[type=password]').first().isVisible().catch(()=>false),signOutVisible:await page.getByRole('link',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)||await page.getByRole('button',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)});
+      if(value.site==='linkedin'&&new URL(page.url()).hostname.endsWith('linkedin.com'))await page.goto('https://www.linkedin.com/feed/',{waitUntil:'domcontentloaded',timeout:20000}).catch(()=>{});
+      const observed=observedLogin(value.site,{url:page.url(),accountNavVisible:await page.locator('a[href*="/messaging/"]').first().isVisible().catch(()=>false),passwordVisible:await page.locator('input[type=password]').first().isVisible().catch(()=>false),signOutVisible:await page.getByRole('link',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)||await page.getByRole('button',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)});
       if(observed==='signed_in'){status=observed;break;}if(observed==='needs_login')status=observed;
      }
     }finally{await browser.close();}
