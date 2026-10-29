@@ -9,6 +9,8 @@ test('unknown terms remain eligible but explicit W2-only and low rates fail',()=
  assert.equal(screenGate({...lead,pay:'$100 - $120 an hour'},'Python'),null);
  assert.match(screenGate({...lead,pay:'$99/hr'},'Python'),/below/);
  assert.equal(screenGate({...lead,pay:'$120,000 per year'},'Python'),null);
+ assert.match(screenGate(lead,'Type: Full-time. Infrastructure engineer.'),/permanent/);
+ assert.equal(screenGate(lead,'Type: Full-time contract. Python engineer.'),null);
 });
 test('manual exclusions and submitted state survive snapshots with new content',()=>{
  for(const progress of [{disposition:{status:'purged'}},{stage:'not_a_fit'},{stage:'applied'}])assert.ok(screenGate({...lead,title:'Changed title'},'New description',progress));

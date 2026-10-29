@@ -24,6 +24,7 @@ export function screenGate(lead,description='',progress,policy=DEFAULT_AUTOMATIO
  if(location?.status==='not_remote'||['onsite','hybrid'].includes(String(lead.work_arrangement).toLowerCase()))return 'Requires onsite or hybrid work';
  if(lead.c2c_status==='not accepted')return 'Explicit C2C exclusion';
  const text=(description+' '+lead.c2c_status).toLowerCase();
+ if(/\b(?:type|employment(?: type)?|job type)\s*:\s*full[ -]?time\b/i.test(description)&&! /\bcontract(?:or|ing)?\b|\bfreelance\b|\btemporary\b/i.test(description))return 'Posting explicitly describes permanent full-time employment';
  if(/\bw[ -]?2\s*(?:only|required)\b|\bno\s+(?:c2c|corp.to.corp)\b/.test(text))return 'Explicit W2-only / no C2C requirement';
  const ranges=[...String(lead.pay||'').matchAll(/\$([\d,]+(?:\.\d+)?)\s*(?:-|–|to)\s*\$?([\d,]+(?:\.\d+)?)/g)];
  const hourly = /(?:hour|\/hr|hourly)/i.test(lead.pay||'')&&!/CAD|AUD|EUR|GBP|£|€/i.test(lead.pay||'');
