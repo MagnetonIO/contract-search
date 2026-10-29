@@ -1,5 +1,15 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload} from '../lib/visual-policy.mjs';
+import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload,experienceAnswer} from '../lib/visual-policy.mjs';
+test('numeric experience comes only from the matching explicit user-confirmed answer',()=>{
+ const sentence='User-confirmed application answer: 3 years of hands-on work experience with Palantir/Foundry.';
+ const facts={verified_experience:sentence};
+ assert.equal(experienceAnswer('How many years of work experience do you have with Palantir?',facts).answer,'3');
+ assert.equal(experienceAnswer('Years of working experience with Foundry?',facts).answer,'3');
+ assert.equal(experienceAnswer('Years of Python experience?',facts),null);
+ assert.equal(experienceAnswer('Desired hourly rate?',facts),null);
+ assert.equal(experienceAnswer('Years of Palantir experience?',{verified_experience:'General 20 years engineering experience'}),null);
+ assert.equal(experienceAnswer('Years of Palantir experience?',{verified_experience:sentence+' User-confirmed application answer: 5 years of hands-on work experience with Palantir.'}),null);
+});
 test('passive reCAPTCHA notices do not masquerade as a human-verification challenge',()=>{
  assert.equal(humanCheckText('This site is protected by reCAPTCHA. Privacy Policy and Terms apply.'),false);
  assert.equal(humanCheckText('Verify you are human to continue'),true);

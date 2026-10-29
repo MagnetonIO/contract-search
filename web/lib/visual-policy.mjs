@@ -1,6 +1,12 @@
 import {applicationControlKind} from './application-controls.mjs';
 export const normalizedLabel=value=>String(value||'').replace(/\s+/g,' ').trim();
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
+export function experienceAnswer(question,facts){
+ if(!/\byears?\b/i.test(question)||! /experience|worked|working/i.test(question))return null;
+ const answers=[...String(facts?.verified_experience||'').matchAll(/User-confirmed application answer:\s*(\d+(?:\.\d+)?) years of hands-on work experience with ([^.\n]+)\./g)].filter(match=>match[2].split('/').some(skill=>{const escaped=skill.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('\\b'+escaped+'\\b','i').test(question);}));
+ if(!answers.length||new Set(answers.map(a=>Number(a[1]))).size!==1)return null;
+ const years=Number(answers[0][1]);return years>=0&&years<=60?{answer:String(years),evidence:answers[0][0]}:null;
+}
 export function visualClickKind(control){
  if(!control||control.disabled)return 'blocked';
  const text=normalizedLabel(control.text||control.label);
