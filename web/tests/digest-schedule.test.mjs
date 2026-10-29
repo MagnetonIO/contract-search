@@ -65,6 +65,14 @@ test('daily email excludes closed and deleted opportunities', async () => {
   assert.doesNotMatch(sent.text, /\?lead=(closed|deleted|notfit|legacy)/);
 });
 
+test('application digest counts held open jobs and excludes secondary screening records',async()=>{
+ const values={'workflow.json':{},'screenings.json':{open:{status:'held',screened_at:'2026-10-28T14:00:00Z'},secondary:{status:'skipped',screened_at:'2026-10-28T14:00:00Z'}}};let sent;
+ const store={read:async key=>({value:structuredClone(values[key]||null),version:null}),write:async(key,value)=>{values[key]=value;return '1';},conflict:()=>false};
+ const snapshotReader=async()=>({value:{collected_at:'2026-10-28T13:20:00Z',leads:[{id:'open',title:'Open',pipeline:'contract',first_seen:'2026-10-28T12:00:00Z',pay:'unknown'},{id:'secondary',title:'Secondary',pipeline:'secondary'}],summary:{target:50,source_coverage:[]}}});
+ await sendDailyDigest({now:new Date('2026-10-28T14:17:00Z'),apiKey:'test',store,snapshotReader,send:async payload=>{sent=payload;return 'receipt';}});
+ assert.match(sent.text,/Applications: 0 submitted; 0 skipped; 0 failed; 1 need input/);
+});
+
 test('stale job scan waits despite fresh Gmail import; final morning report labels delay', async()=>{
  let value=null,version=0,sends=0,payload;
  const store={read:async key=>({value:key==='workflow.json'?{}:structuredClone(value),version}),write:async(_key,next)=>{value=structuredClone(next);return ++version;},conflict:()=>false};

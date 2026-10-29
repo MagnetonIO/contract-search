@@ -12,3 +12,11 @@ test('mandatory duration and residency require explicit verified evidence',()=>{
  assert.equal(verifiedEligibility({requirements:[{requirement:'5 years US residency',status:'confirmed',evidence:'Has lived in the US for 5 years'}]},facts),false);
  assert.equal(verifiedEligibility({requirements:[]},facts),false);
 });
+test('citation formatting does not reject true evidence, but invented or abbreviated excerpts do',()=>{
+ const posting='Python development required. Strong communication required.';
+ const facts='Experienced Python engineer. Led cross-functional teams and wrote technical documentation.';
+ const requirement={requirement:'Python development',posting_evidence:'"Python development required."',status:'confirmed',evidence:['“Experienced Python engineer.”']};
+ assert.equal(verifiedEligibility({requirements:[requirement]},facts,posting),true);
+ assert.equal(verifiedEligibility({requirements:[{...requirement,evidence:['Experienced Python ... engineer.']}]},facts,posting),false);
+ assert.equal(verifiedEligibility({requirements:[{...requirement,evidence:['Unlisted certification earned.']}]},facts,posting),false);
+});

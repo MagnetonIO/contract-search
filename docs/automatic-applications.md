@@ -4,17 +4,18 @@ The existing Contract Desk app has an authenticated Automatic applications view.
 
 ## Operation
 
-- Browserbase owns the saved browser context; users enter logins and MFA in its private live view. Secrets are not supplied to the language model.
-- AI SDK uses `openai/gpt-5.4-nano` for five-job screening batches and final factual checks, and `openai/gpt-5.4-mini` for bounded browser tool use.
+- Start automation enables the schedule and requests an immediate durable run; the page shows the start receipt separately from worker activity.
+- Browserbase owns the saved browser context; users enter logins and MFA in its private live view. Secrets are not supplied to the language model. LinkedIn and Dice sign-in buttons open their login pages in that context. Saving checks for visible signed-in evidence; a connected browser alone never establishes account authentication. Opening sign-in pauses automation.
+- AI SDK uses `openai/gpt-5.4-mini` for five-job professional-fit batches, mandatory qualification reviews, and bounded browser work; the lightweight final filled-answer check uses `openai/gpt-5.4-nano`. Fixed pay, C2C, and US-location rules run in code, outside model scoring.
 - Workflow checkpoints batches and individual applications. A global lease serializes cycles. Each attempt and final submission intent is claimed with conditional writes. Browser steps never replay automatically after failure.
 - Up to 20 attempts per Chicago weekday, 8am–6pm. First run attempts one application; subsequent runs allow five until five confirmed submissions, then twenty.
-- The automation allowance is $50/calendar month, including a conservative $20 browser subscription reservation. Each screen reserves $0.05; each application reserves $2.50. Known usage settles reservations. Unknown provider charges retain their reservation. Resuming an exception reserves a new attempt allowance.
-- Unknown rate and C2C are accepted. Explicit W2-only, incompatible location, low advertised hourly rates, prior submissions and persistent dispositions are excluded. Fit requires score 80, US-remote eligibility, mandatory requirements and résumé evidence.
+- The automation allowance is $50/calendar month, including a conservative $20 browser subscription reservation. Each screening batch reserves $0.10; each application reserves $2.50. Known usage settles reservations. Unknown provider charges retain their reservation. Resuming an exception reserves a new attempt allowance.
+- Unknown rate and C2C are accepted. Explicit W2-only, incompatible location, low advertised hourly rates, prior submissions and persistent dispositions are excluded. Fit requires score 80, compatible US-remote evidence, and verified qualifications. Unconfirmed location or qualifications are held separately from poor-fit skips. Interviews and higher offered pay do not lower professional fit.
 - The collector exports `job-content.json` separately from the browser snapshot. Full descriptions stay private. Decisions are cached by content, facts, policy and disposition/stage.
 - Résumé tailoring adds relevant verbatim highlights and preserves the master text and dates. Each attempt stores immutable PDF versions. Changed master PDFs require a matching canonical text source for tailoring; otherwise the approved PDF is used unchanged.
 - Browser tools support labelled native forms on supported domains; unsupported controls, CAPTCHAs, new agreements and unknown required answers become exceptions. This is not a guarantee that every job board or ATS form can be completed.
 - Every scored match receives an independent mandatory-requirement check before browser work. Required durations, residency and named tools need verbatim verified evidence. Resolved application URLs are claimed across records to prevent cross-board duplicate submissions.
-- Vercel invokes `/api/cron/applications` hourly at minute 27 on weekdays; the engine enforces the Chicago work window and global lease. The dashboard shows the current run and saved results.
+- Vercel invokes `/api/cron/applications` hourly at minute 27 on weekdays; the engine enforces the Chicago work window and global lease. The dashboard uses the same open-opportunity population as the sidebar, with searchable per-job reasons, held/skipped counts, recent activity, and a private live browser link during application work. Secondary roles, submitted and dismissed records are outside that denominator.
 - Closed postings receive a persistent closed disposition. Confirmed submissions become Applied. Ambiguous submission results are never silently retried. Results appear in the next morning digest.
 
 ## Credentials and local use

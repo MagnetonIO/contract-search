@@ -3,6 +3,7 @@ import { readSnapshot } from './snapshot.mjs';
 import { deliverStored, sendMail, digestPayload } from './mail.mjs';
 import { collectionHealth } from './collection-status.mjs';
 import { digestWindow } from './digest-schedule.mjs';
+import { leadInView } from './shared.mjs';
 
 const defaultStore = { read: key => readJson(key, null), write: writeJson, conflict: error => error instanceof ConflictError };
 
@@ -27,7 +28,10 @@ export async function sendDailyDigest({ now = new Date(), apiKey = process.env.R
   const outcomes=Object.values(attempts).filter(item=>Date.parse(item.updated_at)>since&&['submitted','needs_input','submission_unknown','failed','skipped'].includes(item.status));
   const counts={submitted:0,skipped:0,failed:0,needs_input:0};
   for(const item of outcomes)counts[item.status==='submission_unknown'?'needs_input':item.status]++;
-  counts.skipped+=Object.values(screens).filter(item=>item.status==='skipped'&&Date.parse(item.screened_at)>since).length;
+  const openIds=new Set(snapshot.leads.filter(lead=>leadInView(lead,workflow[lead.id],'opportunities')).map(lead=>lead.id));
+  const recentDecisions=Object.entries(screens).filter(([id,item])=>openIds.has(id)&&Date.parse(item.screened_at)>since).map(([,item])=>item);
+  counts.skipped+=recentDecisions.filter(item=>item.status==='skipped').length;
+  counts.needs_input+=recentDecisions.filter(item=>item.status==='held').length;
   const activeSnapshot = { ...snapshot, automation_results:{counts,outcomes:outcomes.slice(-10)}, leads: snapshot.leads.filter(lead => !workflow[lead.id]?.disposition && workflow[lead.id]?.stage !== 'not_a_fit') };
   const record = await deliverStored(store, 'digest-state.json', identity,
     async previous => {

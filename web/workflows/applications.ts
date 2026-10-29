@@ -10,6 +10,9 @@ export async function applicationCycle() {
       if (!attempt) break;
       await apply(attempt);
     }
+  } catch (error) {
+    await failed(id);
+    throw error;
   } finally {
     await release(id);
   }
@@ -25,6 +28,12 @@ export async function release(id: string) {
   'use step';
   const { releaseCycle } = await import('../lib/automation-state.mjs');
   await releaseCycle(id);
+}
+
+export async function failed(id: string) {
+  'use step';
+  const { failCycle } = await import('../lib/automation-state.mjs');
+  await failCycle(id);
 }
 
 export async function screen() {

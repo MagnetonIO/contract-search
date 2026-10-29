@@ -1,6 +1,6 @@
 import { start } from 'workflow/api';
 import { applicationCycle } from '../../../workflows/applications';
-import { automationSettings, saveFacts, setEnabled, patchAttempt, reviseAttempt } from '../../../lib/automation-state.mjs';
+import { automationSettings, automationDashboard, saveFacts, setEnabled, patchAttempt, reviseAttempt, activity } from '../../../lib/automation-state.mjs';
 import { ensureCollection } from '../../../lib/collector-scheduler.mjs';
 import { NextResponse } from 'next/server';
 import { authConfig, isLoggedIn, sessionFor, checkOrigin, localSetupAllowed, createLocalAccount, resetLocalAccount, checkLogin } from '../../../lib/auth';
@@ -74,12 +74,12 @@ async function handle(request: Request, context: Context) {
     const file=await readBytes(a.resume_key);if(!file)return json({error:'Resume unavailable'},404);
     return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename=Resume_Matthew_Long.pdf','Cache-Control':'private, no-store'}});
   }
-  if (action === 'automation' && request.method === 'GET') return json(await automationSettings());
+  if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
   if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
   if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}
-  if (action === 'automation-run' && request.method === 'POST') {const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
-  if (action === 'browser-login' && request.method === 'POST') {const {openLogin}=await import('../../../lib/application-browser.mjs');return json(await openLogin());}
-  if (action === 'browser-login-finish' && request.method === 'POST') {const {finishLogin}=await import('../../../lib/application-browser.mjs');await finishLogin();return json({finished:true});}
+  if (['automation-run','automation-start'].includes(action) && request.method === 'POST') {const state=await automationSettings();if((state.run as {active?:boolean}|null)?.active)return json({already_running:true});await setEnabled(true);const requestedAt=new Date().toISOString();const run=await start(applicationCycle,[]);await writeJson('automation-request.json',{run_id:run.runId,requested_at:requestedAt});await activity('run_requested',{message:'Start accepted. Waiting for the worker to begin.',workflow_run_id:run.runId});return json({run_id:run.runId});}
+  if (action === 'browser-login' && request.method === 'POST') {const {openLogin}=await import('../../../lib/application-browser.mjs');const input=await request.json();return json(await openLogin(input.site));}
+  if (action === 'browser-login-finish' && request.method === 'POST') {const {finishLogin}=await import('../../../lib/application-browser.mjs');return json({finished:true,...await finishLogin()});}
   if (action === 'automation-attempt' && request.method === 'POST') {
     const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];

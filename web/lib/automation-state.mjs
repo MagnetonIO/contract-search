@@ -1,11 +1,26 @@
 import {randomUUID} from 'node:crypto';
 import {readJson,writeJson,ConflictError} from './store.ts';
 import {DEFAULT_AUTOMATION_POLICY,applicationWindow,fingerprint,reserveBudget,applicationIdentity} from './automation-policy.mjs';
+import {readSnapshot} from './snapshot.mjs';
+import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
 
 export class AutomationInputError extends Error {constructor(message){super(message);this.name='AutomationInputError';}}
 export async function mutate(key,change,fallback={}) {
  for(let i=0;i<12;i++){const old=await readJson(key,fallback);const value=await change(structuredClone(old.value));try{await writeJson(key,value,old.version);return value;}catch(e){if(!(e instanceof ConflictError))throw e;}}
  throw Error('Automation state is busy. Try again.');
+}
+export async function activity(kind,detail={}) {
+ const event={id:randomUUID(),at:new Date().toISOString(),kind,...detail};
+ await mutate('automation-activity.json',old=>[...old,event].slice(-200),[]);
+ if(detail.phase)await mutate('automation-run.json',old=>old?.active?{...old,phase:detail.phase,current_job:detail.title||null,last_activity_at:event.at}:old,null);
+ return event;
+}
+export async function automationDashboard(){
+ const state=await automationSettings();
+ const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
+ const activeLive=live&&Date.parse(live.expires_at)>Date.now()&&['running','submitting'].includes(state.attempts[live.attempt_id]?.status)?live:null;
+ const {screens,...visible}=state;
+ return {...visible,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login&&Date.now()-Date.parse(login.opened_at)<300000?{site:login.site,live_url:login.live_url}:null};
 }
 export async function automationSettings(){
  const [settings,facts,budget,screens,attempts,profile,run]=await Promise.all([
@@ -35,14 +50,15 @@ export async function reserve(id,usd,submit=false){return mutate('automation-bud
 export async function settle(id,usd){
  await mutate('automation-budget.json',old=>{const item=old?.charges?.find(c=>c.id===id);if(item){item.usd=Math.max(0,usd);item.status='settled';}return old;},null);
 }
-export async function patchAttempt(id,patch){return mutate('application-attempts.json',old=>({...old,[id]:{...old[id],...patch,updated_at:new Date().toISOString()}}));}
+export async function patchAttempt(id,patch){const result=await mutate('application-attempts.json',old=>({...old,[id]:{...old[id],...patch,updated_at:new Date().toISOString()}}));if(patch.status)await activity('application_status',{phase:'applying',attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});return result;}
 export async function acquireCycle(){
  const state=await automationSettings();if(!state.policy.enabled||!state.facts?.confirmed||!applicationWindow())return null;
  const id=randomUUID();let acquired=false;
  await mutate('automation-run.json',old=>{acquired=false;if(old?.active&&Date.now()-Date.parse(old.started_at)<2*3600000)return old;acquired=true;return {id,active:true,started_at:new Date().toISOString()};},null);
- return acquired?id:null;
+ if(acquired)await activity('run_started',{phase:'screening',message:'Evaluating open opportunities.'});return acquired?id:null;
 }
-export async function releaseCycle(id){await mutate('automation-run.json',old=>old?.id===id?{...old,active:false,finished_at:new Date().toISOString()}:old,null);}
+export async function failCycle(id){await mutate('automation-run.json',old=>old?.id===id?{...old,outcome:'failed'}:old,null);await activity('run_failed',{message:'Run interrupted by an error. Saved decisions and submission safeguards are preserved.'});}
+export async function releaseCycle(id){const result=await mutate('automation-run.json',old=>old?.id===id?{...old,active:false,phase:old.outcome==='failed'?'failed':'finished',current_job:null,finished_at:new Date().toISOString()}:old,null);await activity('run_finished',{message:result?.outcome==='failed'?'Run ended after an error. Check the last activity before starting another run.':'Run finished. See job decisions and application results below.'});}
 export async function claimAttempt(id){let claimed=false;await mutate('application-attempts.json',old=>{claimed=false;if(old[id]?.status!=='queued')return old;claimed=true;return {...old,[id]:{...old[id],status:'running',updated_at:new Date().toISOString()}};});return claimed;}
 export async function submissionIntent(id,url){await mutate('application-attempts.json',old=>{const attempt=old[id];if(attempt?.status!=='running'||attempt.submission_intent_at)throw Error('Submission already reserved or application stopped');const resolved=applicationIdentity({application_url:url});if(Object.values(old).some(other=>other.id!==id&&other.submission_intent_at&&other.application_url&&applicationIdentity({application_url:other.application_url})===resolved))throw Error('Another record already attempted this resolved application; reconcile before retrying');return {...old,[id]:{...attempt,status:'submitting',submission_intent_at:new Date().toISOString(),application_url:url}};});}
 export async function reviseAttempt(id,action){

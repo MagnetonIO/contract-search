@@ -60,9 +60,10 @@ function SidebarNavigation({items,view,onSelect}:{items:NavItem[];view:string;on
         <div className="nav-group-items">{items.filter(([key])=>group.items.includes(key)).map(itemButton)}</div>
       </details>)}
     </nav>
-    <label className="mobile-navigation"><span>View</span><select aria-label="Workspace view" value={items.some(([key])=>key===view)?view:''} onChange={event=>onSelect(event.target.value)}>
+    <label className="mobile-navigation"><span>View</span><select aria-label="Workspace view" value={items.some(([key])=>key===view)||view==='automation'?view:''} onChange={event=>onSelect(event.target.value)}>
       <option value="" disabled>Choose a view</option>
       {items.filter(([key])=>['opportunities','applied'].includes(key)).map(option)}
+      <option value="automation">Automatic applications</option>
       {navGroups.map(group=><optgroup key={group.key} label={group.label}>{items.filter(([key])=>group.items.includes(key)).map(option)}</optgroup>)}
     </select></label>
   </>;
