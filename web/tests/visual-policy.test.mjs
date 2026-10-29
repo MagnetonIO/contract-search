@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {visualClickKind,choiceMatches,humanCheckText} from '../lib/visual-policy.mjs';
+import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload} from '../lib/visual-policy.mjs';
 test('passive reCAPTCHA notices do not masquerade as a human-verification challenge',()=>{
  assert.equal(humanCheckText('This site is protected by reCAPTCHA. Privacy Policy and Terms apply.'),false);
  assert.equal(humanCheckText('Verify you are human to continue'),true);
@@ -15,6 +15,15 @@ test('visual navigation cannot bypass submission, answer or authentication gates
  assert.equal(visualClickKind({tag:'INPUT',type:'password'}),'blocked');
  assert.equal(visualClickKind({tag:'BUTTON',text:'',inForm:false,type:'button'}),'click');
  assert.equal(visualClickKind({tag:'BUTTON',text:'',inForm:true,type:'button'}),'blocked');
+ assert.equal(visualClickKind({tag:'BUTTON',label:'Dismiss',applicationDialog:true}),'blocked');
+ assert.equal(visualClickKind({tag:'BUTTON',label:'Dismiss',applicationDialog:false}),'click');
+});
+test('a preselected old resume cannot bypass the approved upload before Next',()=>{
+ const args={attached:false,control:{text:'Next'},uploadAvailable:true};
+ assert.equal(needsResumeUpload(args),true);
+ assert.equal(needsResumeUpload({...args,attached:true}),false);
+ assert.equal(needsResumeUpload({...args,uploadAvailable:false}),false);
+ assert.equal(needsResumeUpload({...args,control:{text:'Back'}}),false);
 });
 test('visual answer selections must match the question and confirmed facts',()=>{
  const facts={work_authorization:'yes',sponsorship:'no',country:'United States',email:'test@example.com',routine_privacy_consent:'yes'};

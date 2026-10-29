@@ -20,10 +20,10 @@ test('saving a site login resumes authentication-only pauses once, never uncerta
  try{
   const before=new Date(Date.now()-10000).toISOString();
   await writeJson('leads.json',{leads:[{id:'a',application_url:'https://www.linkedin.com/jobs/view/123'},{id:'b',application_url:'https://www.linkedin.com/jobs/view/456'},{id:'c',application_url:'https://www.linkedin.com/jobs/view/789'}]});
-  await writeJson('application-attempts.json',Object.fromEntries(['a','b','c'].map(id=>[id,{id,lead_id:id,status:'needs_input',reason:id==='c'?'Missing required experience answer':'LinkedIn sign-in required',updated_at:before,...(id==='b'?{submission_intent_at:before}:{})}])));
+  await writeJson('application-attempts.json',Object.fromEntries(['a','b','c'].map(id=>[id,{id,lead_id:id,status:'needs_input',reason:id==='c'?'Missing required experience answer':'LinkedIn sign-in required',updated_at:before,...(id==='a'?{visual_step_count:2,visual_steps:[{step:2,action:'pause'}],visual_screenshot_key:'previous.jpg'}:{}),...(id==='b'?{submission_intent_at:before}:{})}])));
   await writeJson('browser-sites.json',{linkedin:{status:'signed_in',checked_at:new Date().toISOString()}});
   assert.equal(await resumeAfterSiteLogin(),1);assert.equal(await resumeAfterSiteLogin(),0);
-  const {value}=await readJson('application-attempts.json',{});assert.equal(value.a.status,'queued');assert.equal(value.a.reason,null,'resumed work does not display a stale exception');assert.equal(value.b.status,'needs_input');assert.equal(value.c.status,'needs_input');
+  const {value}=await readJson('application-attempts.json',{});assert.equal(value.a.status,'queued');assert.equal(value.a.reason,null,'resumed work does not display a stale exception');assert.equal(value.a.visual_step_count,0);assert.deepEqual(value.a.visual_steps,[]);assert.equal(value.a.visual_screenshot_key,null);assert.equal(value.a.prior_visual_runs[0].steps.length,1,'prior visual history remains archived without mixing step numbers');assert.equal(value.b.status,'needs_input');assert.equal(value.c.status,'needs_input');
   assert.equal((await readJson('automation-budget.json',{})).value.charges.length,1);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });

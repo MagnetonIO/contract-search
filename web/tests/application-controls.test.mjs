@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {applicationControlKind,applicationReceipt} from '../lib/application-controls.mjs';
 test('actual sent/received confirmations are distinct from drafts and future submission',()=>{
  assert.equal(applicationReceipt('Your application was sent to Example Company.'),'Your application was sent');
- assert.ok(applicationReceipt('Thank you for applying'));
+ assert.ok(applicationReceipt('Thank you for applying'));assert.equal(applicationReceipt('Your application\nwas sent to Example Company'),'Your application was sent');
  assert.equal(applicationReceipt('Your application will be sent after review.'),null);
  assert.equal(applicationReceipt('Your application was saved as a draft.'),null);
 });

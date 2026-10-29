@@ -1,6 +1,6 @@
 const normalized=value=>String(value||'').replace(/\s+/g,' ').trim();
 export const CONFIRMATION_PATTERN=/your application (?:has been |was |is )?(?:submitted|received|sent)|thank you for applying|successfully applied|application submitted|application received/i;
-export function applicationReceipt(text){return String(text).match(CONFIRMATION_PATTERN)?.[0]||null;}
+export function applicationReceipt(text){return normalized(text).match(CONFIRMATION_PATTERN)?.[0]||null;}
 export function applicationControlKind({text='',label='',type='',inForm=false}={}){
  const name=normalized(text||label).toLowerCase();
  if(/submit|send application|complete application/.test(name))return 'submission';
@@ -11,7 +11,7 @@ export function applicationControlKind({text='',label='',type='',inForm=false}={
  return 'unsupported';
 }
 export async function applicationScope(page){
- const dialogs=page.getByRole('dialog').filter({visible:true});if(await dialogs.count())return dialogs.last();
+ const dialogs=page.locator('dialog:not([aria-hidden=true]),[role=dialog]:not([aria-hidden=true]),[role=alertdialog]:not([aria-hidden=true])').filter({visible:true});if(await dialogs.count())return dialogs.last();
  const main=page.getByRole('main').filter({visible:true});return await main.count()===1?main:page.locator('body');
 }
 export async function applicationButtons(scope){
