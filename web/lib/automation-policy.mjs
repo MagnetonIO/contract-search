@@ -6,6 +6,11 @@ export function applicationWindow(now=new Date()) {
  const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
  return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)>=8&&Number(p.hour)<18;
 }
+export function applicationRunAllowed(state,now=new Date()) {
+ if(applicationWindow(now))return true;
+ const run=state?.run,start=Date.parse(run?.started_at||''),end=Date.parse(run?.manual_expires_at||'');
+ return run?.active===true&&run.mode==='manual'&&Number.isFinite(start)&&Number.isFinite(end)&&start<=now.getTime()&&end>now.getTime()&&end<=start+2*3600000;
+}
 export function fingerprint(value) {return createHash('sha256').update(JSON.stringify(value)).digest('hex');}
 export function applicationIdentity(lead) {
  const target=lead.application_url||lead.source_url;

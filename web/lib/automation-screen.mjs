@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {readJson} from './store.ts';
 import {readSnapshot} from './snapshot.mjs';
 import {automationSettings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
-import {screenGate,fingerprint,applicationIdentity,applicationWindow,chicagoDay} from './automation-policy.mjs';
+import {screenGate,fingerprint,applicationIdentity,applicationRunAllowed,chicagoDay} from './automation-policy.mjs';
 import {leadInView} from './shared.mjs';
 import {automationLocation} from './automation-audit.mjs';
 import {verifiedEligibility} from './automation-eligibility.mjs';
@@ -18,7 +18,7 @@ Count verified skills and demonstrated equivalent work. Leadership, documentatio
 
 export async function screenBatch(){
  const state=await automationSettings();
- if(!state.policy.enabled||!state.facts?.confirmed||!applicationWindow())return false;
+ if(!state.policy.enabled||!state.facts?.confirmed||!applicationRunAllowed(state))return false;
  const [{value:snapshot},{value:content},{value:progress}]=await Promise.all([readSnapshot(),readJson('job-content.json',{postings:{}}),readJson('workflow.json',{})]);
  const batch=[];const decisions={};
  for(const lead of snapshot?.leads||[]){
@@ -51,7 +51,7 @@ export async function screenBatch(){
  return true;
 }
 export async function nextAttempt(){
- let state=await automationSettings();if(!state.policy.enabled||!applicationWindow())return null;await resumeAfterSiteLogin();state=await automationSettings();if((state.budget?.submissions||[]).filter(a=>a.day===chicagoDay()).length>=state.policy.daily_limit)return null;
+ let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if((state.budget?.submissions||[]).filter(a=>a.day===chicagoDay()).length>=state.policy.daily_limit)return null;
  const [{value:snapshot},{value:workflow}]=await Promise.all([readSnapshot(),readJson('workflow.json',{})]);
  const queued=Object.values(state.attempts).find(a=>a.status==='queued');if(queued)return queued.id;
  const leads=(snapshot?.leads||[]).filter(l=>(state.screens[l.id]?.status==='eligible'||state.screens[l.id]?.eligibility_review&&state.screens[l.id]?.eligibility_review_version!==ELIGIBILITY_REVIEW_VERSION)&&!workflow[l.id]?.disposition&&workflow[l.id]?.stage!=='applied').sort((a,b)=>state.screens[b.id].score-state.screens[a.id].score);

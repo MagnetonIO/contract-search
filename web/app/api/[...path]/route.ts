@@ -83,7 +83,16 @@ async function handle(request: Request, context: Context) {
   if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
   if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
   if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}
-  if (['automation-run','automation-start'].includes(action) && request.method === 'POST') {const state=await automationSettings();if((state.run as {active?:boolean}|null)?.active)return json({already_running:true});await setEnabled(true);const requestedAt=new Date().toISOString();const run=await start(applicationCycle,[]);await writeJson('automation-request.json',{run_id:run.runId,requested_at:requestedAt});await activity('run_requested',{message:'Start accepted. Waiting for the worker to begin.',workflow_run_id:run.runId});return json({run_id:run.runId});}
+  if (['automation-run','automation-start'].includes(action) && request.method === 'POST') {
+    const state=await automationSettings();
+    if((state.run as {active?:boolean}|null)?.active)return json({already_running:true});
+    if(!(state.facts as {confirmed?:boolean}|null)?.confirmed)return json({error:'Save and confirm your reusable applicant answers before starting.'},409);
+    await setEnabled(true);const requestedAt=new Date().toISOString();
+    const run=await start(applicationCycle,[{manual:true}]);
+    await writeJson('automation-request.json',{status:'pending',manual:true,run_id:run.runId,requested_at:requestedAt});
+    await activity('run_requested',{message:'Manual start accepted. Waiting for the worker to begin; scheduled-hour restrictions do not apply to this run.',workflow_run_id:run.runId});
+    return json({status:'pending',run_id:run.runId});
+  }
   if (action === 'browser-login-view' && request.method === 'GET') {const {getLoginView}=await import('../../../lib/login-browser.mjs');const id=new URL(request.url).searchParams.get('id');if(id&&!/^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid browser session'},400);return json(await getLoginView({expectedId:id||undefined}));}
   if (action === 'browser-login-close' && request.method === 'POST') {const {closeLogin}=await import('../../../lib/login-browser.mjs');const input=await request.json();if(input.id&&!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid browser session'},400);return json(await closeLogin({expectedId:input.id}));}
   if (action === 'browser-login' && request.method === 'POST') {const {openLogin}=await import('../../../lib/application-browser.mjs');const input=await request.json();return json(await openLogin(input.site));}
@@ -92,7 +101,7 @@ async function handle(request: Request, context: Context) {
     const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];
     if(!attempt)return json({error:'Attempt missing'},404);
-    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await setEnabled(true);await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
+    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await setEnabled(true);await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[{manual:true}]);return json({run_id:run.runId});}
     if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
     return json({error:'An uncertain submission must be reconciled before another attempt.'},409);
   }

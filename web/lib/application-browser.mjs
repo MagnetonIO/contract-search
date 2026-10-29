@@ -6,7 +6,7 @@ import {readSnapshot} from './snapshot.mjs';
 import {automationSettings,mutate,patchAttempt,settle,claimAttempt,submissionIntent,activity} from './automation-state.mjs';
 import {siteForUrl} from './browser-accounts.mjs';
 import {recordDisposition} from './disposition.mjs';
-import {excluded,applicationWindow,fingerprint} from './automation-policy.mjs';
+import {excluded,applicationRunAllowed,fingerprint} from './automation-policy.mjs';
 
 import {bb,browserSession} from './browser-session.mjs';
 import {applicationScope,applicationButtons,clickApplicationStep,openLinkedInApplication,CONFIRMATION_PATTERN,applicationReceipt} from './application-controls.mjs';
@@ -20,7 +20,7 @@ export async function applyAttempt(id,{sessionFactory=browserSession,connect=url
  const initial=await automationSettings();const attempt=initial.attempts[id];if(!attempt||attempt.status!=='queued'||!await claimAttempt(id))return;
  const snapshot=(await readSnapshot()).value;const lead=snapshot?.leads.find(l=>l.id===attempt.lead_id);if(!lead){await patchAttempt(id,{status:'skipped',reason:'Posting unavailable'});return;}
  let session, browser, page, sent=false, confirmed=false, costUncertain=false, usage={input:0,output:0};const started=Date.now();
- const guard=async()=>{const current=await automationSettings();const workflow=(await readJson('workflow.json',{})).value;if(!current.policy.enabled||!applicationWindow()||excluded(lead,workflow[lead.id])||current.facts?.version!==attempt.profile_version||current.resume_hash!==attempt.resume_hash)throw Error('Application paused: settings, profile, résumé or opportunity changed.');};
+ const guard=async()=>{const current=await automationSettings();const workflow=(await readJson('workflow.json',{})).value;if(!current.policy.enabled||!applicationRunAllowed(current)||excluded(lead,workflow[lead.id])||current.facts?.version!==attempt.profile_version||current.resume_hash!==attempt.resume_hash)throw Error('Application paused: settings, profile, résumé or opportunity changed.');};
  try{
   await guard();await patchAttempt(id,{status:'running',reason:null,interaction_mode:'hosted_visual'});
   costUncertain=true;session=await sessionFactory(300);costUncertain=false;await patchAttempt(id,{session_id:session.id});

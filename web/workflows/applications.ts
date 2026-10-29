@@ -1,6 +1,6 @@
-export async function applicationCycle() {
+export async function applicationCycle(options: {manual?: boolean} = {}) {
   'use workflow';
-  const id = await acquire();
+  const id = await acquire(options.manual === true);
   if (!id) return;
   try {
     while (await screen()) { /* Each batch is durably checkpointed. */ }
@@ -18,10 +18,10 @@ export async function applicationCycle() {
   }
 }
 
-export async function acquire() {
+export async function acquire(manual = false) {
   'use step';
   const { acquireCycle } = await import('../lib/automation-state.mjs');
-  return acquireCycle();
+  return acquireCycle(manual);
 }
 
 export async function release(id: string) {

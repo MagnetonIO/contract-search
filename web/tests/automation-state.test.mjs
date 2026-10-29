@@ -1,7 +1,18 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 import {writeJson,readJson} from '../lib/store.ts';
-import {claimAttempt,submissionIntent,reviseAttempt,resumeAfterSiteLogin} from '../lib/automation-state.mjs';
+import {claimAttempt,submissionIntent,reviseAttempt,resumeAfterSiteLogin,acquireCycle} from '../lib/automation-state.mjs';
+test('manual start acquires a bounded cycle after hours while scheduled start stays idle',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'contract-manual-start-'));const previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
+ try{
+  await writeJson('automation-settings.json',{enabled:true});await writeJson('applicant-facts.json',{confirmed:true});
+  const now=new Date('2026-10-31T02:00:00Z');
+  assert.equal(await acquireCycle(false,{now}),null);
+  const claims=await Promise.all([acquireCycle(true,{now}),acquireCycle(true,{now})]);assert.equal(claims.filter(Boolean).length,1);
+  const run=(await readJson('automation-run.json',null)).value;assert.equal(run.mode,'manual');assert.equal(run.started_at,now.toISOString());assert.equal(run.manual_expires_at,'2026-10-31T04:00:00.000Z');
+  await writeJson('automation-settings.json',{enabled:false});assert.equal(await acquireCycle(true,{now}),null,'manual cannot override paused automation');
+ }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
+});
 test('concurrent workers cannot claim or submit the same attempt twice',async()=>{
  const folder=await mkdtemp(path.join(os.tmpdir(),'contract-automation-'));const previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
  try{

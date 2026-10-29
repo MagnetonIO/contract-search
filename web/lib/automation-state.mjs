@@ -4,6 +4,7 @@ import {DEFAULT_AUTOMATION_POLICY,applicationWindow,fingerprint,reserveBudget,ap
 import {readSnapshot} from './snapshot.mjs';
 import {siteForUrl,loginExpiresAt} from './browser-accounts.mjs';
 import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
+import {startRequestState} from './automation-start.mjs';
 
 export class AutomationInputError extends Error {constructor(message){super(message);this.name='AutomationInputError';}}
 export async function mutate(key,change,fallback={}) {
@@ -21,7 +22,7 @@ export async function automationDashboard(){
  const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
  const activeLive=live&&Date.parse(live.expires_at)>Date.now()&&['running','submitting'].includes(state.attempts[live.attempt_id]?.status)?live:null;
  const {screens,...visible}=state;
- return {...visible,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
+ return {...visible,start_status:startRequestState(request, state.run,{windowOpen:applicationWindow()}).status,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
 }
 export async function automationSettings(){
  const [settings,facts,budget,screens,attempts,profile,run]=await Promise.all([
@@ -52,10 +53,10 @@ export async function settle(id,usd){
  await mutate('automation-budget.json',old=>{const item=old?.charges?.find(c=>c.id===id);if(item){item.usd=Math.max(0,usd);item.status='settled';}return old;},null);
 }
 export async function patchAttempt(id,patch){const result=await mutate('application-attempts.json',old=>({...old,[id]:{...old[id],...patch,updated_at:new Date().toISOString()}}));if(patch.status)await activity('application_status',{phase:'applying',attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});return result;}
-export async function acquireCycle(){
- const state=await automationSettings();if(!state.policy.enabled||!state.facts?.confirmed||!applicationWindow())return null;
+export async function acquireCycle(manual=false,{now=new Date()}={}){
+ const state=await automationSettings();if(!state.policy.enabled||!state.facts?.confirmed||manual!==true&&!applicationWindow(now))return null;
  const id=randomUUID();let acquired=false;
- await mutate('automation-run.json',old=>{acquired=false;if(old?.active&&Date.now()-Date.parse(old.started_at)<2*3600000)return old;acquired=true;return {id,active:true,started_at:new Date().toISOString()};},null);
+ await mutate('automation-run.json',old=>{acquired=false;if(old?.active&&now.getTime()-Date.parse(old.started_at)<2*3600000)return old;acquired=true;const started=now;return {id,active:true,started_at:started.toISOString(),mode:manual===true?'manual':'scheduled',...(manual===true?{manual_expires_at:new Date(started.getTime()+2*3600000).toISOString()}: {})};},null);
  if(acquired)await activity('run_started',{phase:'screening',message:'Evaluating open opportunities.'});return acquired?id:null;
 }
 export async function failCycle(id){await mutate('automation-run.json',old=>old?.id===id?{...old,outcome:'failed'}:old,null);await activity('run_failed',{message:'Run interrupted by an error. Saved decisions and submission safeguards are preserved.'});}

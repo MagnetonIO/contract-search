@@ -1,4 +1,15 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {applicationRunAllowed} from '../lib/automation-policy.mjs';
+test('a bounded active manual cycle can run outside scheduled hours without enabling scheduled runs',()=>{
+ const now=new Date('2026-10-29T23:30:00Z');
+ assert.equal(applicationRunAllowed({run:null},now),false);
+ const run={active:true,mode:'manual',started_at:'2026-10-29T23:10:00Z',manual_expires_at:'2026-10-30T01:10:00Z'};
+ assert.equal(applicationRunAllowed({run},now),true);
+ assert.equal(applicationRunAllowed({run:{...run,active:false}},now),false);
+ assert.equal(applicationRunAllowed({run:{...run,mode:'scheduled'}},now),false);
+ assert.equal(applicationRunAllowed({run:{...run,manual_expires_at:'2026-10-30T05:10:00Z'}},now),false);
+ assert.equal(applicationRunAllowed({run},new Date('2026-10-30T01:11:00Z')),false);
+});
 import {applicationWindow,applicationIdentity,screenGate,reserveBudget} from '../lib/automation-policy.mjs';
 const lead={id:'a',pipeline:'contract',source:'board',source_url:'https://example.com/jobs/1?utm_source=x',pay:'Unknown',work_arrangement:'remote',c2c_status:'unknown'};
 test('application windows respect Chicago weekdays and DST',()=>{assert.ok(applicationWindow(new Date('2026-10-29T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-11-02T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-10-31T15:00:00Z')));});

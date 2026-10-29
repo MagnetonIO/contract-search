@@ -8,6 +8,6 @@ if(!token){for(const location of ['Library/Application Support/com.vercel.cli/au
 if(!token)throw Error('Sign into the Vercel CLI first. No token should be pasted into this script.');
 if(deployment.startsWith('dpl_'))process.env.VERCEL_DEPLOYMENT_ID=deployment;
 setWorld(createWorld({token,projectConfig:{projectId:'prj_vqOshmC6BaVQoSsI5G87NLdAOrcK',teamId:'team_N0SIOgAKLlD4Sa91HEiKpDPo',environment:'production'}}));
-const run=deployment.startsWith('wrun_')?getRun(deployment):await start({workflowId:'workflow//./workflows/applications//applicationCycle'},[],{deploymentId:deployment});
+const run=deployment.startsWith('wrun_')?getRun(deployment):await start({workflowId:'workflow//./workflows/applications//applicationCycle'},process.argv.includes('--manual')?[{manual:true}]:[],{deploymentId:deployment});
 if(process.argv.includes('--wait')){await run.returnValue;}
 console.log(JSON.stringify({run_id:run.runId,status:await run.status}));
