@@ -3,11 +3,15 @@ export const LOGIN_TIMEOUT_SECONDS=900;
 export function siteForUrl(url){try{const u=new URL(url);return Object.entries(ACCOUNT_SITES).find(([,s])=>u.protocol==='https:'&&(u.hostname===s.host||u.hostname.endsWith('.'+s.host)))?.[0]||null;}catch{return null;}}
 export function loginExpiresAt(login){return login?.expires_at||new Date(Date.parse(login?.opened_at||'1970-01-01')+(login?.timeout_seconds||300)*1000).toISOString();}
 export function loginIsActive(login,now=Date.now()){return Boolean(login&&Date.parse(loginExpiresAt(login))>now);}
-export function observedLogin(site,{url='',passwordVisible=false,signOutVisible=false,accountNavVisible=false}={}) {
+export function observedLogin(site,{url='',passwordVisible=false,signOutVisible=false,accountNavVisible=false,accountHomeVisible=false}={}) {
  let parsed;try{parsed=new URL(url);}catch{return 'unverified';}
  if(siteForUrl(url)!==site)return 'unverified';
  if(passwordVisible||/\/(?:login|signin|authwall|checkpoint|auth)(?:\/|$)|\/login_input\.htm/i.test(parsed.pathname))return 'needs_login';
  if(signOutVisible||site==='linkedin'&&accountNavVisible&&/^\/feed(?:\/|$)/.test(parsed.pathname))return 'signed_in';
  if(site==='dice'&&accountNavVisible&&/^\/profile(?:\/|$)/.test(parsed.pathname))return 'signed_in';
+ // Glassdoor's personalized job-seeker home hides sign-out in an account menu.
+ // Its private home, greeting and job-match navigation must agree; the URL
+ // alone (or public navigation alone) is never authentication evidence.
+ if(site==='glassdoor'&&accountHomeVisible&&accountNavVisible&&/^\/recruiter\/?$/.test(parsed.pathname))return 'signed_in';
  return 'unverified';
 }

@@ -14,9 +14,10 @@ export async function inspectLogin(browser,site){
   if(siteForUrl(page.url())!==site)continue;
   const target=ACCOUNT_SITES[site]?.verifyUrl;
   if(target&&!/\/(login|checkpoint|authwall)(\/|$)/i.test(new URL(page.url()).pathname))await page.goto(target,{waitUntil:'domcontentloaded',timeout:20000}).catch(()=>{});
-  const nav=site==='linkedin'?page.locator('a[href*="/messaging/"]'):site==='dice'?page.getByRole('link',{name:/^Messages$/i}):null;
+  const nav=site==='linkedin'?page.locator('a[href*="/messaging/"]'):site==='dice'?page.getByRole('link',{name:/^Messages$/i}):site==='glassdoor'?page.getByText(/^Your job matches$/i):null;
   if(nav&&!/\/(login|auth|checkpoint)(\/|$)/i.test(new URL(page.url()).pathname))await nav.first().waitFor({state:'visible',timeout:3000}).catch(()=>{});
-  const current=observedLogin(site,{url:page.url(),accountNavVisible:nav?await nav.first().isVisible().catch(()=>false):false,passwordVisible:await page.locator('input[type=password]').first().isVisible().catch(()=>false),signOutVisible:await page.getByRole('link',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)||await page.getByRole('button',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)});
+  const accountHomeVisible=site==='glassdoor'&&await page.getByRole('heading',{name:/^Good (morning|afternoon|evening),\s+\S/i}).first().isVisible().catch(()=>false);
+  const current=observedLogin(site,{url:page.url(),accountHomeVisible,accountNavVisible:nav?await nav.first().isVisible().catch(()=>false):false,passwordVisible:await page.locator('input[type=password]').first().isVisible().catch(()=>false),signOutVisible:await page.getByRole('link',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)||await page.getByRole('button',{name:/^(sign out|log out|logout)$/i}).first().isVisible().catch(()=>false)});
   if(current==='signed_in')return current;if(current==='needs_login')status=current;
  }
  return status;

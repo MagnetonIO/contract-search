@@ -16,3 +16,13 @@ test('a connected browser or public job page does not establish site sign-in',()
  assert.equal(siteForUrl('https://secure.indeed.com/auth'),'indeed');assert.equal(siteForUrl('https://indeed.com.evil.example/auth'),null);
  assert.equal(loginIsActive({opened_at:'2026-10-29T18:00:00Z',expires_at:'2026-10-29T18:15:00Z'},Date.parse('2026-10-29T18:10:00Z')),true);
 });
+test('Glassdoor personalized job-seeker home verifies without a visible sign-out menu',()=>{
+ const home={url:'https://www.glassdoor.com/recruiter',accountHomeVisible:true,accountNavVisible:true};
+ assert.equal(observedLogin('glassdoor',home),'signed_in');
+ assert.equal(observedLogin('glassdoor',{...home,accountHomeVisible:false}),'unverified');
+ assert.equal(observedLogin('glassdoor',{...home,accountNavVisible:false}),'unverified');
+ assert.equal(observedLogin('glassdoor',{...home,url:'https://www.glassdoor.com/member/profile/login'}),'needs_login');
+ assert.equal(observedLogin('glassdoor',{...home,passwordVisible:true}),'needs_login');
+ assert.equal(observedLogin('glassdoor',{...home,url:'https://www.glassdoor.com/Job/jobs.htm'}),'unverified');
+ assert.equal(observedLogin('glassdoor',{...home,url:'https://glassdoor.com.evil.example/recruiter'}),'unverified');
+});
