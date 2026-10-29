@@ -34,7 +34,7 @@ def main():
             sys.exit('Unexpected permission probe result; nothing saved.')
     except HTTPError as error:
         if error.code != 422:
-            sys.exit('Actions write permission is unavailable. Check token permissions and organization approval; nothing saved.')
+            sys.exit(f'GitHub dispatch permission check returned HTTP {error.code}. Set Repository permissions > Actions > Read and write (not Workflows), and approve any pending organization request. Nothing saved.')
     except URLError:
         sys.exit('GitHub permission check unavailable; nothing saved.')
     result = subprocess.run(['npx','--yes','vercel@65.7.0','env','add','COLLECTOR_GITHUB_TOKEN','--environment','production','--project','contract-search','--scope','magnetonios-projects','--sensitive','--force','--yes'],input=key,text=True,capture_output=True,cwd=Path(__file__).resolve().parents[1])
