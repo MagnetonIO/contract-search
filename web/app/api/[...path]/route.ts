@@ -1,3 +1,6 @@
+import { start } from 'workflow/api';
+import { applicationCycle } from '../../../workflows/applications';
+import { automationSettings, saveFacts, setEnabled, patchAttempt, reviseAttempt } from '../../../lib/automation-state.mjs';
 import { ensureCollection } from '../../../lib/collector-scheduler.mjs';
 import { NextResponse } from 'next/server';
 import { authConfig, isLoggedIn, sessionFor, checkOrigin, localSetupAllowed, createLocalAccount, resetLocalAccount, checkLogin } from '../../../lib/auth';
@@ -8,7 +11,7 @@ import { safeWebUrl } from '../../../lib/auth-core.mjs';
 import { recordApplication, saveApplication, saveDisposition, deleteRemoved } from '../../../lib/workflow';
 import { readSnapshot } from '../../../lib/snapshot.mjs';
 import { scriptTemplate, scriptManifest } from '../../../lib/gmail-script.mjs';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { mailKey, prepareOutreach, latestOutreach, sendOutreach } from '../../../lib/outreach';
 import { MailError, MAIL_FROM, DIGEST_TO } from '../../../lib/mail.mjs';
 
@@ -64,6 +67,26 @@ async function handle(request: Request, context: Context) {
     }
     const endpoint = new URL('/api/import/catalant',request.url).href;
     return json({script:scriptTemplate.replace('__ENDPOINT__',endpoint).replace('__TOKEN__',stored.value!.token),manifest:scriptManifest});
+  }
+  if (action === 'automation-resume' && request.method === 'GET') {
+    const id=new URL(request.url).searchParams.get('id');if(!id||! /^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid attempt'},400);
+    const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];if(!a?.resume_key)return json({error:'Resume unavailable'},404);
+    const file=await readBytes(a.resume_key);if(!file)return json({error:'Resume unavailable'},404);
+    return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename=Resume_Matthew_Long.pdf','Cache-Control':'private, no-store'}});
+  }
+  if (action === 'automation' && request.method === 'GET') return json(await automationSettings());
+  if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
+  if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}
+  if (action === 'automation-run' && request.method === 'POST') {const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
+  if (action === 'browser-login' && request.method === 'POST') {const {openLogin}=await import('../../../lib/application-browser.mjs');return json(await openLogin());}
+  if (action === 'browser-login-finish' && request.method === 'POST') {const {finishLogin}=await import('../../../lib/application-browser.mjs');await finishLogin();return json({finished:true});}
+  if (action === 'automation-attempt' && request.method === 'POST') {
+    const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
+    const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];
+    if(!attempt)return json({error:'Attempt missing'},404);
+    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[]);return json({run_id:run.runId});}
+    if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
+    return json({error:'An uncertain submission must be reconciled before another attempt.'},409);
   }
   if (action === 'collect-now' && request.method === 'POST') return json(await ensureCollection());
   if (action === 'logout' && request.method === 'POST') { (await sessionFor(config)).destroy(); return json({ success: true }); }
@@ -145,7 +168,7 @@ async function handle(request: Request, context: Context) {
     const current = await readJson<Profile>('profile.json', defaultProfile);
     const mime = pdf ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     await writeBytes('resume.bin', bytes, mime);
-    const profile = { ...current.value, resume_name: file.name.replace(/[^a-zA-Z0-9_. -]/g, '_').slice(0,150), resume_type: mime };
+    const profile = { ...current.value, resume_hash: createHash('sha256').update(bytes).digest('hex'), resume_name: file.name.replace(/[^a-zA-Z0-9_. -]/g, '_').slice(0,150), resume_type: mime };
     const version = await writeJson('profile.json', profile, current.version);
     return json({ profile, version });
   }
@@ -159,6 +182,7 @@ async function handle(request: Request, context: Context) {
 async function dispatch(request: Request, context: Context) {
   try { return await handle(request, context); }
   catch (error) {
+    if ((error as Error).name==='AutomationInputError') return json({error:(error as Error).message},400);
     if (error instanceof MailError) return json({error:error.message},400);
     if (error instanceof ConflictError) return json({ error: error.message }, 409);
     if (error instanceof SyntaxError) return json({ error: 'Invalid request.' }, 400);

@@ -121,6 +121,7 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
             count=sum(j.get('source')==row['source'] and bool(j.get('pipeline')) for j in jobs)
             if count:row.update(status='saved',saved_count=count,detail='Saved results; '+row.get('detail','refresh scheduled'))
     leads = []
+    content = {}
     for job in jobs:
         if not job.get('pipeline'):
             continue  # The seed identifies a previously reported job, not a current collected lead.
@@ -128,6 +129,9 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
         lead = {k: v for k, v in job.items() if not k.startswith('_') and k != 'public_recruiter_contact'}
         lead['id'] = lead_id(job)
         lead['contacts'] = classify_contacts(job)
+        text = job.get('_description', '')
+        if text:
+            content[lead['id']] = {'text': text, 'hash': hashlib.sha256(text.encode('utf-8')).hexdigest()}
         # A review belongs to this exact posting, not future jobs sharing a title or employer.
         match = next((q for q in qualifications if q['match'].get('source_url') and
                       posting_key(q['match']['source_url']) == posting_key(job['source_url'])), None)
@@ -143,6 +147,7 @@ def export(state_path, summary_path, qualifications_path, output, config_path=No
     path = Path(output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+    path.with_name('job-content.json').write_text(json.dumps({'generated_at': payload['generated_at'], 'postings': content}, ensure_ascii=False), encoding='utf-8')
     print(f'Exported {len(leads)} leads; {sum(bool(j.get("qualification")) for j in leads)} reviewed; no new scrapes started.')
 
 

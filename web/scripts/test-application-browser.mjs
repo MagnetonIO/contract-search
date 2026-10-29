@@ -1,0 +1,22 @@
+// Explicit opt-in: real hosted browser and models, synthetic form; never a real employer.
+import assert from 'node:assert/strict';import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {randomUUID,createHash} from 'node:crypto';import Browserbase from '@browserbasehq/sdk';import {chromium} from 'playwright-core';
+if(process.env.LIVE_AUTOMATION_TEST!=='1')throw Error('Set LIVE_AUTOMATION_TEST=1 to run this paid integration canary.');
+const folder=await mkdtemp(path.join(os.tmpdir(),'contract-live-fixture-'));process.env.DASHBOARD_LOCAL_DIR=folder;process.env.DASHBOARD_STORAGE='local';delete process.env.VERCEL;
+const {readJson,writeJson,writeBytes}=await import('../lib/store.ts');const {applyAttempt}=await import('../lib/application-browser.mjs');
+const bb=new Browserbase({maxRetries:0});let session,browser,clicks=0;
+try{
+ session=await bb.sessions.create({projectId:process.env.BROWSERBASE_PROJECT_ID,api_timeout:300,proxies:false,browserSettings:{recordSession:false}});
+ browser=await chromium.connectOverCDP(session.connectUrl);const context=browser.contexts()[0],page=context.pages()[0]||await context.newPage();
+ const text='Verified Python software engineering experience for the synthetic integration fixture.';
+ await page.setContent('<h1>Fixture Applicant</h1><p>'+text+'</p>');const pdf=await page.pdf({format:'Letter'}),hash=createHash('sha256').update(pdf).digest('hex');
+ const lead={id:'a'.repeat(20),title:'Fixture Python Engineer',company_agency:'Synthetic employer fixture',source:'Integration fixture',source_url:'https://example.com/contract-fixture',application_url:'https://example.com/contract-fixture',pipeline:'contract'};
+ const id=randomUUID(),now=new Date().toISOString(),facts={name:'Fixture Applicant',first_name:'Fixture',last_name:'Applicant',email:'fixture@example.com',phone:'555-0100',zip:'60612',work_authorization:'yes',sponsorship:'no',verified_experience:text,version:'fixture-v1',confirmed:true};
+ await writeJson('automation-settings.json',{enabled:true});await writeJson('profile.json',{resume_hash:hash});await writeJson('applicant-facts.json',facts);await writeBytes('resume.bin',pdf,'application/pdf');await writeJson('resume-source.json',{hash,text});
+ await writeJson('leads.json',{collected_at:now,leads:[lead],summary:{source_coverage:[]}});await writeJson('application-attempts.json',{[id]:{id,lead_id:lead.id,status:'queued',profile_version:facts.version,resume_hash:hash,created_at:now,updated_at:now}});await writeJson('automation-budget.json',{month:now.slice(0,7),charges:[{id,usd:2.5,status:'reserved'}],submissions:[]});
+ await context.route('https://example.com/**',route=>route.fulfill({contentType:'text/html',body:`<h1>Fixture Python Engineer — Synthetic employer fixture</h1><form><label>Full name<input name="fullname" required></label><label>Email<input name="email" type="email" required></label><label>Resume<input name="resume" type="file" required></label><button type="submit">Submit application</button></form><script>document.querySelector('form').addEventListener('submit',e=>{e.preventDefault();console.log('fixture submitted');document.body.innerHTML='<h1>Your application has been received</h1><p>Fixture Python Engineer — Synthetic employer fixture</p>';});</script>`}));
+ for(const p of context.pages())p.on('console',m=>{if(m.text()==='fixture submitted')clicks++;});
+ await applyAttempt(id,{sessionFactory:async()=>session,connect:async()=>browser});const result=(await readJson('application-attempts.json',{})).value[id],workflow=(await readJson('workflow.json',{})).value;
+ assert.equal(result.status,'submitted',JSON.stringify({status:result.status,reason:result.reason}));assert.equal(clicks,1);assert.equal(workflow[lead.id].stage,'applied');assert.equal(workflow[lead.id].events[0].evidence,'browser_confirmed');assert.ok(result.resume_key);
+ await applyAttempt(id,{sessionFactory:()=>{throw Error('Must not reopen submitted application');}});assert.equal(clicks,1);
+ const budget=(await readJson('automation-budget.json',null)).value;console.log(JSON.stringify({integration_fixture:'passed',real_hosted_browser:true,real_model:true,synthetic_form_submissions:clicks,confirmed_tracker_update:true,duplicate_prevented:true,estimated_usage_usd:budget.charges[0].usd}));
+}finally{if(session)await bb.sessions.update(session.id,{status:'REQUEST_RELEASE'}).catch(()=>{});await rm(folder,{recursive:true,force:true});}

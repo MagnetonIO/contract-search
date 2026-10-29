@@ -22,7 +22,7 @@ function digestLocation(value) {
   } catch { /* Most sources already provide readable text. */ }
   return value || 'Location not published';
 }
-function digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, collectedAt) {
+function digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, collectedAt, automation) {
   const link = (url, label) => `<a href="${escapeHtml(url)}" style="color:#175cd3;text-decoration:underline;">${escapeHtml(label)}</a>`;
   const paragraph = text => `<p style="margin:0 0 12px;">${escapeHtml(text)}</p>`;
   const job = (lead, index) => {
@@ -49,6 +49,7 @@ function digestHtml(heading, rows, emails, notices, cutoff, since, collectionPen
         ${remaining>0?paragraph(`${remaining} more candidates are available in your dashboard.`):''}
         ${emails.length?`<h2 style="font-size:18px;margin:24px 0 12px;">Catalant projects to review: ${emails.length}</h2><ul>${emails.slice(0,25).map(lead=>`<li style="margin-bottom:12px;">${link(digestLink(lead),lead.title)}</li>`).join('')}</ul>${emails.length>25?paragraph(`${emails.length-25} more Catalant projects are available in your dashboard.`):''}`:''}
         <hr style="border:0;border-top:1px solid #d0d5dd;margin:24px 0;">
+        ${automation?`<h2 style="font-size:18px">Application results</h2><p>Submitted: ${automation.counts.submitted} · Skipped: ${automation.counts.skipped} · Failed: ${automation.counts.failed} · Needs input: ${automation.counts.needs_input}</p><ul>${automation.outcomes.map(a=>`<li>${escapeHtml(a.title||a.lead_id)} — ${escapeHtml(a.status.replaceAll('_',' '))}</li>`).join('')}</ul><p>${link(DASHBOARD_URL+'/?view=automation','View application results')}</p>`:''}
         <h2 style="font-size:16px;margin:0 0 12px;">Collection notes</h2>
         ${paragraph('Last job scan: '+digestDate(collectedAt))}${paragraph('New since: '+digestDate(since))}
         ${notices.map(paragraph).join('')}
@@ -117,7 +118,9 @@ export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
   if (collectionPending) notices.push('Today’s scheduled job scan has not published. These are saved results, not a completed scan with zero matches. Last job scan: '+digestDate(snapshot.collected_at)+'. Email-import updates do not refresh job-board results.');
   if (stale) notices.push('Collection is over 26 hours old. The daily collector may need attention.');
   if (rows.length < snapshot.summary.target) notices.push(`Below the target of ${snapshot.summary.target}; no older leads added to fill the count.`);
+  const automation=snapshot.automation_results;
   const lines = [heading, '', `Last job scan: ${digestDate(snapshot.collected_at)}`, `Latest data/import: ${digestDate(cutoff)}`, `New since: ${digestDate(since)}`, 'Rates, C2C eligibility, location restrictions, and client identity still require confirmation.', ...notices];
+  if(automation){lines.push('',`Applications: ${automation.counts.submitted} submitted; ${automation.counts.skipped} skipped; ${automation.counts.failed} failed; ${automation.counts.needs_input} need input.`,DASHBOARD_URL+'/?view=automation');}
   if (!rows.length) lines.push((collectionPending?'New job counts are unavailable until the scheduled scan publishes.':'No new contract candidates in this digest window.'));
   if (rows.length) lines.push(`Showing ${Math.min(rows.length,DIGEST_PREVIEW_LIMIT)} candidates, highest review score first.`);
   for (const [index, lead] of rows.slice(0,DIGEST_PREVIEW_LIMIT).entries()) {
@@ -133,6 +136,6 @@ export function digestPayload(snapshot, previousCutoff, day, now = new Date()) {
   if (pending.length) notices.push('Sources awaiting setup: '+pending.map(source=>source.source).join(', '));
   lines.push('', 'Open Contract Desk: '+DASHBOARD_URL, 'This digest contains individual contract candidates. Procurement notices and secondary roles are separate dashboard views.');
   const text = lines.join('\n');
-  return { payload: { from: MAIL_FROM, to: [DIGEST_TO], reply_to: MAIL_REPLY_TO, subject: '[Contract Desk] '+heading, text, html: digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, snapshot.collected_at) },
+  return { payload: { from: MAIL_FROM, to: [DIGEST_TO], reply_to: MAIL_REPLY_TO, subject: '[Contract Desk] '+heading, text, html: digestHtml(heading, rows, emails, notices, cutoff, since, collectionPending, snapshot.collected_at, automation) },
     meta: { day, count: rows.length, cutoff: Date.parse(cutoff)>Date.parse(since)?cutoff:since } };
 }

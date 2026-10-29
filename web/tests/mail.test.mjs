@@ -77,3 +77,9 @@ test('empty digest retains collection warnings and separates Catalant review lin
   assert.equal($('li a').text(),'Project <review>');
   assert.ok($.text().includes('CDT'));
 });
+
+test('application outcomes remain separate from new candidate counts and escape job text',()=>{
+ const snapshot={collected_at:'2026-10-29T13:30:00Z',leads:[],summary:{target:50,source_coverage:[]},automation_results:{counts:{submitted:2,skipped:4,failed:1,needs_input:1},outcomes:[{title:'Engineer <script>',status:'submitted'}]}};
+ const {payload,meta}=digestPayload(snapshot,'2026-10-28T13:00:00Z','2026-10-29',new Date('2026-10-29T14:17:00Z'));
+ assert.equal(meta.count,0);assert.match(payload.text,/2 submitted; 4 skipped; 1 failed; 1 need input/);assert.match(payload.html,/Engineer &lt;script&gt;/);assert.equal(payload.html.includes('<script>'),false);
+});

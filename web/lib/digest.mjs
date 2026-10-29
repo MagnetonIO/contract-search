@@ -21,12 +21,20 @@ export async function sendDailyDigest({ now = new Date(), apiKey = process.env.R
   const recovery = !collectionPending && previous?.meta?.day === window.day && (previous.meta.collection_pending || Date.parse(previous.meta.cutoff) < Date.parse(expected));
   const identity = recovery || previous?.identity === 'digest/'+window.day+'/recovery' ? 'digest/'+window.day+'/recovery' : 'digest/'+window.day;
   const workflow = (await store.read('workflow.json')).value || {};
-  const activeSnapshot = { ...snapshot, leads: snapshot.leads.filter(lead => !workflow[lead.id]?.disposition && workflow[lead.id]?.stage !== 'not_a_fit') };
+  const attempts=(await store.read('application-attempts.json')).value||{};
+  const screens=(await store.read('screenings.json')).value||{};
+  const since=Date.parse(previous?.meta?.automation_cutoff)||now.getTime()-86400000;
+  const outcomes=Object.values(attempts).filter(item=>Date.parse(item.updated_at)>since&&['submitted','needs_input','submission_unknown','failed','skipped'].includes(item.status));
+  const counts={submitted:0,skipped:0,failed:0,needs_input:0};
+  for(const item of outcomes)counts[item.status==='submission_unknown'?'needs_input':item.status]++;
+  counts.skipped+=Object.values(screens).filter(item=>item.status==='skipped'&&Date.parse(item.screened_at)>since).length;
+  const activeSnapshot = { ...snapshot, automation_results:{counts,outcomes:outcomes.slice(-10)}, leads: snapshot.leads.filter(lead => !workflow[lead.id]?.disposition && workflow[lead.id]?.stage !== 'not_a_fit') };
   const record = await deliverStored(store, 'digest-state.json', identity,
     async previous => {
       const draft = digestPayload(activeSnapshot, previous?.meta?.cutoff, window.day, now);
       draft.meta.collection_pending = collectionPending;
       draft.meta.collection_at = snapshot.collected_at;
+      draft.meta.automation_cutoff = now.toISOString();
       return draft;
     },
     (payload, identity) => send(payload, identity, { apiKey }));
