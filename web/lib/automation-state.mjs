@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {readJson,writeJson,ConflictError} from './store.ts';
 import {DEFAULT_AUTOMATION_POLICY,applicationWindow,fingerprint,reserveBudget,applicationIdentity} from './automation-policy.mjs';
 import {readSnapshot} from './snapshot.mjs';
+import {siteForUrl,loginExpiresAt} from './browser-accounts.mjs';
 import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
 
 export class AutomationInputError extends Error {constructor(message){super(message);this.name='AutomationInputError';}}
@@ -20,7 +21,7 @@ export async function automationDashboard(){
  const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
  const activeLive=live&&Date.parse(live.expires_at)>Date.now()&&['running','submitting'].includes(state.attempts[live.attempt_id]?.status)?live:null;
  const {screens,...visible}=state;
- return {...visible,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login&&Date.now()-Date.parse(login.opened_at)<300000?{site:login.site,live_url:login.live_url}:null};
+ return {...visible,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
 }
 export async function automationSettings(){
  const [settings,facts,budget,screens,attempts,profile,run]=await Promise.all([
@@ -43,7 +44,7 @@ export async function saveFacts(input){
  await mutate('applicant-facts.json',()=>facts,null);return facts;
 }
 export async function setEnabled(enabled){
- if(enabled){const ready=(await readJson('automation-readiness.json',null)).value;if(!ready?.provider_integration_verified)throw new AutomationInputError('The initial browser integration check is still in progress.');const login=(await readJson('browser-login.json',null)).value;if(login&&Date.now()-Date.parse(login.opened_at)<300000)throw new AutomationInputError('Finish the login browser before enabling automation.');const state=await automationSettings();if(!state.facts?.confirmed||!state.resume_hash||!state.connections.browser)throw new AutomationInputError('Complete applicant facts, upload a PDF résumé and connect the browser first.');}
+ if(enabled){const ready=(await readJson('automation-readiness.json',null)).value;if(!ready?.provider_integration_verified)throw new AutomationInputError('The initial browser integration check is still in progress.');const login=(await readJson('browser-login.json',null)).value;if(login?.id)throw new AutomationInputError('Finish the login browser before enabling automation.');const state=await automationSettings();if(!state.facts?.confirmed||!state.resume_hash||!state.connections.browser)throw new AutomationInputError('Complete applicant facts, upload a PDF résumé and connect the browser first.');}
  return mutate('automation-settings.json',old=>({...DEFAULT_AUTOMATION_POLICY,...old,enabled:Boolean(enabled)}),DEFAULT_AUTOMATION_POLICY);
 }
 export async function reserve(id,usd,submit=false){return mutate('automation-budget.json',old=>reserveBudget(old,{id,usd,submit}),null);}
@@ -71,7 +72,7 @@ export async function resumeAfterSiteLogin(){
  for(const attempt of Object.values(state.attempts)){
   if(attempt.status!=='needs_input'||attempt.submission_intent_at||!/sign.?in|log.?in|authentication|MFA/i.test(attempt.reason||''))continue;
   const lead=snapshot?.leads.find(l=>l.id===attempt.lead_id);let host='';try{host=new URL(lead?.application_url||lead?.source_url).hostname;}catch{continue;}
-  const site=host==='linkedin.com'||host.endsWith('.linkedin.com')?'linkedin':host==='dice.com'||host.endsWith('.dice.com')?'dice':null;
+  const site=siteForUrl('https://'+host);
   const account=site&&sites[site];
   // A fresh save can safely retry an authentication-only pause once. It does
   // not establish verified sign-in and never retries a submission intent.

@@ -43,6 +43,7 @@ try {
  response=await request('data');assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);
  let data=await response.json();assert.equal(data.snapshot.leads.length,1);
  assert.equal((await request('automation',{authenticated:false})).status,401);
+ assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');
  const automation=await(await request('automation')).json();assert.equal(automation.audit.total,1);assert.equal(automation.audit.rows[0].title,fixture.title);assert.equal(automation.live_browser,null);assert.deepEqual(automation.activity,[]);
  assert.equal((await request('automation-settings',{body:{enabled:true},origin:'https://attacker.example'})).status,403);
  response=await request('progress',{body:{id:fixture.id,stage:'saved',notes:'Synthetic private note',version:null},origin:'https://attacker.example'});assert.equal(response.status,403);
