@@ -12,8 +12,8 @@ export function collectionHealth(snapshot,run,now=new Date()){
  const expected=slots.filter(t=>t<=now.getTime()).at(-1);const next=slots.find(t=>t>now.getTime());
  const active=run?.status==='running'&&now.getTime()-Date.parse(run.started_at)<55*60000;
  const overdue=expected && Date.parse(snapshot.collected_at)<expected && now.getTime()>expected+60*60000;
- const status=active?'running':run?.status==='running'?'stalled':overdue?'overdue':run?.status==='failed'?'failed':'idle';
+ const status=active?'running':run?.status==='running'?'stalled':overdue?'overdue':run?.status==='failed'?'failed':run?.status==='completed_with_warnings'?'partial':'idle';
  return {status,next_at:new Date(next).toISOString(),expected_at:new Date(expected).toISOString(),
- title:({running:'Collection running',stalled:'Collection has not reported completion',overdue:'Scheduled collection overdue',failed:'Last collection attempt failed',idle:'Waiting for next scheduled collection'})[status],
- detail:active?'Source counts below will update when this run publishes.':overdue?'The scheduled time passed without a newer scan. Saved source results below are from the last published scan.':'Source results below retain their own collection times.'};
+ title:({running:'Collection running',stalled:'Collection has not reported completion',overdue:'Scheduled collection overdue',failed:'Last collection attempt failed',partial:'Collection published with source warnings',idle:'Waiting for next scheduled collection'})[status],
+ detail:status==='partial'?'Fresh results were published. Some sources failed; see their individual coverage below.':active?'Source counts below will update when this run publishes.':overdue?'The scheduled time passed without a newer scan. Saved source results below are from the last published scan.':'Source results below retain their own collection times.'};
 }

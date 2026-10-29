@@ -133,7 +133,7 @@ jobs:
           npm ci --omit=dev
           node scripts/publish-data.mjs ../output/dashboard.json
       - name: Send morning digest after fresh results publish
-        if: steps.dashboard.outcome == 'success' && env.MODE == 'daily'
+        if: always() && steps.dashboard.outcome == 'success' && env.MODE == 'daily'
         working-directory: code/web
         env:
           DASHBOARD_STORAGE: blob
@@ -147,4 +147,5 @@ jobs:
           DASHBOARD_STORAGE: blob
           BLOB_READ_WRITE_TOKEN: ${{ secrets.DASHBOARD_BLOB_TOKEN }}
           COLLECTION_OUTCOME: ${{ job.status }}
+          COLLECTION_PUBLISHED: ${{ steps.dashboard.outcome == 'success' }}
         run: node scripts/collection-status.mjs finished

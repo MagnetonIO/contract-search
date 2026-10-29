@@ -1,3 +1,4 @@
+import { ensureCollection } from '../../../lib/collector-scheduler.mjs';
 import { NextResponse } from 'next/server';
 import { authConfig, isLoggedIn, sessionFor, checkOrigin, localSetupAllowed, createLocalAccount, resetLocalAccount, checkLogin } from '../../../lib/auth';
 import { readBytes, writeBytes, readJson, writeJson, ConflictError } from '../../../lib/store';
@@ -64,6 +65,7 @@ async function handle(request: Request, context: Context) {
     const endpoint = new URL('/api/import/catalant',request.url).href;
     return json({script:scriptTemplate.replace('__ENDPOINT__',endpoint).replace('__TOKEN__',stored.value!.token),manifest:scriptManifest});
   }
+  if (action === 'collect-now' && request.method === 'POST') return json(await ensureCollection());
   if (action === 'logout' && request.method === 'POST') { (await sessionFor(config)).destroy(); return json({ success: true }); }
   if (action === 'data' && request.method === 'GET') {
     const [snapshot, workflow, profile] = await Promise.all([
