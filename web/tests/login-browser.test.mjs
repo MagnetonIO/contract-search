@@ -16,3 +16,11 @@ test('inconclusive verification keeps the login browser alive; saved sessions sh
   await finishLogin({...deps,expectedId:'fixture',inspect:async()=> 'signed_in'});await closeLogin({...deps,expectedId:'fixture'});assert.equal(released,1,'old viewer controls cannot close a newer login');assert.equal((await readJson('browser-login.json',null)).value.id,'different-session');
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });
+test('active viewer exposes each remote tab without OAuth query strings',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'contract-login-tabs-'));const previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
+ try{
+  await writeJson('browser-login.json',{id:'tabs',site:'glassdoor',expires_at:new Date(Date.now()+900000).toISOString(),live_url:'https://www.browserbase.com/site'});
+  const client={sessions:{retrieve:async()=>({status:'RUNNING'}),debug:async()=>({pages:[{id:'site',title:'Glassdoor',url:'https://www.glassdoor.com/member/profile/login',debuggerFullscreenUrl:'https://www.browserbase.com/site'},{id:'oauth',title:'Sign in',url:'https://accounts.google.com/signin?code=private-oauth-code',debuggerFullscreenUrl:'https://www.browserbase.com/auth'}]})}};
+  const view=await getLoginView({client,expectedId:'tabs'});assert.equal(view.state,'active');assert.equal(view.tabs.length,2);assert.equal(view.tabs[1].label,'Google sign-in');assert.equal(JSON.stringify(view).includes('private-oauth-code'),false);
+ }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
+});

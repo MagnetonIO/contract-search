@@ -4,6 +4,7 @@ import {readJson} from './store.ts';
 import {automationSettings,mutate,setEnabled,AutomationInputError} from './automation-state.mjs';
 import {bb,browserSession} from './browser-session.mjs';
 import {ACCOUNT_SITES,LOGIN_TIMEOUT_SECONDS,observedLogin,siteForUrl,loginExpiresAt,loginIsActive} from './browser-accounts.mjs';
+import {loginTabs} from './login-tabs.mjs';
 const terminal=status=>['COMPLETED','TIMED_OUT','ERROR'].includes(status);
 const options=deps=>({client:deps?.client||bb(),connect:deps?.connect||(url=>chromium.connectOverCDP(url)),inspect:deps?.inspect||inspectLogin,pause:deps?.pause||delay});
 
@@ -83,9 +84,10 @@ export async function getLoginView(deps={}){
  if(deps.expectedId&&login?.id!==deps.expectedId){const previous=(await readJson('browser-login-last.json',null)).value;return previous?.session_id===deps.expectedId?previous:{state:'closed'};}
  if(!login?.id)return (await readJson('browser-login-last.json',{state:'closed'})).value;
  try{
-  const session=await options(deps).client.sessions.retrieve(login.id);
+  const client=options(deps).client;const session=await client.sessions.retrieve(login.id);
   if(terminal(session.status))return finalized(login,login.close_reason||'expired',login.verified_status);
   if(!loginIsActive(login)){const result=await closeLogin({...deps,reason:'expired',status:login.verified_status});return result.finished?result:{state:'closing',site:login.site};}
-  return {state:login.close_reason?'closing':'active',site:login.site,name:ACCOUNT_SITES[login.site]?.name,live_url:login.embed_url||login.live_url,expires_at:loginExpiresAt(login)};
+  const tabs=login.close_reason?[]:loginTabs(await client.sessions.debug(login.id));
+  return {state:login.close_reason?'closing':'active',site:login.site,name:ACCOUNT_SITES[login.site]?.name,tabs,expires_at:loginExpiresAt(login)};
  }catch{return {state:'unavailable',site:login.site,message:'The browser connection could not be checked. Try again shortly.'};}
 }
