@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload,experienceAnswer} from '../lib/visual-policy.mjs';
+import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload,experienceAnswer,optionalTopChoice,knownChoiceAnswer} from '../lib/visual-policy.mjs';
 test('numeric experience comes only from the matching explicit user-confirmed answer',()=>{
  const sentence='User-confirmed application answer: 3 years of hands-on work experience with Palantir/Foundry.';
  const facts={verified_experience:sentence};
@@ -44,4 +44,22 @@ test('visual answer selections must match the question and confirmed facts',()=>
  assert.equal(choiceMatches({fact:'country',label:'United States (+1)',question:'Phone country code',facts}),true);
  assert.equal(choiceMatches({fact:'email',value:'test@example.com',question:'Email address',facts}),true);
  assert.equal(choiceMatches({fact:'routine_privacy_consent',label:'Yes',question:'Accept arbitration terms',facts}),false);
+});
+
+test('optional top-choice promotion is recognized without answering an eligibility question',()=>{
+ assert.equal(optionalTopChoice({type:'checkbox',question:'Mark job as a top choice'}),true);
+ assert.equal(optionalTopChoice({type:'radio',label:'Top choice'}),true);
+ assert.equal(optionalTopChoice({type:'checkbox',question:'Are you authorized to work?'}),false);
+ assert.equal(optionalTopChoice({type:'button',label:'Top choice'}),false);
+});
+
+test('authorization without sponsorship is a combined question, not a request for sponsorship',()=>{
+ const facts={work_authorization:'yes',sponsorship:'no'};
+ const question='Are you authorized to work in the United States without the need for current or future visa sponsorship?';
+ assert.deepEqual(knownChoiceAnswer(question,facts),{fact:'work_authorization',answer:'yes'});
+ assert.equal(choiceMatches({fact:'sponsorship',label:'No',question,facts}),false);
+ assert.equal(choiceMatches({fact:'work_authorization',label:'Yes',question,facts}),true);
+ assert.equal(knownChoiceAnswer('Do you need sponsorship?',facts).answer,'no');
+ assert.equal(knownChoiceAnswer('Do you have a clearance?',facts),null);
+ assert.equal(knownChoiceAnswer(question,{work_authorization:'yes'}),null);
 });
