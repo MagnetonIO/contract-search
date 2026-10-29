@@ -21,7 +21,7 @@ export function automationLocation(lead, facts, description='') {
  // An office address is not a residency restriction. Require restrictive wording.
  const regional=clauses.find(s=>/must (?:reside|live|be based|be located)|(?:candidates|applicants|residents) (?:from|in) .{0,35}\bonly\b|only.{0,15}(?:candidates|applicants) (?:from|in|based in)|eligible states|excluding.{0,35}(?:states|Illinois|IL)\b/i.test(s)&&! /(?:based|located|reside|live) in (?:the )?(?:United States|U\.?S\.?A?\b)|authorized to work|visa|sponsor/i.test(s));
  if(regional&&!(/\bIllinois\b|\bChicago\b|\bIL\b/.test(regional)&&! /exclud|except|not eligible/i.test(regional)))return {status:'held',reason:'Regional restriction needs confirmation: '+regional.trim().slice(0,240)};
- const timezone=clauses.find(s=>/\bonly\b.{0,20}(?:PST|PDT|EST|EDT|Pacific|Eastern)|(?:PST|PDT|EST|EDT|Pacific|Eastern).{0,20}\bonly\b/i.test(s));
+ const timezone=clauses.find(s=>/\bonly\b.{0,20}\b(?:PST|PDT|EST|EDT|Pacific|Eastern)\b|\b(?:PST|PDT|EST|EDT|Pacific|Eastern)\b.{0,20}\bonly\b/i.test(s));
  if(timezone)return {status:'held',reason:'Time-zone residency restriction needs confirmation: '+timezone.trim().slice(0,200)};
  const remote=lead.work_arrangement==='remote'||/\bremote\b/i.test(lead.remote_location||'');
  const usScope=/United States|\bU\.?S\.?A?\b|\bworldwide\b|\banywhere\b/i.test(lead.remote_location||'')||/remote\s*[-–(,:]*\s*(?:US\b|U\.S\.|United States)|(?:candidates|applicants).{0,40}(?:based|located|reside).{0,20}(?:United States|U\.S\.)/i.test(description);
