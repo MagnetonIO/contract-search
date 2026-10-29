@@ -13,6 +13,8 @@ The existing Contract Desk app has an authenticated Automatic applications view.
 - The collector exports `job-content.json` separately from the browser snapshot. Full descriptions stay private. Decisions are cached by content, facts, policy and disposition/stage.
 - Résumé tailoring adds relevant verbatim highlights and preserves the master text and dates. Each attempt stores immutable PDF versions. Changed master PDFs require a matching canonical text source for tailoring; otherwise the approved PDF is used unchanged.
 - Browser tools support labelled native forms on supported domains; unsupported controls, CAPTCHAs, new agreements and unknown required answers become exceptions. This is not a guarantee that every job board or ATS form can be completed.
+- Every scored match receives an independent mandatory-requirement check before browser work. Required durations, residency and named tools need verbatim verified evidence. Resolved application URLs are claimed across records to prevent cross-board duplicate submissions.
+- Vercel invokes `/api/cron/applications` hourly at minute 27 on weekdays; the engine enforces the Chicago work window and global lease. The dashboard shows the current run and saved results.
 - Closed postings receive a persistent closed disposition. Confirmed submissions become Applied. Ambiguous submission results are never silently retried. Results appear in the next morning digest.
 
 ## Credentials and local use
