@@ -30,5 +30,9 @@ test('time-zone rules match complete zone names, not words such as requests',()=
 });
 test('next application check skips nights/weekends and follows Chicago DST',()=>{
  assert.equal(nextApplicationCheck(new Date('2026-10-29T17:08:00Z')),'2026-10-29T17:30:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-10-30T19:00:00Z')),'2026-10-30T19:30:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-10-30T19:30:00Z')),'2026-11-02T14:30:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-10-30T20:00:00Z')),'2026-11-02T14:30:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-11-06T20:30:00Z')),'2026-11-09T14:30:00.000Z');
  assert.equal(nextApplicationCheck(new Date('2026-10-30T22:30:00Z')),'2026-11-02T14:30:00.000Z');
 });

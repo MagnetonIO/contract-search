@@ -13,6 +13,17 @@ test('a bounded active manual cycle can run outside scheduled hours without enab
 import {applicationWindow,applicationIdentity,screenGate,reserveBudget} from '../lib/automation-policy.mjs';
 const lead={id:'a',pipeline:'contract',source:'board',source_url:'https://example.com/jobs/1?utm_source=x',pay:'Unknown',work_arrangement:'remote',c2c_status:'unknown'};
 test('application windows respect Chicago weekdays and DST',()=>{assert.ok(!applicationWindow(new Date('2026-10-29T13:29:59Z')));assert.ok(applicationWindow(new Date('2026-10-29T13:30:00Z')));assert.ok(!applicationWindow(new Date('2026-11-02T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-10-31T15:00:00Z')));});
+test('Friday scheduled work stops at 3pm Chicago in both daylight and standard time',()=>{
+ for(const [before,cutoff] of [['2026-10-30T19:59:59Z','2026-10-30T20:00:00Z'],['2026-11-06T20:59:59Z','2026-11-06T21:00:00Z']]){
+  assert.equal(applicationWindow(new Date(before)),true);
+  assert.equal(applicationWindow(new Date(cutoff)),false);
+  assert.equal(applicationRunAllowed({run:{active:true,mode:'scheduled'}},new Date(cutoff)),false);
+ }
+ assert.equal(applicationWindow(new Date('2026-10-29T22:59:59Z')),true);
+ assert.equal(applicationWindow(new Date('2026-10-29T23:00:00Z')),false);
+ const run={active:true,mode:'manual',started_at:'2026-10-30T20:10:00Z',manual_expires_at:'2026-10-30T22:10:00Z'};
+ assert.equal(applicationRunAllowed({run},new Date('2026-10-30T20:30:00Z')),true);
+});
 test('unknown terms remain eligible but explicit W2-only and low rates fail',()=>{
  assert.equal(screenGate(lead,'Python contract'),null);assert.match(screenGate(lead,'W2 CANDIDATES ONLY'),/W2/);assert.equal(screenGate({...lead,pay:'$200 - $300 an hour'},'AI video interview required.'),null);assert.match(screenGate(lead,'W2 only'),/W2/);
  assert.match(screenGate({...lead,pay:'$70 - $99 an hour'},'Python'),/below/);

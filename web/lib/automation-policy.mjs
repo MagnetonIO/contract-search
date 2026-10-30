@@ -14,7 +14,8 @@ export function dailySubmissionQuota(attempts,policy=DEFAULT_AUTOMATION_POLICY,n
 }
 export function applicationWindow(now=new Date()) {
  const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
- return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)*60+Number(p.minute)>=510&&Number(p.hour)<18;
+ const endHour=p.weekday==='Fri'?15:18;
+ return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)*60+Number(p.minute)>=510&&Number(p.hour)<endHour;
 }
 export function applicationRunAllowed(state,now=new Date()) {
  if(applicationWindow(now))return true;

@@ -1,11 +1,11 @@
 import {leadInView} from './shared.mjs';
+import {applicationWindow} from './automation-policy.mjs';
 
 export function nextApplicationCheck(now=new Date()) {
  const candidate=new Date(now);candidate.setUTCSeconds(0,0);candidate.setUTCMinutes(30);
  if(candidate<=now)candidate.setUTCHours(candidate.getUTCHours()+1);
  for(let i=0;i<168;i++){
-  const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(candidate).map(x=>[x.type,x.value]));
-  if(!['Sat','Sun'].includes(p.weekday)&&Number(p.hour)>=8&&Number(p.hour)<18)return candidate.toISOString();
+  if(applicationWindow(candidate))return candidate.toISOString();
   candidate.setUTCHours(candidate.getUTCHours()+1);
  }
  return null;
