@@ -5,7 +5,7 @@ const basis:Record<string,string>={application_browser:'Observed application pag
 export function EvidenceDetails({record:e}:{record:any}){
  return <details className="outcome-evidence"><summary>Evidence · {basis[e.basis]||e.basis}</summary>
   <p>Recorded {when(e.recorded_at)} Chicago{e.observed_at?` · Page checked ${when(e.observed_at)} Chicago`:''}</p>
-  <p>{e.reason}</p>
+  <p>{e.reason}</p>{e.resolution&&<p><strong>{e.resolution}</strong></p>}
   {e.source_url&&<p><a href={e.source_url} target="_blank" rel="noreferrer">Original posting</a></p>}
   {e.observed_url&&e.observed_url!==e.source_url&&<p><a href={e.observed_url} target="_blank" rel="noreferrer">Observed application page</a></p>}
   {e.http_status!==undefined&&e.http_status!==null&&<p>Recorded HTTP response: {e.http_status}. {e.http_status===403||e.http_status===429?'Access restriction; this does not establish that the job is closed.':''}</p>}
@@ -30,7 +30,7 @@ export default function OutcomeEvidence({records}:{records:any[]}){
  return <section id="outcome-evidence" className="settings-panel"><h2>Outcome evidence</h2><p>Failed, closed, skipped and unconfirmed outcomes remain documented here, including earlier outcomes for retried applications. Only confirmed submissions count toward the daily quota.</p>
   <p><a className="button secondary" href="/api/automation-evidence">Download evidence log (JSON)</a></p>
   <div className="automation-filters"><input aria-label="Search outcome evidence" placeholder="Search job, company or reason" value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/><select aria-label="Filter outcome evidence" value={filter} onChange={e=>{setFilter(e.target.value);setPage(0);}}>{['all','failed','closed','skipped','unconfirmed','needs_input','submitted','cancelled'].map(s=><option key={s} value={s}>{s==='all'?'All outcomes':s==='needs_input'?'Needs input':s.replaceAll('_',' ')}</option>)}</select></div>
-  {rows.slice(current*15,current*15+15).map(e=><article className="automation-decision" key={e.id}><a href={'/?lead='+e.lead_id}><strong>{e.title}</strong></a><span className={'badge '+(e.category==='submitted'?'green':'amber')}>{e.category.replaceAll('_',' ')}</span><small>{e.company} · {when(e.recorded_at)} Chicago</small><p>{e.reason}</p><EvidenceDetails record={e}/></article>)}
+  {rows.slice(current*15,current*15+15).map(e=><article className="automation-decision" key={e.id}><a href={'/?lead='+e.lead_id}><strong>{e.title}</strong></a><span className={'badge '+(e.category==='submitted'?'green':'amber')}>{e.category.replaceAll('_',' ')}</span><small>{e.company} · {when(e.recorded_at)} Chicago</small><p>{e.reason}</p>{e.resolution&&<p><strong>{e.resolution}</strong></p>}<EvidenceDetails record={e}/></article>)}
   {!rows.length&&<p>No outcomes match this filter.</p>}
   <div className="automation-actions"><button className="button secondary" disabled={!current} onClick={()=>setPage(current-1)}>Previous</button><span>Page {current+1} of {pages} · {rows.length} records</span><button className="button secondary" disabled={current>=pages-1} onClick={()=>setPage(current+1)}>Next</button></div>
  </section>;

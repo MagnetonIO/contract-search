@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
 import {readJson} from './store.ts';
 import {readSnapshot} from './snapshot.mjs';
+import {reconcileSavedReceipts} from './application-reconciliation.mjs';
 import {approvedSiteResume,recoverableResumeBlock} from './resume-library.mjs';
 import {automationSettings,reviseAttempt,updateScreenings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
 import {screenGate,fingerprint,applicationIdentity,applicationRunAllowed} from './automation-policy.mjs';
@@ -53,6 +54,7 @@ export async function screenBatch(){
  return true;
 }
 export async function nextAttempt(){
+ await reconcileSavedReceipts();
  let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if(state.quota.remaining===0)return null;
  const [{value:snapshot},{value:workflow}]=await Promise.all([readSnapshot(),readJson('workflow.json',{})]);
  const queued=Object.values(state.attempts).find(a=>a.status==='queued');if(queued)return queued.id;

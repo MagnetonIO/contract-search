@@ -5,6 +5,7 @@ import {readSnapshot} from './snapshot.mjs';
 import {siteForUrl,loginExpiresAt} from './browser-accounts.mjs';
 import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
 import {OUTCOME_STATUSES,outcomeRecord,attemptOutcomes,outcomeLog,preserveScreeningHistory} from './outcome-evidence.mjs';
+import {reconcileSavedReceipts} from './application-reconciliation.mjs';
 import {startRequestState} from './automation-start.mjs';
 
 export class AutomationInputError extends Error {constructor(message){super(message);this.name='AutomationInputError';}}
@@ -20,6 +21,7 @@ export async function activity(kind,detail={}) {
  return event;
 }
 export async function automationDashboard(){
+ await reconcileSavedReceipts();
  const state=await automationSettings();
  const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
  const activeLive=live&&Date.parse(live.expires_at)>Date.now()&&['running','submitting'].includes(state.attempts[live.attempt_id]?.status)?live:null;

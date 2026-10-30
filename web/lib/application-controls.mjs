@@ -1,6 +1,17 @@
 const normalized=value=>String(value||'').replace(/\s+/g,' ').trim();
-export const CONFIRMATION_PATTERN=/your application (?:has been |was |is )?(?:submitted|received|sent)|thank you for applying|successfully applied|application submitted|application received/i;
-export function applicationReceipt(text){return normalized(text).match(CONFIRMATION_PATTERN)?.[0]||null;}
+const STANDARD_CONFIRMATION_PATTERN=/your application (?:has been |was |is )?(?:submitted|received|sent)|thank you for applying|successfully applied|application submitted|application received/i;
+export const CONFIRMATION_PATTERN=new RegExp(STANDARD_CONFIRMATION_PATTERN.source+'|your application is on its way','i');
+export function diceApplicationReceipt(text,{url,target}={}){
+ try{
+  const current=new URL(url),original=new URL(target),dice=u=>u.hostname==='dice.com'||u.hostname.endsWith('.dice.com');
+  if(!dice(current)||!dice(original))return null;
+  const job=current.pathname.match(/^\/job-applications\/([a-z0-9-]+)\/wizard\/success\/?$/i)?.[1];
+  const intended=original.pathname.match(/^\/(?:job-detail|job-applications)\/([a-z0-9-]+)(?:\/|$)/i)?.[1];
+  const notice=normalized(text);if(!job||job!==intended||! /find the job listing for this role in your Applied Jobs/i.test(notice))return null;
+  return notice.match(/your application is on its way/i)?.[0]||null;
+ }catch{return null;}
+}
+export function applicationReceipt(text,context={}){return normalized(text).match(STANDARD_CONFIRMATION_PATTERN)?.[0]||diceApplicationReceipt(text,context);}
 export function applicationControlKind({text='',label='',type='',inForm=false}={}){
  const name=normalized(text||label).toLowerCase();
  if(/submit|send application|complete application/.test(name))return 'submission';
