@@ -19,3 +19,8 @@ test('public checks never call SAM APIs, credential links, local addresses or ar
  for(const source_url of ['https://api.sam.gov/opportunities/v2/search','https://user:secret@www.dice.com/job-detail/x','http://www.dice.com/job-detail/x','https://127.0.0.1/job','https://unknown.example/job'])assert.equal(publicPostingUrl({source_url}),null);
  assert.equal(publicPostingUrl(lead),lead.source_url);
 });
+
+test('closure evidence retains the exact matched site notice',()=>{
+ const result=parsePostingStatus(lead,{status:200,html:'<h1>'+lead.title+'</h1><div role="alert">Sorry, this job is no longer available.</div>'});
+ assert.equal(result.status,'closed');assert.equal(result.site_notice,'Sorry, this job is no longer available.');
+});

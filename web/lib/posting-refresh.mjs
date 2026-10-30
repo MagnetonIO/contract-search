@@ -28,7 +28,7 @@ export async function refreshPostingBatch({check=checkPublicPosting,now=new Date
  }
  await mutate('posting-status.json',old=>({...old,postings:{...old.postings,...updates},hosts:{...old.hosts,...hosts}}),{postings:{},hosts:{}});
  const closed=stale.filter(l=>updates[l.id]?.status==='closed');
- if(closed.length)await mutate('workflow.json',old=>{for(const lead of closed)if(old[lead.id]?.stage!=='applied'&&!old[lead.id]?.disposition)old[lead.id]={...recordDisposition(old[lead.id],'closed',now.toISOString()),availability_reason:updates[lead.id].reason};return old;});
+ if(closed.length)await mutate('workflow.json',old=>{for(const lead of closed)if(old[lead.id]?.stage!=='applied'&&!old[lead.id]?.disposition)old[lead.id]={...recordDisposition(old[lead.id],'closed',now.toISOString()),availability_reason:updates[lead.id].reason,availability_evidence:updates[lead.id]};return old;});
  if(Object.keys(content).length)await mutate('job-content.json',old=>({...old,postings:{...old.postings,...content}}),{postings:{}});
  await activity('posting_check_result',{message:`Checked ${stale.length} postings; ${closed.length} confirmed closed and removed from active opportunities.`});
  return true;

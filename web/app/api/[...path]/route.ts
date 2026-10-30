@@ -1,3 +1,4 @@
+import {screenshotKey} from '../../../lib/outcome-evidence.mjs';
 import { start } from 'workflow/api';
 import { applicationCycle } from '../../../workflows/applications';
 import { automationSettings, automationDashboard, saveFacts, setEnabled, patchAttempt, reviseAttempt, activity } from '../../../lib/automation-state.mjs';
@@ -70,8 +71,9 @@ async function handle(request: Request, context: Context) {
   }
   if (action === 'automation-screenshot' && request.method === 'GET') {
     const id=new URL(request.url).searchParams.get('id');if(!id||! /^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid attempt'},400);
-    const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];if(!a?.visual_screenshot_key)return json({error:'Screenshot unavailable'},404);
-    const file=await readBytes(a.visual_screenshot_key);if(!file)return json({error:'Screenshot unavailable'},404);
+    const outcome=new URL(request.url).searchParams.get('outcome');if(outcome&&!/^[a-f0-9-]{36}$/.test(outcome))return json({error:'Invalid outcome'},400);
+    const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];const key=screenshotKey(a,outcome);if(!key)return json({error:'Screenshot unavailable'},404);
+    const file=await readBytes(key);if(!file)return json({error:'Screenshot unavailable'},404);
     return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'image/jpeg','Content-Disposition':'inline','Cache-Control':'private, no-store'}});
   }
   if (action === 'automation-resume' && request.method === 'GET') {
@@ -80,6 +82,7 @@ async function handle(request: Request, context: Context) {
     const file=await readBytes(a.resume_key);if(!file)return json({error:'Resume unavailable'},404);
     return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename=Resume_Matthew_Long.pdf','Cache-Control':'private, no-store'}});
   }
+  if (action === 'automation-evidence' && request.method === 'GET') {const data=await automationDashboard();return new Response(JSON.stringify({schema_version:1,exported_at:new Date().toISOString(),quota:data.quota,records:data.evidence_log},null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename=contract-desk-evidence.json','Cache-Control':'private, no-store'}});}
   if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
   if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
   if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}

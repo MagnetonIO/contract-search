@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
 import {readJson} from './store.ts';
 import {readSnapshot} from './snapshot.mjs';
-import {automationSettings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
+import {automationSettings,updateScreenings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
 import {screenGate,fingerprint,applicationIdentity,applicationRunAllowed} from './automation-policy.mjs';
 import {leadInView} from './shared.mjs';
 import {automationLocation} from './automation-audit.mjs';
@@ -29,13 +29,13 @@ export async function screenBatch(){
   if(screeningCurrent(state.screens[lead.id],version))continue;
   const reason=screenGate(lead,posting?.text,progress[lead.id],state.policy);
   const location=automationLocation(lead,state.facts,posting?.text);
-  const base={version,title:lead.title,score:0,screened_at:new Date().toISOString()};
+  const base={version,title:lead.title,source_url:lead.application_url||lead.source_url,decision_basis:'screening_rule',score:0,profile_version:state.facts.version,resume_hash:state.resume_hash,minimum_score:state.policy.minimum_score,rule_inputs:{pay:lead.pay,c2c_status:lead.c2c_status,work_arrangement:lead.work_arrangement,remote_location:lead.remote_location,restrictions:lead.location_assessment?.restrictions,minimum_hourly_usd:state.policy.minimum_hourly_usd},screened_at:new Date().toISOString()};
   if(reason){decisions[lead.id]={...base,status:'skipped',reason};continue;}
   if(location.status!=='allowed'){decisions[lead.id]={...base,status:location.status==='blocked'?'skipped':'held',reason:'Location: '+location.reason};continue;}
-  batch.push({id:lead.id,title:lead.title,company:lead.company_agency,text:posting.text.slice(0,18000),version});
+  batch.push({id:lead.id,source_url:lead.application_url||lead.source_url,title:lead.title,company:lead.company_agency,text:posting.text.slice(0,18000),version});
   if(batch.length===5)break;
  }
- if(Object.keys(decisions).length)await mutate('screenings.json',old=>({...old,...decisions}));
+ if(Object.keys(decisions).length)await updateScreenings(old=>({...old,...decisions}));
  if(!batch.length)return false;
  const costId='screen-'+randomUUID();
  try{await reserve(costId,0.1);}catch(e){if(/allowance exhausted/.test(e.message)){await activity('budget_hold',{message:'Automation allowance reached; remaining jobs are waiting.'});return false;}throw e;}
@@ -45,9 +45,9 @@ export async function screenBatch(){
  const updates={};
  for(const job of batch){
   const result=response.output.results.find(r=>r.id===job.id);
-  updates[job.id]=result?{...result,title:job.title,version:job.version,status:result.score>=state.policy.minimum_score&&result.evidence.length?'eligible':'skipped',screened_at:new Date().toISOString()}:{title:job.title,version:job.version,status:'pending',score:0,screening_failures:(state.screens[job.id]?.screening_failures||0)+1,retry_after:new Date(Date.now()+((state.screens[job.id]?.screening_failures||0)>=1?15*60000:0)).toISOString(),reason:'Automatic screening retry queued; no applicant confirmation is needed.',screened_at:new Date().toISOString()};
+  updates[job.id]=result?{...result,decision_basis:'model_evaluation',source_url:job.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,minimum_score:state.policy.minimum_score,title:job.title,version:job.version,status:result.score>=state.policy.minimum_score&&result.evidence.length?'eligible':'skipped',screened_at:new Date().toISOString()}:{title:job.title,version:job.version,status:'pending',score:0,screening_failures:(state.screens[job.id]?.screening_failures||0)+1,retry_after:new Date(Date.now()+((state.screens[job.id]?.screening_failures||0)>=1?15*60000:0)).toISOString(),reason:'Automatic screening retry queued; no applicant confirmation is needed.',screened_at:new Date().toISOString()};
  }
- await mutate('screenings.json',old=>({...old,...updates}));
+ await updateScreenings(old=>({...old,...updates}));
  for(const [id,result] of Object.entries(updates))await activity('job_screened',{lead_id:id,title:result.title,status:result.status,score:result.score,message:result.reason.slice(0,500)});
  return true;
 }
@@ -56,19 +56,19 @@ export async function nextAttempt(){
  const [{value:snapshot},{value:workflow}]=await Promise.all([readSnapshot(),readJson('workflow.json',{})]);
  const queued=Object.values(state.attempts).find(a=>a.status==='queued');if(queued)return queued.id;
  const leads=(snapshot?.leads||[]).filter(l=>(state.screens[l.id]?.status==='eligible'||state.screens[l.id]?.eligibility_review&&state.screens[l.id]?.eligibility_review_version!==ELIGIBILITY_REVIEW_VERSION)&&!workflow[l.id]?.disposition&&workflow[l.id]?.stage!=='applied').sort((a,b)=>state.screens[b.id].score-state.screens[a.id].score);
- for(const lead of leads){const identity=applicationIdentity(lead);const previous=(snapshot?.leads||[]).filter(l=>workflow[l.id]?.stage==='applied');if(previous.some(l=>applicationIdentity(l)===identity||l.company_agency?.toLowerCase()===lead.company_agency?.toLowerCase()&&l.title?.toLowerCase()===lead.title?.toLowerCase())){await mutate('screenings.json',old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',reason:'Matches an existing application identity or employer/title; held to avoid duplicates.'}}));continue;}if(Object.values(state.attempts).some(a=>a.target_identity===identity&&!['cancelled','skipped'].includes(a.status)))continue;
+ for(const lead of leads){const identity=applicationIdentity(lead);const previous=(snapshot?.leads||[]).filter(l=>workflow[l.id]?.stage==='applied');if(previous.some(l=>applicationIdentity(l)===identity||l.company_agency?.toLowerCase()===lead.company_agency?.toLowerCase()&&l.title?.toLowerCase()===lead.title?.toLowerCase())){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',decision_basis:'screening_rule',reason:'Matches an existing application identity or employer/title; held to avoid duplicates.'}}));continue;}if(Object.values(state.attempts).some(a=>a.target_identity===identity&&!['cancelled','skipped'].includes(a.status)))continue;
  // Professional qualifications are match notes; explicit legal restrictions
  // use confirmed reusable answers before the browser is reserved.
  const content=(await readJson('job-content.json',{postings:{}})).value;
  const text=content.postings[lead.id]?.text||'';
- const location=automationLocation(lead,state.facts,text);if(location.status!=='allowed'){await mutate('screenings.json',old=>({...old,[lead.id]:{...old[lead.id],status:'held',reason:'Location: '+location.reason,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}
- const gate=screenGate(lead,text,workflow[lead.id],state.policy);if(gate){await mutate('screenings.json',old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',reason:gate,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}
+ const location=automationLocation(lead,state.facts,text);if(location.status!=='allowed'){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'held',reason:'Location: '+location.reason,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}
+ const gate=screenGate(lead,text,workflow[lead.id],state.policy);if(gate){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',decision_basis:'screening_rule',reason:gate,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}
  const cached=state.screens[lead.id];
  if(cached.eligibility_review&&cached.eligibility_review_version===ELIGIBILITY_REVIEW_VERSION&&cached.eligibility_profile_version===state.facts.version){
   const decision=qualificationDecision(cached.eligibility_review,state.facts,text);
   if(decision.status!=='eligible')continue;
   const id=randomUUID();try{await reserve(id,2.5,true);}catch(e){if(/allowance exhausted|Daily submission limit/.test(e.message))return null;throw e;}
-  await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;
+  await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;
  }
  const reviewId='eligibility-'+randomUUID();
  try{await reserve(reviewId,0.1);}catch(e){if(/allowance exhausted/.test(e.message))return null;throw e;}
@@ -78,11 +78,11 @@ export async function nextAttempt(){
  prompt:JSON.stringify({job:{title:lead.title,text:text.slice(0,18000)},facts:state.facts,facts_json:JSON.stringify(state.facts)})});
  await settle(reviewId,(review.usage.inputTokens||0)*0.75/1e6+(review.usage.outputTokens||0)*4.5/1e6+0.001);
  const decision=qualificationDecision(review.output,state.facts,text);
- await mutate('screenings.json',old=>({...old,[lead.id]:{...old[lead.id],eligibility_review_version:ELIGIBILITY_REVIEW_VERSION,eligibility_profile_version:state.facts.version,prior_eligibility_reviews:[...(old[lead.id]?.prior_eligibility_reviews||[])].slice(-3),eligibility_review:review.output,status:decision.status,reason:decision.reason,match_notes:decision.notes,eligibility_questions:decision.requirements}}));
+ await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],eligibility_review_version:ELIGIBILITY_REVIEW_VERSION,eligibility_profile_version:state.facts.version,prior_eligibility_reviews:[...(old[lead.id]?.prior_eligibility_reviews||[])].slice(-3),eligibility_review:review.output,status:decision.status,reason:decision.reason,match_notes:decision.notes,eligibility_questions:decision.requirements}}));
  await activity('qualification_result',{lead_id:lead.id,title:lead.title,status:decision.status,message:decision.reason});
  if(decision.status!=='eligible')continue;
  const id=randomUUID();try{await reserve(id,2.5,true);}catch(e){if(/allowance exhausted|Daily submission limit/.test(e.message))return null;throw e;}
- await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;}
+ await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;}
  return null;
 }
 
@@ -93,9 +93,9 @@ export async function reconcileQualificationReviews(){
  for(const lead of snapshot?.leads||[]){
   const prior=state.screens[lead.id];if(!prior?.eligibility_review||prior.score<state.policy.minimum_score||!leadInView(lead,workflow[lead.id],'opportunities'))continue;
   const text=content.postings[lead.id]?.text||'',gate=screenGate(lead,text,workflow[lead.id],state.policy),location=automationLocation(lead,state.facts,text);
-  const decision=gate?{status:'skipped',reason:gate,notes:[],requirements:[]}:location.status!=='allowed'?{status:location.status==='blocked'?'skipped':'held',reason:'Location: '+location.reason,notes:[],requirements:[]}:qualificationDecision(prior.eligibility_review,state.facts,text);
+  const decision=gate?{status:'skipped',decision_basis:'screening_rule',reason:gate,notes:[],requirements:[]}:location.status!=='allowed'?{status:location.status==='blocked'?'skipped':'held',reason:'Location: '+location.reason,notes:[],requirements:[]}:qualificationDecision(prior.eligibility_review,state.facts,text);
   updates[lead.id]={...prior,status:decision.status,reason:decision.reason,match_notes:decision.notes,eligibility_questions:decision.requirements,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION,eligibility_profile_version:state.facts.version};
  }
- if(Object.keys(updates).length)await mutate('screenings.json',old=>({...old,...updates}));
+ if(Object.keys(updates).length)await updateScreenings(old=>({...old,...updates}));
  return {updated:Object.keys(updates).length,ready:Object.values(updates).filter(q=>q.status==='eligible').length,held:Object.values(updates).filter(q=>q.status==='held').length};
 }

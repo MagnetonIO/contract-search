@@ -4,6 +4,7 @@ import {DEFAULT_AUTOMATION_POLICY,applicationWindow,fingerprint,reserveBudget,ap
 import {readSnapshot} from './snapshot.mjs';
 import {siteForUrl,loginExpiresAt} from './browser-accounts.mjs';
 import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
+import {OUTCOME_STATUSES,outcomeRecord,attemptOutcomes,outcomeLog,preserveScreeningHistory} from './outcome-evidence.mjs';
 import {startRequestState} from './automation-start.mjs';
 
 export class AutomationInputError extends Error {constructor(message){super(message);this.name='AutomationInputError';}}
@@ -11,6 +12,7 @@ export async function mutate(key,change,fallback={}) {
  for(let i=0;i<12;i++){const old=await readJson(key,fallback);const value=await change(structuredClone(old.value));try{await writeJson(key,value,old.version);return value;}catch(e){if(!(e instanceof ConflictError))throw e;}}
  throw Error('Automation state is busy. Try again.');
 }
+export async function updateScreenings(change){return mutate('screenings.json',old=>preserveScreeningHistory(old,change(structuredClone(old))));}
 export async function activity(kind,detail={}) {
  const event={id:randomUUID(),at:new Date().toISOString(),kind,...detail};
  await mutate('automation-activity.json',old=>[...old,event].slice(-200),[]);
@@ -22,13 +24,15 @@ export async function automationDashboard(){
  const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
  const activeLive=live&&Date.parse(live.expires_at)>Date.now()&&['running','submitting'].includes(state.attempts[live.attempt_id]?.status)?live:null;
  const {screens,...visible}=state;
- return {...visible,start_status:startRequestState(request, state.run,{windowOpen:applicationWindow()}).status,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
+ const postings=(await readJson('posting-status.json',{postings:{}})).value;
+ const evidence_log=outcomeLog(snapshot?.leads||[],workflow,screens,state.attempts,postings.postings);
+ return {...visible,evidence_log,start_status:startRequestState(request, state.run,{windowOpen:applicationWindow()}).status,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
 }
 export async function automationSettings(){
  const [settings,facts,budget,screens,attempts,profile,run]=await Promise.all([
  readJson('automation-settings.json',DEFAULT_AUTOMATION_POLICY),readJson('applicant-facts.json',null),readJson('automation-budget.json',null),readJson('screenings.json',{}),readJson('application-attempts.json',{}),readJson('profile.json',{}),readJson('automation-run.json',null)]);
  const stale=Object.values(attempts.value).some(a=>['running','submitting'].includes(a.status)&&Date.now()-Date.parse(a.updated_at)>6*60000);
- if(stale)attempts.value=await mutate('application-attempts.json',old=>Object.fromEntries(Object.entries(old).map(([id,a])=>[id,['running','submitting'].includes(a.status)&&Date.now()-Date.parse(a.updated_at)>6*60000?{...a,status:a.submission_intent_at?'submission_unknown':'failed',reason:'Worker interrupted. Reconcile any submission before retrying.',updated_at:new Date().toISOString()}:a])));
+ if(stale)attempts.value=await mutate('application-attempts.json',old=>Object.fromEntries(Object.entries(old).map(([id,a])=>[id,['running','submitting'].includes(a.status)&&Date.now()-Date.parse(a.updated_at)>6*60000?{...a,status:a.submission_intent_at?'submission_unknown':'failed',reason:'Worker interrupted. Reconcile any submission before retrying.',outcome_history:[...attemptOutcomes(a),outcomeRecord(a,{status:a.submission_intent_at?'submission_unknown':'failed',reason:'Worker interrupted. Reconcile any submission before retrying.',evidence:{basis:'worker_liveness',evidence_gap:'No worker heartbeat for six minutes. No new page or employer confirmation was observed.'}})],updated_at:new Date().toISOString()}:a])));
  const ready=(await readJson('automation-readiness.json',null)).value;
  const source=(await readJson('resume-source.json',null)).value;
  return {quota:dailySubmissionQuota(attempts.value,settings.value),interaction_mode:'hosted_visual',integration_verified:Boolean(ready?.provider_integration_verified),resume_source_text:source?.text&&source.hash===profile.value.resume_hash?source.text:'',run:run.value,policy:settings.value,facts:facts.value,budget:budget.value,screens:screens.value,attempts:attempts.value,resume_hash:profile.value.resume_hash,connections:{browser:Boolean(process.env.BROWSERBASE_API_KEY&&process.env.BROWSERBASE_PROJECT_ID),ai:Boolean(process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||process.env.VERCEL)}};
@@ -54,7 +58,16 @@ export async function reserve(id,usd,submit=false){const policy=(await readJson(
 export async function settle(id,usd){
  await mutate('automation-budget.json',old=>{const item=old?.charges?.find(c=>c.id===id);if(item){item.usd=Math.max(0,usd);item.status='settled';}return old;},null);
 }
-export async function patchAttempt(id,patch){const result=await mutate('application-attempts.json',old=>({...old,[id]:{...old[id],...patch,updated_at:new Date().toISOString()}}));if(patch.status)await activity('application_status',{phase:'applying',attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});return result;}
+export async function patchAttempt(id,patch){
+ const at=new Date().toISOString();const {evidence,...fields}=patch;
+ const result=await mutate('application-attempts.json',old=>{
+  const prior=old[id]||{},next={...prior,...fields,updated_at:at};
+  if(OUTCOME_STATUSES.includes(patch.status)&&(prior.status!==patch.status||prior.reason!==patch.reason||evidence))next.outcome_history=[...attemptOutcomes(prior),outcomeRecord(next,{evidence},at)];
+  return {...old,[id]:next};
+ });
+ if(patch.status)await activity('application_status',{phase:'applying',attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});
+ return result;
+}
 export async function acquireCycle(manual=false,{now=new Date()}={}){
  const state=await automationSettings();if(!state.policy.enabled||!state.facts?.confirmed||manual!==true&&!applicationWindow(now))return null;
  const id=randomUUID();let acquired=false;
@@ -68,7 +81,7 @@ export async function submissionIntent(id,url,{now=new Date()}={}){const policy=
 export async function reviseAttempt(id,action){
  const state=await automationSettings();
  const costId=id+'-resume-'+randomUUID();if(action==='resume')await reserve(costId,2.5,true);
- await mutate('application-attempts.json',old=>{const prior=old[id];if(!prior||prior.submission_intent_at||!['needs_input','failed','queued','running'].includes(prior.status))throw Error('Application cannot be changed without reconciliation');if(action==='resume'&&!['needs_input','failed'].includes(prior.status))throw Error('Only paused applications can resume');return {...old,[id]:{...prior,status:action==='resume'?'queued':'cancelled',reason:action==='resume'?null:prior.reason,...(action==='resume'?{prior_visual_runs:[...(prior.prior_visual_runs||[]),...(prior.visual_steps?.length?[{steps:prior.visual_steps,resume_key:prior.resume_key,ended_at:prior.updated_at}]:[])].slice(-5),visual_step_count:0,visual_steps:[],visual_screenshot_key:null,visual_screenshot_at:null,uploaded_resume_filename:null}:{}),profile_version:state.facts?.version,resume_hash:state.resume_hash,cost_reservation_id:action==='resume'?costId:prior.cost_reservation_id,updated_at:new Date().toISOString()}};});
+ await mutate('application-attempts.json',old=>{const prior=old[id];if(!prior||prior.submission_intent_at||!['needs_input','failed','queued','running'].includes(prior.status))throw Error('Application cannot be changed without reconciliation');if(action==='resume'&&!['needs_input','failed'].includes(prior.status))throw Error('Only paused applications can resume');return {...old,[id]:{...prior,outcome_history:[...attemptOutcomes(prior),...(action==='cancel'?[outcomeRecord(prior,{status:'cancelled',reason:'Cancelled by user',evidence:{basis:'user_record',evidence_gap:'User cancelled this attempt; no new page was observed.'}})]:[])],status:action==='resume'?'queued':'cancelled',reason:action==='resume'?null:'Cancelled by user',...(action==='resume'?{prior_visual_runs:[...(prior.prior_visual_runs||[]),...(prior.visual_steps?.length?[{steps:prior.visual_steps,resume_key:prior.resume_key,ended_at:prior.updated_at}]:[])].slice(-5),visual_step_count:0,visual_steps:[],visual_screenshot_key:null,visual_screenshot_at:null,uploaded_resume_filename:null}:{}),profile_version:state.facts?.version,resume_hash:state.resume_hash,cost_reservation_id:action==='resume'?costId:prior.cost_reservation_id,updated_at:new Date().toISOString()}};});
 }
 export async function resumeAfterSiteLogin(){
  const state=await automationSettings();const {value:sites}=await readJson('browser-sites.json',{});const {value:snapshot}=await readSnapshot();let count=0;

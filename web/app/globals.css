@@ -69,3 +69,5 @@
 .automation-page input:not([type=checkbox]),.automation-page select,.automation-page textarea{font-size:16px;min-width:0}
 .automation-activity li>div,.automation-profile>label{min-width:0}
 }
+
+.outcome-evidence{margin:12px 0;overflow-wrap:anywhere}.outcome-evidence blockquote{white-space:pre-wrap;margin:8px 0;padding:10px 12px;border-left:3px solid var(--line);background:#f5f8fc}.outcome-evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace}.outcome-evidence small{word-break:break-all}

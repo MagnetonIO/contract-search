@@ -29,7 +29,8 @@ export function parsePostingStatus(lead,{status,html=''}){
  if(!matching)return {...base,status:'unknown',reason:'The response did not identify the selected posting.'};
  const closed=/no longer accepting applications|(?:this )?job is no longer available|(?:this )?position has been filled|posting has expired/i;
  const alerts=$('[role="alert"],.alert-type-page,.artdeco-inline-feedback,[data-testid*="expired"]').toArray().map(e=>$(e).text());
- if(alerts.some(t=>closed.test(t)))return {...base,status:'closed',reason:'The selected posting explicitly reports that applications are closed.'};
+ const siteNotice=alerts.find(t=>closed.test(t));
+ if(siteNotice)return {...base,status:'closed',site_notice:siteNotice.replace(/\s+/g,' ').trim().slice(0,1000),reason:'The selected posting explicitly reports that applications are closed.'};
  return {...base,status:'open',reason:'The current public posting was identified.'};
 }
 export async function checkPublicPosting(lead,{fetcher=fetch,now=new Date()}={}){
