@@ -21,3 +21,12 @@ test('out-of-bounds coordinates never execute a browser action',async()=>{
 test('authentication pages stop before images or model calls',async()=>{
  const f=fixture([],'https://example.com/login');await f.run();assert.equal(f.calls,0);assert.equal(f.screenshots,0);assert.equal(f.invoked[0].name,'pause');
 });
+test('repeated submit failures retain the real error and request automation repair, not applicant facts',async()=>{
+ const records=[],calls=[];let done=false;
+ const page={url:()=> 'https://example.com/job',locator:()=>({filter:()=>({count:async()=>0})}),evaluate:async()=>({width:800,height:600}),screenshot:async()=>Buffer.from('frame')};
+ await runVisualApplication({getPage:()=>page,inspect:async()=>({fields:[],text:'Review'}),guard:async()=>{},stopped:async()=>done,job:{},facts:{},record:async r=>records.push(r),generate:async()=>({output:{action:{type:'submit',label:'Submit'},summary:'Submitting now'},usage:{}}),invoke:async(name,input)=>{calls.push({name,input});if(name==='pause'){done=true;return {paused:true};}throw new Error('Attach the approved PDF before submitting');},maxSteps:3});
+ assert.equal(calls.at(-1).name,'pause');assert.equal(calls.at(-1).input.technical,true);assert.match(calls.at(-1).input.reason,/Attach the approved PDF/);assert.ok(records.some(r=>r.result_detail?.message==='Attach the approved PDF before submitting'));assert.equal(records.filter(r=>r.outcome==='blocked').length,3);
+});
+test('a mandatory cover letter is skipped without a model call or letter generation',async()=>{
+ let skipped=false;await runVisualApplication({getPage:()=>({url:()=> 'https://example.com/job'}),inspect:async()=>({fields:[{visible:true,required:true,label:'Cover Letter',type:'textarea'}]}),guard:async()=>{},stopped:async()=>false,job:{},facts:{},record:async()=>{},invoke:async name=>{assert.equal(name,'skipCoverLetter');skipped=true;},generate:()=>{throw Error('No model call for a mandatory cover letter');}});assert.equal(skipped,true);
+});

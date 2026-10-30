@@ -43,6 +43,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: node node_modules/playwright-core/cli.js install --with-deps chromium
       - run: npm test
       - run: npm run build
       - run: node tests/integration.mjs

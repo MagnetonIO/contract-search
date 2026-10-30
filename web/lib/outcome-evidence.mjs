@@ -18,11 +18,11 @@ export function outcomeCategory(status,reason='',explicit){
 export function outcomeRecord(attempt,patch={},at=new Date().toISOString()){
  const a={...attempt,...patch},e=patch.evidence||{};
  return {id:e.id||randomUUID(),status:a.status,category:outcomeCategory(a.status,a.reason,e.category),recorded_at:at,
-  reason:evidenceText(a.reason||a.receipt||a.status),source_url:evidenceUrl(e.source_url||a.application_url),observed_url:evidenceUrl(e.observed_url),
+  required_action:a.required_action||null,reason:evidenceText(a.reason||a.receipt||a.status),source_url:evidenceUrl(e.source_url||a.application_url),observed_url:evidenceUrl(e.observed_url),
   basis:e.basis||'worker_record',observed_at:e.observed_at||null,http_status:Number.isInteger(e.http_status)?e.http_status:null,
   site_notice:evidenceText(e.site_notice),page_excerpt:evidenceText(e.page_excerpt),error_type:evidenceText(a.failure_type||e.error_type),error_message:evidenceText(e.error_message),
   screenshot_key:e.screenshot_key||null,screenshot_at:e.screenshot_at||null,screenshot_kind:e.screenshot_kind||'outcome',preserved_at:e.preserved_at||null,
-  actions:(a.visual_steps||[]).slice(-10).map(s=>({at:s.at,step:s.step,action:s.action,status:s.status,summary:evidenceText(s.summary)})),
+  actions:(a.visual_steps||[]).slice(-10).map(s=>({at:s.at,step:s.step,action:s.action,status:s.status,summary:evidenceText(s.summary),result_detail:s.result_detail||null})),
   evidence_gap:e.evidence_gap||(!e.screenshot_key&&!e.site_notice&&!e.page_excerpt?'No page snapshot was retained for this outcome. The reason is a worker record.':null),
   submission_intent_at:a.submission_intent_at||null,confirmed_at:a.confirmed_at||null,receipt:evidenceText(a.receipt),profile_version:a.profile_version||null,resume_hash:a.resume_hash||null};
 }

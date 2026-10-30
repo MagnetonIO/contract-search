@@ -1,6 +1,7 @@
 import {pointControl} from './application-visual.mjs';
 
 export async function uploadApprovedResume({page,scope,file,index,label,byIndex,x,y}){
+ if(/cover[\s_-]*letter/i.test(label||''))return {not_uploaded:true,action:'Skip the cover letter; this helper only uploads the approved résumé.'};
  const inputs=scope.locator('input[type=file]');
  if(await inputs.count()===1){
   const meta=await inputs.evaluate(e=>({accept:e.accept||'',label:[e.name,e.id,e.getAttribute('aria-label'),e.labels?.[0]?.innerText].join(' ')}));
@@ -12,7 +13,7 @@ export async function uploadApprovedResume({page,scope,file,index,label,byIndex,
  if(await button.count()===1)click=()=>button.click({timeout:10000});
  else if(Number.isFinite(x)&&Number.isFinite(y)){
   const control=await pointControl(page,x,y);
-  if(control&&!/photo|avatar|tailor|generate|premium/i.test(control.label+' '+control.text)&&/resume|résumé|upload|attach|choose.*file|select.*file/i.test(control.label+' '+control.text))click=()=>page.mouse.click(x,y);
+  if(control&&!/photo|avatar|cover.?letter|tailor|generate|premium/i.test(control.label+' '+control.text)&&/resume|résumé|upload|attach|choose.*file|select.*file/i.test(control.label+' '+control.text))click=()=>page.mouse.click(x,y);
  }
  if(!click)return {not_uploaded:true,action:'No unique resume uploader was identified. Inspect the current resume upload control.'};
  const picker=page.waitForEvent('filechooser',{timeout:10000}).catch(()=>null);
