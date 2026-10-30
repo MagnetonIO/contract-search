@@ -3,11 +3,24 @@ export async function applicationCycle(options: {manual?: boolean} = {}) {
   const id = await acquire(options.manual === true);
   if (!id) return;
   try {
-    while (await refresh()) { /* Public checks are bounded and cached; no paid collectors. */ }
-    while (await screen()) { /* Each batch is durably checkpointed. */ }
-    await reconcile();
     const limit = await rolloutLimit();
-    for (let i = 0; i < limit; i++) {
+    let attempted = 0;
+    // A user-resumed application already passed screening. Do not leave it
+    // behind a fresh collection; the browser still checks current conditions.
+    let retry = await queued();
+    while (retry && attempted < limit) {
+      await apply(retry);
+      attempted++;
+      retry = attempted < limit ? await queued() : null;
+    }
+    while (await refresh()) { /* Public checks are bounded and cached; no paid collectors. */ }
+    while (await screen()) {
+      // Pick up retries requested while the screening pass was in progress.
+      const retry = attempted < limit ? await queued() : null;
+      if (retry) { await apply(retry); attempted++; }
+    }
+    await reconcile();
+    for (let i = attempted; i < limit; i++) {
       const attempt = await next();
       if (!attempt) break;
       await apply(attempt);
@@ -18,6 +31,13 @@ export async function applicationCycle(options: {manual?: boolean} = {}) {
   } finally {
     await release(id);
   }
+}
+
+export async function queued() {
+  'use step';
+  const {automationSettings} = await import('../lib/automation-state.mjs');
+  const {queuedAttemptId} = await import('../lib/application-blockers.mjs');
+  return queuedAttemptId(await automationSettings());
 }
 
 export async function refresh() {
