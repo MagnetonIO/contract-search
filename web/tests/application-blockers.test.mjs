@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {attemptBlocker,blockerFor,coverLetterField,toolOutcomeDetail,queuedAttemptId} from '../lib/application-blockers.mjs';
 test('technical control and resume failures never ask for a new applicant answer',()=>{
- for(const reason of ['The visual control remained unavailable after repeated observations.','Attach the approved PDF before submitting','Unrecognized final submission control'])assert.equal(blockerFor(reason).owner,'automation');
+ for(const reason of ['The visual control remained unavailable after repeated observations.','Attach the approved PDF before submitting','Unrecognized final submission control','Selection needs a matching approved answer: Resume_Matthew_Long.pdf'])assert.equal(blockerFor(reason).owner,'automation');
  const legacy=attemptBlocker({status:'needs_input',reason:'Control unavailable',visual_steps:[{action:'submit',status:'blocked'},{action:'submit',status:'blocked'}]});assert.match(legacy.instruction,/select your approved existing résumé/);assert.equal(legacy.owner,'automation');
  assert.equal(blockerFor('Missing applicant answer: Dialogflow experience in years').owner,'user');assert.equal(blockerFor('LinkedIn sign-in required').kind,'sign_in');
 });

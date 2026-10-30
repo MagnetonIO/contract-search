@@ -22,5 +22,5 @@ test('a page with many old job resumes selects only the approved exact filename'
 });
 
 test('resume repair retries only identified old blockers once and never an uncertain submission',()=>{
- const a={status:'needs_input',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:1}),false);assert.equal(recoverableResumeBlock({status:'needs_input',reason:'Missing Dialogflow years'}),false);
+ const a={status:'needs_input',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:2}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:1}),true);assert.equal(recoverableResumeBlock({status:'needs_input',reason:'Missing Dialogflow years'}),false);
 });
