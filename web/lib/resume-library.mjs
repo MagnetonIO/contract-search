@@ -10,7 +10,7 @@ export function recoverableResumeBlock(attempt){
 
 // Only select the exact approved file. Never choose the first/latest file or
 // match an older job-specific file by a shortened name.
-export async function selectExistingResume(scope,filename){
+export async function selectExistingResume(scope,filename,{requested=false}={}){
  const radios=scope.locator('input[type=radio],[role=radio]');
  const matches=await radios.evaluateAll((items,filename)=>items.flatMap((e,index)=>{
   const exact=text=>String(text||'').split(/\s+/).includes(filename);
@@ -21,9 +21,24 @@ export async function selectExistingResume(scope,filename){
   }
   return [];
  }),filename);
- if(matches.length!==1)return {selected:false,reason:matches.length?'Approved filename is ambiguous on this page.':'Approved saved résumé is not listed on this page.'};
+ if(!matches.length){
+  const file=scope.getByText(filename,{exact:true}).filter({visible:true});
+  if(await file.count()===1){
+   const review=scope.getByText(/^Review your application$/i).filter({visible:true});
+   const caption=scope.getByText(/^(?:Resume|Résumé)\s*\*?$/i).filter({visible:true});
+   if(await review.count()===1&&await caption.count()>=1)return {selected:true,filename,method:'reviewed_saved_file'};
+   // Some boards draw file cards without a native/ARIA radio. Request this
+   // exact file once; final review must still confirm it before submission.
+   const upload=scope.getByText(/^Upload (?:resume|résumé)$/i).filter({visible:true});
+   if(await upload.count()===1){
+    const safe=await file.evaluate(e=>!e.closest('a[href],button[type=submit],button:not([type]),[role=checkbox]'));
+    if(safe){if(!requested)await file.click({timeout:5000});return {selected:false,requested:true,filename,reason:'Saved file selected; awaiting confirmation on the review page.'};}
+   }
+  }
+ }
+ if(matches.length!==1)return {selected:false,reason:matches.length?'Approved filename is ambiguous on this page.':'Approved saved résumé selection is not identified on this page.'};
  const match=matches[0],radio=radios.nth(match.index);
  if(!match.checked){if(match.native)await radio.check({timeout:5000});else await radio.click({timeout:5000});}
  const selected=await radio.evaluate(e=>e.checked===true||e.getAttribute('aria-checked')==='true');
- return {selected,filename,...(!selected?{reason:'The approved résumé selection did not stay checked.'}:{})};
+ return {selected,filename,method:'native_saved_file',...(!selected?{reason:'The approved résumé selection did not stay checked.'}:{})};
 }
