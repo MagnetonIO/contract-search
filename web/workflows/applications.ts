@@ -3,7 +3,9 @@ export async function applicationCycle(options: {manual?: boolean} = {}) {
   const id = await acquire(options.manual === true);
   if (!id) return;
   try {
+    while (await refresh()) { /* Public checks are bounded and cached; no paid collectors. */ }
     while (await screen()) { /* Each batch is durably checkpointed. */ }
+    await reconcile();
     const limit = await rolloutLimit();
     for (let i = 0; i < limit; i++) {
       const attempt = await next();
@@ -16,6 +18,12 @@ export async function applicationCycle(options: {manual?: boolean} = {}) {
   } finally {
     await release(id);
   }
+}
+
+export async function refresh() {
+  'use step';
+  const {refreshPostingBatch} = await import('../lib/posting-refresh.mjs');
+  return refreshPostingBatch();
 }
 
 export async function acquire(manual = false) {
@@ -61,4 +69,10 @@ export async function rolloutLimit() {
   const state = await automationSettings();
   const count = Object.values(state.attempts).filter((a: any) => a.status === 'submitted').length;
   return count === 0 ? 1 : count < 5 ? 5 : 20;
+}
+
+export async function reconcile() {
+  'use step';
+  const {reconcileQualificationReviews} = await import('../lib/automation-screen.mjs');
+  return reconcileQualificationReviews();
 }

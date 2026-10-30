@@ -51,7 +51,12 @@ function SidebarNavigation({items,view,onSelect}:{items:NavItem[];view:string;on
     if(group)setExpanded(old=>({...old,[group.key]:true}));
   },[view]);
   const itemButton=([key,label,icon,count]:NavItem)=><button key={key} onClick={()=>onSelect(key)} className={view===key?'active':''} aria-current={view===key?'page':undefined}><Icon name={icon}/><span>{label}</span>{count!==undefined&&<span className="nav-count">{count}</span>}</button>;
-  const option=([key,label,,count]:NavItem)=><option key={key} value={key}>{label}{count!==undefined?` (${count})`:''}</option>;
+  const mobileMenu=useRef<HTMLDetailsElement>(null);
+  const [mobileOpen,setMobileOpen]=useState(false);
+  useEffect(()=>{if(!mobileOpen)return;const outside=(event:PointerEvent)=>{if(!mobileMenu.current?.contains(event.target as Node))setMobileOpen(false);};const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){setMobileOpen(false);mobileMenu.current?.querySelector('summary')?.focus();}};document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape);};},[mobileOpen]);
+  const currentLabel=items.find(([key])=>key===view)?.[1]||({automation:'Automatic applications',coverage:'Source coverage',profile:'Profile & résumé'}[view as 'automation'|'coverage'|'profile'])||'Choose a view';
+  const chooseMobile=(key:string)=>{onSelect(key);setMobileOpen(false);mobileMenu.current?.querySelector('summary')?.focus();};
+  const mobileButton=([key,label,,count]:NavItem)=><button type="button" key={key} onClick={()=>chooseMobile(key)} aria-current={view===key?'page':undefined}><span>{label}</span>{count!==undefined&&<small>{count}</small>}{view===key&&<Icon name="check" size={16}/>}</button>;
   return <>
     <nav aria-label="Workspace" className="desktop-navigation">
       {items.filter(([key])=>['opportunities','applied'].includes(key)).map(itemButton)}
@@ -60,12 +65,15 @@ function SidebarNavigation({items,view,onSelect}:{items:NavItem[];view:string;on
         <div className="nav-group-items">{items.filter(([key])=>group.items.includes(key)).map(itemButton)}</div>
       </details>)}
     </nav>
-    <label className="mobile-navigation"><span>View</span><select aria-label="Workspace view" value={items.some(([key])=>key===view)||view==='automation'?view:''} onChange={event=>onSelect(event.target.value)}>
-      <option value="" disabled>Choose a view</option>
-      {items.filter(([key])=>['opportunities','applied'].includes(key)).map(option)}
-      <option value="automation">Automatic applications</option>
-      {navGroups.map(group=><optgroup key={group.key} label={group.label}>{items.filter(([key])=>group.items.includes(key)).map(option)}</optgroup>)}
-    </select></label>
+    <details ref={mobileMenu} className="mobile-navigation" open={mobileOpen} onToggle={event=>setMobileOpen(event.currentTarget.open)}>
+      <summary aria-label={'Workspace view: '+currentLabel}><span><small>View</small>{currentLabel}</span><Icon name="chevron" size={16}/></summary>
+      <div className="mobile-view-menu" role="navigation" aria-label="Choose workspace view">
+        {items.filter(([key])=>['opportunities','applied'].includes(key)).map(mobileButton)}
+        {mobileButton(['automation','Automatic applications','briefcase'])}
+        {navGroups.map(group=><div key={group.key}><h3>{group.label}</h3>{items.filter(([key])=>group.items.includes(key)).map(mobileButton)}</div>)}
+        <div><h3>Workspace</h3>{mobileButton(['coverage','Source coverage','shield'])}{mobileButton(['profile','Profile & résumé','user'])}</div>
+      </div>
+    </details>
   </>;
 }
 

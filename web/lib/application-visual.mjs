@@ -4,7 +4,7 @@ import {humanCheckText} from './visual-policy.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const point={x:z.number().int().min(0),y:z.number().int().min(0)};
-const fact=z.enum(['name','first_name','last_name','email','phone','linkedin','website','street','city','state','zip','country','work_authorization','sponsorship','availability','desired_hourly_rate']);
+const fact=z.enum(['name','first_name','last_name','email','phone','linkedin','website','street','city','state','zip','country','work_authorization','sponsorship','us_citizen','availability','desired_hourly_rate']);
 export const visualDecisionSchema=z.object({action:z.union([
  z.object({type:z.literal('click'),...point,fact:z.string().nullable()}),
  z.object({type:z.literal('scroll'),...point,delta_y:z.number().int().min(-900).max(900)}),

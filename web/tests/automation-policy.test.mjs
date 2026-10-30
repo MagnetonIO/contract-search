@@ -12,7 +12,7 @@ test('a bounded active manual cycle can run outside scheduled hours without enab
 });
 import {applicationWindow,applicationIdentity,screenGate,reserveBudget} from '../lib/automation-policy.mjs';
 const lead={id:'a',pipeline:'contract',source:'board',source_url:'https://example.com/jobs/1?utm_source=x',pay:'Unknown',work_arrangement:'remote',c2c_status:'unknown'};
-test('application windows respect Chicago weekdays and DST',()=>{assert.ok(applicationWindow(new Date('2026-10-29T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-11-02T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-10-31T15:00:00Z')));});
+test('application windows respect Chicago weekdays and DST',()=>{assert.ok(!applicationWindow(new Date('2026-10-29T13:29:59Z')));assert.ok(applicationWindow(new Date('2026-10-29T13:30:00Z')));assert.ok(!applicationWindow(new Date('2026-11-02T13:00:00Z')));assert.ok(!applicationWindow(new Date('2026-10-31T15:00:00Z')));});
 test('unknown terms remain eligible but explicit W2-only and low rates fail',()=>{
  assert.equal(screenGate(lead,'Python contract'),null);assert.match(screenGate(lead,'W2 CANDIDATES ONLY'),/W2/);assert.equal(screenGate({...lead,pay:'$200 - $300 an hour'},'AI video interview required.'),null);assert.match(screenGate(lead,'W2 only'),/W2/);
  assert.match(screenGate({...lead,pay:'$70 - $99 an hour'},'Python'),/below/);

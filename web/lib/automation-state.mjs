@@ -34,13 +34,15 @@ export async function automationSettings(){
  return {interaction_mode:'hosted_visual',integration_verified:Boolean(ready?.provider_integration_verified),resume_source_text:source?.text&&source.hash===profile.value.resume_hash?source.text:'',run:run.value,policy:settings.value,facts:facts.value,budget:budget.value,screens:screens.value,attempts:attempts.value,resume_hash:profile.value.resume_hash,connections:{browser:Boolean(process.env.BROWSERBASE_API_KEY&&process.env.BROWSERBASE_PROJECT_ID),ai:Boolean(process.env.AI_GATEWAY_API_KEY||process.env.VERCEL_OIDC_TOKEN||process.env.VERCEL)}};
 }
 export async function saveFacts(input){
- const allowed=['name','email','phone','street','city','state','zip','country','work_authorization','sponsorship','availability','desired_hourly_rate','verified_experience','routine_privacy_consent','linkedin','website'];
+ const allowed=['name','email','phone','street','city','state','zip','country','work_authorization','sponsorship','us_citizen','availability','desired_hourly_rate','verified_experience','routine_privacy_consent','linkedin','website'];
  const facts={};for(const key of allowed)facts[key]=String(input[key]??'').trim().slice(0,key==='verified_experience'?24000:300);
  if(!facts.name||!/^\S+@\S+\.\S+$/.test(facts.email)||!facts.phone||!facts.zip)throw new AutomationInputError('Name, email, phone and ZIP are required.');
  if(!['yes','no'].includes(facts.work_authorization)||!['yes','no'].includes(facts.sponsorship))throw new AutomationInputError('Answer work authorization and sponsorship once.');
+ if(facts.us_citizen&&!['yes','no'].includes(facts.us_citizen))throw new AutomationInputError('Choose yes or no for U.S. citizenship, or leave it unspecified.');
  if(input.confirmed!==true||!facts.verified_experience)throw new AutomationInputError('Confirm your verified experience and reusable answers.');
  if(!Number.isFinite(Number(facts.desired_hourly_rate))||Number(facts.desired_hourly_rate)<100)throw new AutomationInputError('Desired hourly rate must be at least $100.');
  facts.first_name=facts.name.split(/\s+/)[0];facts.last_name=facts.name.split(/\s+/).slice(1).join(' ');
+ const previous=(await readJson('applicant-facts.json',null)).value;const sameFit=previous&&allowed.filter(key=>key!=='us_citizen').every(key=>String(previous[key]??'')===facts[key]);facts.fit_version=sameFit?(previous.fit_version||previous.version):fingerprint({experience:facts.verified_experience,state:facts.state,country:facts.country,rate:facts.desired_hourly_rate});
  facts.confirmed=true;facts.version=fingerprint(facts);facts.updated_at=new Date().toISOString();
  await mutate('applicant-facts.json',()=>facts,null);return facts;
 }

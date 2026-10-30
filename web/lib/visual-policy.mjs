@@ -3,6 +3,7 @@ export const normalizedLabel=value=>String(value||'').replace(/\s+/g,' ').trim()
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
 export const optionalTopChoice=control=>['checkbox','radio'].includes(control?.type)&&/\b(?:mark (?:this )?job as a )?top choice\b/i.test(normalizedLabel(control?.question||control?.label));
 export function knownChoiceAnswer(question,facts){
+ if(/(?:u\.?s\.?|united states)\s+(?:citizen|citizenship)|citizen(?:ship)?\s+(?:of\s+)?(?:the\s+)?(?:u\.?s\.?|united states)\b/i.test(question)&&! /clearance|criminal|signature|penalty|background/i.test(question))return ['yes','no'].includes(facts?.us_citizen)?{fact:'us_citizen',answer:facts.us_citizen}:null;
  const authorization=/authoriz|eligible.*work|legal.*work/i.test(question);
  if(authorization&&/without.*sponsor/i.test(question)){
   if(!['yes','no'].includes(facts?.work_authorization)||!['yes','no'].includes(facts?.sponsorship))return null;
@@ -40,7 +41,7 @@ export function needsResumeUpload({attached,control,uploadAvailable}){
 export function choiceMatches({fact,value,label,question,facts}){
  const expected=normalizedLabel(facts?.[fact]).toLowerCase(),answer=normalizedLabel(label||value).toLowerCase(),raw=normalizedLabel(value).toLowerCase();
  if(!expected)return false;
- if(['work_authorization','sponsorship'].includes(fact)){const known=knownChoiceAnswer(question,facts);return known?.fact===fact&&answer===known.answer;}
+ if(['work_authorization','sponsorship','us_citizen'].includes(fact)){const known=knownChoiceAnswer(question,facts);return known?.fact===fact&&answer===known.answer;}
  if(fact==='routine_privacy_consent')return expected==='yes'&&/privacy|personal data|accurac|accurate/i.test(question)&&! /terms|conditions|arbitration|background|signature/i.test(question);
  if(fact==='country'){
   if(!/country/i.test(question))return false;

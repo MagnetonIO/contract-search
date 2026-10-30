@@ -3,8 +3,8 @@ import {createHash} from 'node:crypto';
 export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:20,monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:80,allow_unknown_terms:true});
 export function chicagoDay(now=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function applicationWindow(now=new Date()) {
- const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
- return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)>=8&&Number(p.hour)<18;
+ const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
+ return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)*60+Number(p.minute)>=510&&Number(p.hour)<18;
 }
 export function applicationRunAllowed(state,now=new Date()) {
  if(applicationWindow(now))return true;

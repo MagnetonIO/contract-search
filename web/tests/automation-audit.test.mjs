@@ -9,8 +9,11 @@ test('US remote includes Chicago; Central time and higher offered pay are not mi
  assert.equal(automationLocation(lead,applicant,'Build hybrid keyword and semantic retrieval. Only candidates with Python experience should apply.').status,'allowed');
  assert.equal(automationLocation({...lead,location_assessment:{status:'us_remote_restricted',restrictions:['Remote (must be willing to work CST)']}},applicant).status,'allowed');
  assert.equal(automationLocation({...lead,location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'allowed');
- assert.equal(automationLocation({...lead,location_assessment:{status:'us_remote_restricted',restrictions:['Candidates must reside in Texas only.']}},applicant).status,'held');
- assert.equal(automationLocation({...lead,remote_location:'Unknown',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'held');
+ assert.equal(automationLocation({...lead,location_assessment:{status:'us_remote_restricted',restrictions:['Candidates must reside in Texas only.']}},applicant).status,'blocked');
+ assert.equal(automationLocation({...lead,remote_location:'Unknown',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'allowed');
+ assert.equal(automationLocation({...lead,remote_location:'Chicago, IL',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'allowed');
+ assert.equal(automationLocation({...lead,remote_location:'Remote Canada',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'blocked');
+ assert.equal(automationLocation(lead,applicant,'Must live in the Continental US.').status,'allowed');
  assert.equal(automationLocation({...lead,location_assessment:{status:'us_remote_restricted',restrictions:['First week onsite at the client office.']}},applicant).status,'blocked');
 });
 test('automation totals use the same open-opportunity population as the sidebar',()=>{
@@ -21,10 +24,11 @@ test('automation totals use the same open-opportunity population as the sidebar'
 });
 test('time-zone rules match complete zone names, not words such as requests',()=>{
  assert.equal(automationLocation(lead,applicant,'This contact information is for accommodation requests only and cannot be used to inquire about the status of applications.').status,'allowed');
- assert.equal(automationLocation(lead,applicant,'EST only.').status,'held');
- assert.equal(automationLocation(lead,applicant,'PST only.').status,'held');
+ assert.equal(automationLocation(lead,applicant,'EST only.').status,'allowed');
+ assert.equal(automationLocation(lead,applicant,'PST only.').status,'allowed');
+ assert.equal(automationLocation(lead,applicant,'Only PST candidates.').status,'blocked');
 });
 test('next application check skips nights/weekends and follows Chicago DST',()=>{
- assert.equal(nextApplicationCheck(new Date('2026-10-29T17:08:00Z')),'2026-10-29T17:27:00.000Z');
- assert.equal(nextApplicationCheck(new Date('2026-10-30T22:30:00Z')),'2026-11-02T14:27:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-10-29T17:08:00Z')),'2026-10-29T17:30:00.000Z');
+ assert.equal(nextApplicationCheck(new Date('2026-10-30T22:30:00Z')),'2026-11-02T14:30:00.000Z');
 });

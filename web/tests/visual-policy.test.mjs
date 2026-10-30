@@ -63,3 +63,8 @@ test('authorization without sponsorship is a combined question, not a request fo
  assert.equal(knownChoiceAnswer('Do you have a clearance?',facts),null);
  assert.equal(knownChoiceAnswer(question,{work_authorization:'yes'}),null);
 });
+test('confirmed U.S. citizenship can answer the matching question without implying clearance',()=>{
+ const facts={us_citizen:'yes'};assert.equal(knownChoiceAnswer('Are you a U.S. citizen?',facts).answer,'yes');
+ assert.equal(choiceMatches({fact:'us_citizen',label:'Yes',question:'Are you a United States citizen?',facts}),true);
+ assert.equal(knownChoiceAnswer('Are you a U.S. citizen with active Secret clearance?',facts),null);
+});

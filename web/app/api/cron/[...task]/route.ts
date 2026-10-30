@@ -18,7 +18,6 @@ export async function GET(request: Request, context: { params: Promise<{ task: s
   try {
     if(task==='applications'){const state=await automationSettings();if(!state.policy.enabled||!applicationWindow())return Response.json({status:'paused_or_outside_window'});const run=await start(applicationCycle,[]);return Response.json({status:'started',run_id:run.runId});}
     const result = task.startsWith('collect') ? await ensureCollection() : await sendDailyDigest();
-    if (task.startsWith('collect') && result.status === 'already_collected') await start(applicationCycle,[]);
     if (task.startsWith('collect')) await writeJson('scheduler-state.json',{...result,checked_at:new Date().toISOString()});
     return Response.json(result, { status: result.status === 'configuration_required' ? 503 : 200, headers: { 'Cache-Control': 'private, no-store' } });
   } catch {
