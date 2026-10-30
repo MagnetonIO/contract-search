@@ -1,42 +1,40 @@
-# Contract search — 2026-10-29
+# Contract search — 2026-10-30
 
-Mode: **daily**. New remote contracts: **49 / 50**. Secondary roles: **93**. Published project needs: **0**.
-Raw rows: 892; normalized relevant rows: 849; unique new relevant leads: 142; duplicates: 519; stale: 188; rejected: 43.
+Mode: **daily**. New remote contracts: **63 / 50**. Secondary roles: **121**. Published project needs: **4**.
+Raw rows: 855; normalized relevant rows: 809; unique new relevant leads: 188; duplicates: 445; stale: 176; rejected: 46.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
 
 ## Top 10 remote contracts
 
-1. [Cloud / AI Architect](https://www.linkedin.com/jobs/view/4474441977?pageNum=0&position=10) — Eliassen Group; $100.00/hr; 1 - remote C2C USD100+/hr; LinkedIn. agency / client unverified.
-2. [Marketing Automation Solutions Architect (Temp Contractor)](https://job-boards.greenhouse.io/credible/jobs/8319538) — Credible; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-3. [Software Engineer](https://careers-adastragrp.icims.com/jobs/5811/software-engineer/job) — Adastra Corporation; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
-4. [Azure DevOps Engineer](https://www.dice.com/job-detail/ae5f9234-938d-4b74-8362-f4f64392a2cd) — SSN Group LLC; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
-5. [Full Stack Engineer, Agentic AI](https://www.linkedin.com/jobs/view/4484763197?pageNum=0&position=48) — Lazer Technologies; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-6. [Full Stack GenAI Engineer (With Node/TypeScript experience)](https://www.linkedin.com/jobs/view/4484727522?pageNum=0&position=33) — Tek Leaders Inc; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-7. [Lead GCP Cloud Migration Architect (GenAI & Application Modernization) - Remote (US)-](https://www.linkedin.com/jobs/view/4484747357?pageNum=0&position=50) — Saransh Inc; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-8. [Middleware Architect](https://www.linkedin.com/jobs/view/4482549081?pageNum=0&position=37) — GeorgiaTEK Systems Inc.; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-9. [Openshift Platform engineer](https://www.linkedin.com/jobs/view/4483892214?pageNum=0&position=20) — Intone Networks Inc; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-10. [RSA (Sr. Forward Deployed Engineer)](https://www.dice.com/job-detail/3546d99f-784d-44a9-bbc6-8c68a894a284) — dBestWorkz LLC; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
-
-**Shortfall: 1.** Source failures, bounded search limits, stale postings, deduplication and relevance/contract filters constrain the count. Secondary roles and project notices do not fill the contract target. No inferred prospects are counted.
+1. [Full Stack Software Engineer — AI & Automation](https://job-boards.greenhouse.io/utilityprofit/jobs/4412541009) — Utility Profit; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
+2. [Hiring: Principal IAM Architect | AWS Security & Authorization | 15+ Years | local to CA only](https://jobs.smartrecruiters.com/TMSLLC/744000158537839-hiring-principal-iam-architect-aws-security-authorization-15-years-local-to-ca-only) — TMS LLC; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
+3. [Senior DevOps Engineer /Infrastructure Automation Developer / Ansible Engineer - Remote](https://simplesolutions.zohorecruit.com/jobs/Careers/441940000108323613/Senior-DevOps-Engineer-Infrastructure-Automation-Developer-Ansible-Engineer-Remote) — Simple Solutions; unknown; 2 - remote contract; terms to verify; Employer ATS discovery. employer posting verified; agency status to confirm.
+4. [AI Architect](https://www.linkedin.com/jobs/view/4484521505?pageNum=0&position=34) — Daman; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+5. [AI Architect](https://www.linkedin.com/jobs/view/4484131138?pageNum=0&position=21) — Xforia Global Talent & Technology Solutions; unknown; 2 - remote contract; terms to verify; LinkedIn. agency / client unverified.
+6. [AI FullStack Software Engineer](https://www.linkedin.com/jobs/view/4484120475?pageNum=0&position=45) — Innovar Group; $70.00/yr - $80.00/yr; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+7. [AI Principal Architect](https://www.linkedin.com/jobs/view/4484546118?pageNum=0&position=37) — BayOne Solutions; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+8. [Agentic AI Architect - 100% Remote](https://www.linkedin.com/jobs/view/4448298141?pageNum=0&position=32) — Connect Tech+Talent; unknown; 2 - remote contract; terms to verify; LinkedIn. agency / client unverified.
+9. [Data Center Network Engineer](https://www.dice.com/job-detail/0a52f31b-514a-4347-8441-17dfd3659320) — Simple Solutions; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
+10. [Data Engineer - building production pipelines](https://www.dice.com/job-detail/1fa660f6-c557-4ba6-9490-a365c5292a37) — APN Software Services, Inc; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
 
 ## Source coverage
 
 | Source | Status | Raw rows | Detail |
 |---|---|---:|---|
-| LinkedIn | ok | 300 | Capped runs PCllhfR2AYcgPfeHz; configured result ceiling reached; coverage is partial |
-| Indeed | ok | 75 | Capped runs rWQr6eVYQxoHpY01w |
-| Dice | ok | 178 | Capped runs EQQBloIgpzEZatoWM |
-| Employer ATS discovery | ok | 22 | Capped runs oBict7dWssfidYxvE |
-| Glassdoor | ok | 77 | Capped runs BERF4xcxgBNSTdgHK, MWF6QwaIPYMmwFV15, jthlU23Jt6pDjfnvW |
-| Wellfound | ok | 72 | Capped runs XNnyjpQfhTBp9mylW |
-| Built In | ok | 31 | Capped runs rGnTPz0ghXQN8ubpb |
-| Staffing firm career feeds | ok | 32 | Capped runs F04HJsQRziPXjnE0r; provider ATS index; end client unverified |
-| JobServe US | ok | 9 | Capped runs hxOLNDZsdcggXNdum |
+| LinkedIn | ok | 294 | Capped runs VRNC6AoDHpfWObxNe |
+| Indeed | ok | 75 | Capped runs KN6cAxd8PwzJdMC1t |
+| Dice | ok | 137 | Capped runs QTtFx9wjOagc1iICy |
+| Employer ATS discovery | ok | 19 | Capped runs YWas7UnpE6O4UM8lb |
+| Glassdoor | ok | 82 | Capped runs yzJ4hQu6tGBtEWj3f, vgMe8xmVaoefdCYpi, 9yUGoLEdhRHqH0VCP |
+| Wellfound | ok | 73 | Capped runs SiUhKdNClmAN0vDQD |
+| Built In | ok | 33 | Capped runs tSC9gONVauXh2uAWh |
+| Staffing firm career feeds | ok | 30 | Capped runs O0D0bAVUIP13Kzjpc; provider ATS index; end client unverified |
+| JobServe US | ok | 5 | Capped runs XqasBqaqpTVo4NJWX |
 | Remotive | ok | 12 |  |
 | We Work Remotely | ok | 25 |  |
-| We Work Remotely DevOps | ok | 29 |  |
-| US SAM.gov solicitations | failed | 0 | HTTP 401 |
+| We Work Remotely DevOps | ok | 33 |  |
+| US SAM.gov solicitations | ok | 7 | Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; 0 cached queries; 10 requests per rolling 24h; federal projects, not individual jobs |
 | Myticas direct career feed | ok | 30 | Direct agency career feeds: Myticas Consulting; hiring client unverified |
 | TechFetch | disabled | 0 | Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access |
 
