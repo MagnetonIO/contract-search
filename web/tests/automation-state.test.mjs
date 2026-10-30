@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
 import {writeJson,readJson} from '../lib/store.ts';
-import {claimAttempt,submissionIntent,reviseAttempt,resumeAfterSiteLogin,acquireCycle} from '../lib/automation-state.mjs';
+import {claimAttempt,submissionIntent,reviseAttempt,resumeAfterSiteLogin,acquireCycle,saveFacts} from '../lib/automation-state.mjs';
 test('manual start acquires a bounded cycle after hours while scheduled start stays idle',async()=>{
  const folder=await mkdtemp(path.join(os.tmpdir(),'contract-manual-start-'));const previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
  try{
@@ -36,5 +36,15 @@ test('saving a site login resumes authentication-only pauses once, never uncerta
   assert.equal(await resumeAfterSiteLogin(),1);assert.equal(await resumeAfterSiteLogin(),0);
   const {value}=await readJson('application-attempts.json',{});assert.equal(value.a.status,'queued');assert.equal(value.a.reason,null,'resumed work does not display a stale exception');assert.equal(value.a.visual_step_count,0);assert.deepEqual(value.a.visual_steps,[]);assert.equal(value.a.visual_screenshot_key,null);assert.equal(value.a.prior_visual_runs[0].steps.length,1,'prior visual history remains archived without mixing step numbers');assert.equal(value.b.status,'needs_input');assert.equal(value.c.status,'needs_input');
   assert.equal((await readJson('automation-budget.json',{})).value.charges.length,1);
+ }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
+});
+
+test('a confirmed additive application answer preserves existing fit scores while versioning the new facts',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'contract-answer-cache-')),previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
+ try{
+  const input={name:'Fixture Applicant',email:'fixture@example.com',phone:'555-0100',zip:'60612',work_authorization:'yes',sponsorship:'no',desired_hourly_rate:'100',verified_experience:'Twenty years of engineering experience.',confirmed:true};
+  const first=await saveFacts(input);const second=await saveFacts({...first,verified_experience:first.verified_experience+'\nUser-confirmed application answer: 10 years of hands-on work experience with Conversational AI.',confirmed:true});
+  assert.equal(second.fit_version,first.fit_version);assert.notEqual(second.version,first.version);
+  const changed=await saveFacts({...second,verified_experience:'Different professional history.',confirmed:true});assert.notEqual(changed.fit_version,second.fit_version);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });
