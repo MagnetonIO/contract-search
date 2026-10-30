@@ -1,7 +1,17 @@
 import {createHash} from 'node:crypto';
 
-export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:20,monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:80,allow_unknown_terms:true});
+export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:50,daily_quota_metric:'confirmed_submissions',monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:80,allow_unknown_terms:true});
 export function chicagoDay(now=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+export function dailySubmissionQuota(attempts,policy=DEFAULT_AUTOMATION_POLICY,now=new Date()){
+ const day=chicagoDay(now),identities=new Set();let in_flight=0;
+ for(const a of Object.values(attempts||{})){
+  if(a.status==='submitting'&&a.submission_intent_at)in_flight++;
+  if(a.status!=='submitted'||!a.receipt||!Number.isFinite(Date.parse(a.confirmed_at||''))||chicagoDay(new Date(a.confirmed_at))!==day)continue;
+  identities.add(a.target_identity||a.id||applicationIdentity(a));
+ }
+ const limit=policy.daily_limit??50,confirmed=identities.size;
+ return {day,limit,confirmed,remaining:Math.max(0,limit-confirmed),in_flight};
+}
 export function applicationWindow(now=new Date()) {
  const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
  return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)*60+Number(p.minute)>=510&&Number(p.hour)<18;
@@ -41,13 +51,14 @@ export function screenGate(lead,description='',progress,policy=DEFAULT_AUTOMATIO
 export function reserveBudget(ledger,reservation,now=new Date(),policy=DEFAULT_AUTOMATION_POLICY) {
  if(!Number.isFinite(reservation.usd)||reservation.usd<=0)throw Error('Invalid spending reservation');
  const day=chicagoDay(now);const month=day.slice(0,7);
- const state=structuredClone(ledger||{month,charges:[],submissions:[]});
+ const state=structuredClone(ledger||{month,charges:[]});
+ // Old versions stored browser-start reservations as "submissions". Keep the
+ // history, but the receipt-backed attempt records are now the quota source.
+ if(state.submissions){state.legacy_attempt_reservations=[...(state.legacy_attempt_reservations||[]),...state.submissions];delete state.submissions;}
  if(state.month!==month){state.month=month;state.charges=[];}
  if(state.charges.some(c=>c.id===reservation.id))return state;
  const spent=state.charges.reduce((sum,c)=>sum+c.usd,policy.browser_subscription_usd);
  if(spent+reservation.usd>policy.monthly_limit_usd+1e-9)throw Error('Monthly automation allowance exhausted');
- if(reservation.submit&&state.submissions.filter(s=>s.day===day).length>=policy.daily_limit)throw Error('Daily submission limit reached');
  state.charges.push({...reservation,reserved_at:now.toISOString(),status:'reserved'});
- if(reservation.submit)state.submissions.push({id:reservation.id,day});
  return state;
 }

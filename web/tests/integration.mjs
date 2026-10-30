@@ -45,6 +45,10 @@ try {
  assert.equal((await request('automation',{authenticated:false})).status,401);
  assert.equal((await request('automation-screenshot?id=invalid',{authenticated:false})).status,401);assert.equal((await request('automation-screenshot?id=invalid')).status,400);assert.equal((await request('automation-screenshot?id=11111111-1111-4111-8111-111111111111')).status,404);assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');
  const automation=await(await request('automation')).json();assert.equal(automation.audit.total,1);assert.equal(automation.audit.rows[0].title,fixture.title);assert.equal(automation.live_browser,null);assert.deepEqual(automation.activity,[]);
+ await writeFile(path.join(directory,'application-attempts.json'),JSON.stringify({success:{id:'success',status:'submitted',receipt:'Application submitted',confirmed_at:new Date().toISOString()},failed:{id:'failed',status:'failed'},closed:{id:'closed',status:'skipped'}}));
+ const quota=(await(await request('automation')).json()).quota;assert.equal(quota.limit,50);assert.equal(quota.confirmed,1);assert.equal(quota.remaining,49,'failed and unavailable applications do not consume daily successful-application quota');
+ await rm(path.join(directory,'application-attempts.json'));
+
  assert.equal((await request('automation-start',{body:{}})).status,409,'missing confirmed applicant facts cannot launch a silent no-op');
  assert.equal((await request('automation-settings',{body:{enabled:true},origin:'https://attacker.example'})).status,403);
  response=await request('progress',{body:{id:fixture.id,stage:'saved',notes:'Synthetic private note',version:null},origin:'https://attacker.example'});assert.equal(response.status,403);

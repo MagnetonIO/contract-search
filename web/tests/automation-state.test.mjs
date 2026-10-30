@@ -26,6 +26,18 @@ test('concurrent workers cannot claim or submit the same attempt twice',async()=
  assert.equal(duplicate.filter(r=>r.status==='fulfilled').length,1,'distinct board records cannot submit the same resolved application twice');
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });
+test('confirmed receipts enforce the daily limit; failures do not, and concurrent final clicks cannot take one slot twice',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'contract-success-quota-')),previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
+ try{
+  const now=new Date('2026-10-30T15:00:00Z');await writeJson('automation-settings.json',{daily_limit:2});
+  await writeJson('application-attempts.json',{done:{id:'done',status:'submitted',receipt:'Application submitted',confirmed_at:now.toISOString()},failed:{id:'failed',status:'failed'},closed:{id:'closed',status:'skipped'},a:{id:'a',status:'running'},b:{id:'b',status:'running'}});
+  const results=await Promise.allSettled([submissionIntent('a','https://example.com/a',{now}),submissionIntent('b','https://example.com/b',{now})]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  let data=(await readJson('application-attempts.json',{})).value;const winner=data.a.submission_intent_at?'a':'b',other=winner==='a'?'b':'a';
+  data[winner]={...data[winner],status:'failed'};await writeJson('application-attempts.json',data);await submissionIntent(other,'https://example.com/'+other,{now});
+  data=(await readJson('application-attempts.json',{})).value;data[other]={...data[other],status:'submitted',receipt:'Application submitted',confirmed_at:now.toISOString()};data.next={id:'next',status:'running'};await writeJson('application-attempts.json',data);
+  await assert.rejects(submissionIntent('next','https://example.com/next',{now}),/Daily submission limit/);assert.equal((await readJson('application-attempts.json',{})).value.next.submission_intent_at,undefined);
+ }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
+});
 test('saving a site login resumes authentication-only pauses once, never uncertain submissions',async()=>{
  const folder=await mkdtemp(path.join(os.tmpdir(),'contract-login-retry-'));const previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
  try{

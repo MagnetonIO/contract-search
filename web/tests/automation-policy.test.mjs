@@ -32,11 +32,11 @@ test('tracking parameters are not new applications; distinct requisitions remain
  assert.equal(applicationIdentity({...lead,source_url:'https://www.linkedin.com/jobs/view/engineer-at-example-123?trackingId=a'}),applicationIdentity({...lead,source_url:'https://linkedin.com/jobs/view/123'}));
  assert.notEqual(applicationIdentity(lead),applicationIdentity({...lead,source_url:'https://example.com/jobs/2'}));
 });
-test('budget holds uncertain charges and counts submission intents, including across midnight',()=>{
+test('spending reservations stay separate from successful-submission quota, including across midnight',()=>{
  let state=null;const now=new Date('2026-10-29T15:00:00Z');
  for(let i=0;i<20;i++)state=reserveBudget(state,{id:String(i),usd:0.5,submit:true},now);
- assert.throws(()=>reserveBudget(state,{id:'21',usd:0.5,submit:true},now),/Daily/);
+ assert.equal(reserveBudget(state,{id:'21',usd:0.5,submit:true},now).charges.length,21);
  assert.throws(()=>reserveBudget(state,{id:'expensive',usd:25},now),/Monthly/);
  assert.deepEqual(reserveBudget(state,{id:'1',usd:0.5,submit:true},now),state);
- assert.equal(reserveBudget(state,{id:'tomorrow',usd:0.5,submit:true},new Date('2026-10-30T15:00:00Z')).submissions.length,21);
+ assert.equal(reserveBudget(state,{id:'tomorrow',usd:0.5,submit:true},new Date('2026-10-30T15:00:00Z')).charges.length,21);
 });
