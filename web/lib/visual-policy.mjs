@@ -1,4 +1,4 @@
-import {applicationControlKind} from './application-controls.mjs';
+import {applicationControlKind,applicationAuxiliaryUrl} from './application-controls.mjs';
 export const normalizedLabel=value=>String(value||'').replace(/\s+/g,' ').trim();
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
 export const optionalTopChoice=control=>['checkbox','radio'].includes(control?.type)&&/\b(?:mark (?:this )?job as a )?top choice\b/i.test(normalizedLabel(control?.question||control?.label));
@@ -21,6 +21,7 @@ export function experienceAnswer(question,facts){
 export function visualClickKind(control){
  if(!control||control.disabled)return 'blocked';
  const text=normalizedLabel(control.text||control.label);
+ if(applicationAuxiliaryUrl(control.href)||/tailor (?:my |your )?resum[eé]|create (?:a )?cover letter|help me stand out|upgrade|\bpremium\b/i.test(text))return 'blocked';
  if(control.applicationDialog&&/^(?:close|dismiss|cancel)$/i.test(text))return 'blocked';
  if(control.type==='password'||/sign.?in|log.?in|captcha|verify.*human|security check|agree|accept.*terms|purchase|pay|delete|withdraw|unsubscribe/i.test(text))return 'blocked';
  if(['checkbox','radio'].includes(control.type)||['checkbox','radio','option'].includes(control.role))return 'answer';

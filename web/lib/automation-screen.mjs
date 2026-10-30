@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {readJson} from './store.ts';
 import {readSnapshot} from './snapshot.mjs';
 import {reconcileSavedReceipts} from './application-reconciliation.mjs';
+import {recoverableNavigationBlock,NAVIGATION_REPAIR_VERSION} from './application-navigation.mjs';
 import {approvedSiteResume,recoverableResumeBlock,RESUME_RECOVERY_VERSION} from './resume-library.mjs';
 import {automationSettings,reviseAttempt,updateScreenings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
 import {screenGate,fingerprint,applicationIdentity,applicationRunAllowed} from './automation-policy.mjs';
@@ -56,16 +57,15 @@ export async function screenBatch(){
 export async function nextAttempt(){
  await reconcileSavedReceipts();
  let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if(state.quota.remaining===0)return null;
- const [{value:snapshot},{value:workflow}]=await Promise.all([readSnapshot(),readJson('workflow.json',{})]);
+ const [{value:snapshot},{value:workflow},{value:content}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('job-content.json',{postings:{}})]);
  const queued=Object.values(state.attempts).find(a=>a.status==='queued');if(queued)return queued.id;
  const library=(await readJson('resume-site-files.json',{})).value;
- const recover=Object.values(state.attempts).find(a=>{const lead=snapshot?.leads.find(l=>l.id===a.lead_id);return lead&&leadInView(lead,workflow[lead.id],'opportunities')&&recoverableResumeBlock(a)&&approvedSiteResume(library,lead.application_url||lead.source_url,state.resume_hash);});
- if(recover){try{await reviseAttempt(recover.id,'resume');await patchAttempt(recover.id,{resume_recovery_version:RESUME_RECOVERY_VERSION});return recover.id;}catch(error){if(!/allowance exhausted|Daily submission limit/.test(error.message))throw error;return null;}}
+ const recover=Object.values(state.attempts).find(a=>{const lead=snapshot?.leads.find(l=>l.id===a.lead_id);return lead&&leadInView(lead,workflow[lead.id],'opportunities')&&(recoverableResumeBlock(a)||/linkedin\.com/.test(lead.application_url||lead.source_url)&&recoverableNavigationBlock(a))&&!screenGate(lead,content.postings[lead.id]?.text,workflow[lead.id],state.policy)&&approvedSiteResume(library,lead.application_url||lead.source_url,state.resume_hash);});
+ if(recover){try{await reviseAttempt(recover.id,'resume');await patchAttempt(recover.id,{resume_recovery_version:RESUME_RECOVERY_VERSION,...(recoverableNavigationBlock(recover)?{navigation_recovery_version:NAVIGATION_REPAIR_VERSION}:{})});return recover.id;}catch(error){if(!/allowance exhausted|Daily submission limit/.test(error.message))throw error;return null;}}
  const leads=(snapshot?.leads||[]).filter(l=>(state.screens[l.id]?.status==='eligible'||state.screens[l.id]?.eligibility_review&&state.screens[l.id]?.eligibility_review_version!==ELIGIBILITY_REVIEW_VERSION)&&!workflow[l.id]?.disposition&&workflow[l.id]?.stage!=='applied').sort((a,b)=>state.screens[b.id].score-state.screens[a.id].score);
  for(const lead of leads){const identity=applicationIdentity(lead);const previous=(snapshot?.leads||[]).filter(l=>workflow[l.id]?.stage==='applied');if(previous.some(l=>applicationIdentity(l)===identity||l.company_agency?.toLowerCase()===lead.company_agency?.toLowerCase()&&l.title?.toLowerCase()===lead.title?.toLowerCase())){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',decision_basis:'screening_rule',reason:'Matches an existing application identity or employer/title; held to avoid duplicates.'}}));continue;}if(Object.values(state.attempts).some(a=>a.target_identity===identity&&!['cancelled','skipped'].includes(a.status)))continue;
  // Professional qualifications are match notes; explicit legal restrictions
  // use confirmed reusable answers before the browser is reserved.
- const content=(await readJson('job-content.json',{postings:{}})).value;
  const text=content.postings[lead.id]?.text||'';
  const location=automationLocation(lead,state.facts,text);if(location.status!=='allowed'){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'held',reason:'Location: '+location.reason,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}
  const gate=screenGate(lead,text,workflow[lead.id],state.policy);if(gate){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',decision_basis:'screening_rule',reason:gate,eligibility_review_version:ELIGIBILITY_REVIEW_VERSION}}));continue;}

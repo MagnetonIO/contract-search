@@ -40,3 +40,11 @@ test('spending reservations stay separate from successful-submission quota, incl
  assert.deepEqual(reserveBudget(state,{id:'1',usd:0.5,submit:true},now),state);
  assert.equal(reserveBudget(state,{id:'tomorrow',usd:0.5,submit:true},new Date('2026-10-30T15:00:00Z')).charges.length,21);
 });
+
+test('explicit hourly rates in posting text are checked when the board omitted structured pay',()=>{
+ assert.match(screenGate({...lead,pay:'unknown'},'Automation Engineer. Hourly Pay Range: $83-$98. Contract.'),/below minimum/);
+ assert.match(screenGate({...lead,pay:'unknown'},'Remote contract pays $70 - $95/hr.'),/below minimum/);
+ assert.equal(screenGate({...lead,pay:'unknown'},'Remote contract: annual salary $180,000 - $200,000.'),null);
+ assert.equal(screenGate({...lead,pay:'unknown'},'Remote contract: $90 - $120/hr.'),null);
+ assert.equal(screenGate({...lead,pay:'unknown'},'Remote contract: CAD $90/hr.'),null);
+});

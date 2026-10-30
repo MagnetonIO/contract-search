@@ -44,7 +44,13 @@ export function screenGate(lead,description='',progress,policy=DEFAULT_AUTOMATIO
  const ranges=[...String(lead.pay||'').matchAll(/\$([\d,]+(?:\.\d+)?)\s*(?:-|–|to)\s*\$?([\d,]+(?:\.\d+)?)/g)];
  const hourly = /(?:hour|\/hr|hourly)/i.test(lead.pay||'')&&!/CAD|AUD|EUR|GBP|£|€/i.test(lead.pay||'');
  const upper = ranges.length?Math.max(...ranges.map(m=>Number(m[2].replaceAll(',','')))):Number(String(lead.pay||'').match(/\$([\d,]+(?:\.\d+)?)/)?.[1]?.replaceAll(',',''));
- if(hourly&&Number.isFinite(upper)&&upper<policy.minimum_hourly_usd)return 'Published hourly rate is below minimum';
+ const descriptionRates=[];
+ const amount='([\\d,]+(?:\\.\\d+)?)';
+ const patterns=[new RegExp('\\$\\s*'+amount+'(?:\\s*(?:-|–|to)\\s*\\$?\\s*'+amount+')?\\s*(?:/\\s*(?:hr|hour)|per hour|an hour)','gi'),new RegExp('hourly\\s+(?:pay|rate|compensation)(?:\\s+range)?\\s*:?\\s*(?:USD\\s*)?\\$\\s*'+amount+'(?:\\s*(?:-|–|to)\\s*\\$?\\s*'+amount+')?','gi')];
+ const prose=String(description).replace(/\s+/g,' ');
+ for(const pattern of patterns)for(const match of prose.matchAll(pattern)){if(/CAD|AUD|EUR|GBP|£|€/i.test(prose.slice(Math.max(0,match.index-12),match.index+match[0].length+8)))continue;const max=Number((match[2]||match[1]).replaceAll(',',''));if(Number.isFinite(max))descriptionRates.push(max);}
+ const knownRates=[...(hourly&&Number.isFinite(upper)?[upper]:[]),...descriptionRates];
+ if(knownRates.length&&Math.max(...knownRates)<policy.minimum_hourly_usd)return 'Published hourly rate is below minimum';
  if(!String(description).trim())return 'Full posting description unavailable';
  return null;
 }

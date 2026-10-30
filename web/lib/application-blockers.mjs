@@ -20,8 +20,9 @@ export function attemptBlocker(attempt){
  return null;
 }
 export function toolOutcomeDetail(outcome){
- const message=outcome?.reason||outcome?.retry||outcome?.action||outcome?.action_hint||outcome?.receipt||outcome?.error_message||null;
- return {message,action:outcome?.action||null,error_type:outcome?.error_type||null,requires_upload_resume:Boolean(outcome?.requires_upload_resume),not_submitted:Boolean(outcome?.not_submitted),incomplete_fields:outcome?.incomplete_fields||[]};
+ const base=outcome?.reason||outcome?.retry||outcome?.action||outcome?.action_hint||outcome?.receipt||outcome?.error_message||null;
+ const message=base&&outcome?.target?base+' Target: '+outcome.target:base;
+ return {message,target:outcome?.target||null,action:outcome?.action||null,error_type:outcome?.error_type||null,requires_upload_resume:Boolean(outcome?.requires_upload_resume),not_submitted:Boolean(outcome?.not_submitted),incomplete_fields:outcome?.incomplete_fields||[]};
 }
 export function queuedAttemptId(state){
  if(!state.policy?.enabled||!state.facts?.confirmed||state.quota?.remaining===0)return null;

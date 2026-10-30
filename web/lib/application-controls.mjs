@@ -1,4 +1,5 @@
 const normalized=value=>String(value||'').replace(/\s+/g,' ').trim();
+export function applicationAuxiliaryUrl(raw){try{const u=new URL(raw);return (u.hostname==='linkedin.com'||u.hostname.endsWith('.linkedin.com'))&&/^\/job-apply-resources(?:\/|$)/i.test(u.pathname);}catch{return false;}}
 const STANDARD_CONFIRMATION_PATTERN=/your application (?:has been |was |is )?(?:submitted|received|sent)|thank you for applying|successfully applied|application submitted|application received/i;
 export const CONFIRMATION_PATTERN=new RegExp(STANDARD_CONFIRMATION_PATTERN.source+'|your application is on its way','i');
 export function diceApplicationReceipt(text,{url,target}={}){
