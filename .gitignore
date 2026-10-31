@@ -17,3 +17,4 @@ web/next-env.d.ts
 web/tsconfig.tsbuildinfo
 output-browser/
 .playwright-mcp/
+resumes/

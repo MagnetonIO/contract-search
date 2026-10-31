@@ -1,3 +1,4 @@
+import {TRACKED_ROLES,roleResumeEntry} from '../../../lib/roles.mjs';
 import {screenshotKey} from '../../../lib/outcome-evidence.mjs';
 import { start } from 'workflow/api';
 import { applicationCycle } from '../../../workflows/applications';
@@ -191,6 +192,21 @@ async function handle(request: Request, context: Context) {
     const profile = { ...current.value, resume_hash: createHash('sha256').update(bytes).digest('hex'), resume_name: file.name.replace(/[^a-zA-Z0-9_. -]/g, '_').slice(0,150), resume_type: mime };
     const version = await writeJson('profile.json', profile, current.version);
     return json({ profile, version });
+  }
+  if (action === 'role-resumes' && request.method === 'GET') {
+    const registry=(await readJson<any>('role-resumes.json',{})).value;
+    const profile=(await readJson<any>('profile.json',{})).value;
+    return json({roles:Object.fromEntries(TRACKED_ROLES.map(role=>[role.id,{available:Boolean(registry.roles?.[role.id]?.approved),current:Boolean(roleResumeEntry(registry,role.aliases[0],profile.resume_hash))}]))});
+  }
+  if (action === 'role-resume' && request.method === 'GET') {
+    const url=new URL(request.url),id=url.searchParams.get('role'),format=url.searchParams.get('format')||'pdf';
+    const role=TRACKED_ROLES.find(r=>r.id===id);if(!role||!['pdf','docx'].includes(format))return json({error:'Choose a valid role and PDF or DOCX.'},400);
+    const registry=(await readJson<any>('role-resumes.json',{})).value,entry=registry.roles?.[role.id];
+    if(!entry?.approved)return json({error:'Role résumé unavailable.'},404);
+    const hash=format==='pdf'?entry.hash:entry.docx_hash,key=format==='pdf'?entry.key:entry.docx_key;
+    if(!/^[a-f0-9]{64}$/.test(hash||'')||key!==(format==='pdf'?'applications/resumes/':'role-resumes/docx/')+hash+'.'+format)return json({error:'Role résumé version is invalid.'},409);
+    const file=await readBytes(key);if(!file||createHash('sha256').update(file.value).digest('hex')!==hash)return json({error:'Role résumé version is unavailable.'},404);
+    return new Response(new Uint8Array(file.value),{headers:{'Content-Type':format==='pdf'?'application/pdf':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','Content-Disposition':`attachment; filename="${role.resume_stem}.${format}"`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
   }
   if (action === 'resume' && request.method === 'GET') {
     const [file, profile] = await Promise.all([readBytes('resume.bin'), readJson<Profile>('profile.json', defaultProfile)]);

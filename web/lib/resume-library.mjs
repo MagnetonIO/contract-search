@@ -2,7 +2,8 @@ import {siteForUrl} from './browser-accounts.mjs';
 export const RESUME_RECOVERY_VERSION=2;
 export const MASTER_RESUME_NAME='Resume_Matthew_Long.pdf';
 export function resumeSite(url){try{return siteForUrl(url)||new URL(url).hostname.toLowerCase();}catch{return null;}}
-export function approvedSiteResume(library,url,masterHash){const entry=library?.[resumeSite(url)];return entry?.master_hash===masterHash?entry:null;}
+export function approvedSiteResume(library,url,masterHash){const site=library?.[resumeSite(url)],entry=site?.master_hash===masterHash?site:site?.versions?.[masterHash];return entry?.master_hash===masterHash?entry:null;}
+export function recordSiteResume(library,site,entry){const previous=library?.[site];return {...library,[site]:{...entry,versions:{...previous?.versions,...(previous?.master_hash?{[previous.master_hash]:{master_hash:previous.master_hash,filename:previous.filename,approval:previous.approval,recorded_at:previous.recorded_at}}:{}),[entry.master_hash]:entry}}};}
 export function resumeUploadName(library,url,masterHash){const entry=approvedSiteResume(library,url,masterHash);return entry?.filename||'Resume_Matthew_Long_'+masterHash.slice(0,8)+'.pdf';}
 export function recoverableResumeBlock(attempt){
  if(attempt.submission_intent_at||attempt.resume_recovery_version>=RESUME_RECOVERY_VERSION||!['needs_input','failed'].includes(attempt.status))return false;

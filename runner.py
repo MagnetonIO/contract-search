@@ -31,6 +31,7 @@ UTC = timezone.utc
 API = 'https://api.apify.com/v2'
 TERMINAL = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'}
 SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
+ROLE_CATALOG = json.loads((Path(__file__).resolve().parent / 'web/lib/role-catalog.json').read_text(encoding='utf-8'))
 AGENCIES = r'\b(?:recruitment|recruiting|staffing|talent|tek.?systems|insight global|robert half|randstad|kforce|apex systems|motion recruitment|dice job bot)\b'
 FIELDS = ['title', 'company_agency', 'source', 'source_job_id', 'source_posted_at',
           'source_date_text', 'first_seen', 'pay', 'hourly_min_usd', 'contract_status',
@@ -273,6 +274,11 @@ def normalize(row, source, now, project=False):
     if match and not re.search(r'\b(?:CAD|AUD|NZD)\b', pay_text[max(0, match.start()-10):match.end()+10], re.I):
         rate = float(match[1])
     skills = sorted(set(m.group().lower() for m in re.finditer(SKILLS, title+' '+desc, re.I)))
+    # Recognize explicit target titles even when a leadership posting has no
+    # named programming language. Role labels do not bypass contract/location policy.
+    roles = [r['id'] for r in ROLE_CATALOG if re.search(r['pattern'], re.sub('[\u2010-\u2015]', '-', title), re.I)]
+    if roles:
+        skills = sorted(set(skills + [r['label'] for r in ROLE_CATALOG if r['id'] in roles]))
     if not skills:
         return None
     agency = bool(row.get('_agency')) or bool(re.search(AGENCIES, str(company), re.I) or re.search(r'our (?:client|customer)\b|on behalf of (?:our|a) client', desc, re.I))
@@ -293,7 +299,7 @@ def normalize(row, source, now, project=False):
     duration = re.search(r'\b\d+\s*(?:[-–]\s*\d+\s*)?(?:month|week|year)s?\b', desc, re.I)
     contact = sorted(set(re.findall(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b', desc, re.I)))
     source_date = pick(row, 'postingDateParsed', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate', 'postedAt')
-    return reassess(dict(title=title, company_agency=plain(company), source=source,
+    return reassess(dict(title=title, role_families=roles, company_agency=plain(company), source=source,
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
                 source_posted_at=parse_date(source_date, now), source_date_text=plain(row.get('postedAt') or source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),

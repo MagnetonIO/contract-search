@@ -16,3 +16,4 @@ web/tests
 web/tsconfig.tsbuildinfo
 
 .wrangler
+resumes

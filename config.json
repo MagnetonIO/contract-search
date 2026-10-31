@@ -10,6 +10,15 @@
       "max_items": 300,
       "input": {
         "urls": [
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+CTO&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Lead+Software+Engineer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Software+Engineering+Manager&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Data+Engineer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Full+Stack+Engineer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Forward+Deployed+Engineer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Chief+Technology+Officer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Lead+Developer&location=United+States&f_TPR=r604800",
+          "https://www.linkedin.com/jobs/search/?keywords=remote+contract+Engineering+Manager&location=United+States&f_TPR=r604800",
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20software%20architect&location=United%20States&f_TPR=r604800",
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20DevOps%20Kubernetes&location=United%20States&f_TPR=r604800",
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20Python%20AI%20engineer&location=United%20States&f_TPR=r604800",
@@ -18,7 +27,7 @@
           "https://www.linkedin.com/jobs/search/?keywords=remote%20contract%20Golang%20Java%20Rust&location=United%20States&f_TPR=r604800"
         ],
         "datePosted": "pastWeek",
-        "limitPerSource": 50,
+        "limitPerSource": 20,
         "scrapeCompany": false,
         "autoConvertToAiSearch": true
       },
@@ -40,6 +49,33 @@
       "input": {
         "startUrls": [
           {
+            "url": "https://www.indeed.com/jobs?q=CTO+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Lead+Software+Engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Software+Engineering+Manager+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Data+Engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Full+Stack+Engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Forward+Deployed+Engineer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Chief+Technology+Officer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Lead+Developer+contract&l=Remote&fromage=7"
+          },
+          {
+            "url": "https://www.indeed.com/jobs?q=Engineering+Manager+contract&l=Remote&fromage=7"
+          },
+          {
             "url": "https://www.indeed.com/jobs?q=software+engineer+contract&l=Remote&fromage=7"
           },
           {
@@ -52,7 +88,7 @@
             "url": "https://www.indeed.com/jobs?q=cloud+architect+contract&l=Remote&fromage=7"
           }
         ],
-        "maxItemsPerSearch": 50,
+        "maxItemsPerSearch": 15,
         "country": "US",
         "saveOnlyUniqueItems": true,
         "parseCompanyDetails": true
@@ -76,6 +112,15 @@
       "max_items": 240,
       "input": {
         "searchQueries": [
+          "CTO",
+          "Lead Software Engineer",
+          "Software Engineering Manager",
+          "Data Engineer",
+          "Full Stack Engineer",
+          "Forward Deployed Engineer",
+          "Chief Technology Officer",
+          "Lead Developer",
+          "Engineering Manager",
           "software architect",
           "DevOps Kubernetes",
           "Python AI",
@@ -125,10 +170,15 @@
         "timeRange": "7d",
         "limit": 60,
         "titleSearch": [
+          "CTO",
+          "Lead Software Engineer",
+          "Software Engineering Manager",
+          "Data Engineer",
+          "Full Stack Engineer",
+          "Forward Deployed Engineer",
           "Software",
           "Architect",
           "DevOps",
-          "Data Engineer",
           "Platform Engineer",
           "AI Engineer"
         ],
@@ -186,7 +236,7 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 40
+          "limit": 10
         },
         {
           "keywords": "DevOps contract",
@@ -194,7 +244,7 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 40
+          "limit": 10
         },
         {
           "keywords": "data engineer contract",
@@ -202,7 +252,79 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 40
+          "limit": 10
+        },
+        {
+          "keywords": "CTO contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Lead Software Engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Software Engineering Manager contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Data Engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Full Stack Engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Forward Deployed Engineer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Chief Technology Officer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Lead Developer contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
+        },
+        {
+          "keywords": "Engineering Manager contract",
+          "location": "United States",
+          "daysOld": 7,
+          "remoteWorkType": true,
+          "sortBy": "date_desc",
+          "limit": 10
         }
       ],
       "smoke_input": {
@@ -265,6 +387,15 @@
       "max_items": 120,
       "input": {
         "searchQueries": [
+          "CTO",
+          "Lead Software Engineer",
+          "Software Engineering Manager",
+          "Data Engineer",
+          "Full Stack Engineer",
+          "Forward Deployed Engineer",
+          "Chief Technology Officer",
+          "Lead Developer",
+          "Engineering Manager",
           "software architect",
           "DevOps Kubernetes",
           "Python AI engineer",
@@ -275,7 +406,7 @@
         "location": "United States",
         "remoteMode": "remote",
         "postedWithinDays": "7",
-        "maxResultsPerQuery": 20,
+        "maxResultsPerQuery": 8,
         "fetchDescription": true
       },
       "smoke_input": {
@@ -322,6 +453,12 @@
         "removeAgency": false,
         "descriptionType": "text",
         "titleSearch": [
+          "CTO:*",
+          "Lead Software Engineer:*",
+          "Software Engineering Manager:*",
+          "Data Engineer:*",
+          "Full Stack Engineer:*",
+          "Forward Deployed Engineer:*",
           "Software:*",
           "Architect:*",
           "DevOps:*",
@@ -367,6 +504,15 @@
         "onlyUniqueJobs": true,
         "maxResults": 80,
         "keywords": [
+          "CTO",
+          "Lead Software Engineer",
+          "Software Engineering Manager",
+          "Data Engineer",
+          "Full Stack Engineer",
+          "Forward Deployed Engineer",
+          "Chief Technology Officer",
+          "Lead Developer",
+          "Engineering Manager",
           "software engineer",
           "software architect",
           "cloud architect",
@@ -441,6 +587,15 @@
       "kind": "techfetch",
       "max_items": 80,
       "queries": [
+        "CTO",
+        "Lead Software Engineer",
+        "Software Engineering Manager",
+        "Data Engineer",
+        "Full Stack Engineer",
+        "Forward Deployed Engineer",
+        "Chief Technology Officer",
+        "Lead Developer",
+        "Engineering Manager",
         "software engineer",
         "software architect",
         "cloud architect",
@@ -455,5 +610,13 @@
     }
   ],
   "unconfigured_sources": {},
-  "monthly_cap_usd": 50
+  "monthly_cap_usd": 50,
+  "tracked_roles": [
+    "cto",
+    "lead-software",
+    "engineering-manager",
+    "data-engineer",
+    "full-stack",
+    "forward-deployed"
+  ]
 }

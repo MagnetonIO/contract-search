@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, readFile, rm, mkdir } from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createServer } from 'node:net';
@@ -40,6 +41,8 @@ try {
  const authBytes=await readFile(path.join(directory,'auth.json'),'utf8');assert.equal(authBytes.includes('disposable-http-test-password'),false);
  assert.equal((await request('data',{authenticated:false})).status,401);
  assert.equal((await request('resume',{authenticated:false})).status,401);
+ assert.equal((await request('role-resumes',{authenticated:false})).status,401);
+ assert.equal((await request('role-resume?role=cto',{authenticated:false})).status,401);
  response=await request('data');assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);
  let data=await response.json();assert.equal(data.snapshot.leads.length,1);
  assert.equal((await request('automation',{authenticated:false})).status,401);
@@ -88,6 +91,13 @@ try {
  const form=new FormData();form.set('file',new Blob(['%PDF-1.4 synthetic test resume'],{type:'application/pdf'}),'test-resume.pdf');
  response=await request('resume',{body:form,form:true});assert.equal(response.status,200);
  response=await request('resume');assert.equal(response.status,200);assert.match(response.headers.get('content-disposition'),/attachment/);assert.ok((await response.text()).startsWith('%PDF-'));
+ const rolePdf=Buffer.from('%PDF-1.4 reviewed role fixture'),roleHash=createHash('sha256').update(rolePdf).digest('hex'),masterHash=createHash('sha256').update('%PDF-1.4 synthetic test resume').digest('hex');
+ await mkdir(path.join(directory,'applications/resumes'),{recursive:true});await writeFile(path.join(directory,'applications/resumes/'+roleHash+'.pdf'),rolePdf);
+ await writeFile(path.join(directory,'role-resumes.json'),JSON.stringify({master_hash:masterHash,roles:{cto:{approved:true,hash:roleHash,key:'applications/resumes/'+roleHash+'.pdf',filename:'Resume_Matthew_Long_CTO_'+roleHash.slice(0,8)+'.pdf'}}}));
+ response=await request('role-resumes');assert.equal((await response.json()).roles.cto.current,true);
+ response=await request('role-resume?role=cto');assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal(await response.text(),rolePdf.toString());
+ assert.equal((await request('role-resume?role=../../resume')).status,400);assert.equal((await request('role-resume?role=cto&format=html')).status,400);
+ await writeFile(path.join(directory,'applications/resumes/'+roleHash+'.pdf'),'changed');assert.equal((await request('role-resume?role=cto')).status,404,'a changed role PDF is never downloaded under a reviewed hash');
  const messageId='66666666-6666-4666-8666-666666666666';
  const outreach={id:fixture.id,messageId,recipient:'recruiter@example.com',subject:'Synthetic contract inquiry',text:'Synthetic reviewed message',attachResume:true};
  assert.equal((await request('outreach',{body:{...outreach,recipient:'accommodation@example.com'}})).status,400,'accommodation addresses cannot receive outreach');
