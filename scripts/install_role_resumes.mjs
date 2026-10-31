@@ -14,7 +14,7 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const registry={schema_version:1,master_hash:profile.resume_hash,roles:{}};
 for(const role of TRACKED_ROLES){
  const entry=manifest.roles.find(r=>r.id===role.id);
- if(!entry||entry.pages!==2)throw Error('Missing reviewed two-page role résumé: '+role.id);
+ if(!entry||!Number.isInteger(entry.pages)||entry.pages<2||entry.pages>3)throw Error('Missing reviewed two-to-three-page role résumé: '+role.id);
  const bytes=await readFile(path.join(root,role.id,role.resume_stem+'.pdf'));
  if(hash(bytes)!==entry.sha256||bytes.subarray(0,5).toString()!=='%PDF-')throw Error('Rebuild required: PDF changed since the manifest');
  const key='applications/resumes/'+entry.sha256+'.pdf';
