@@ -23,12 +23,6 @@ def sync(config,roles):
         elif name=='JobServe US':data['keywords']=unique(queries+data['keywords'])
         elif name=='Employer ATS discovery':data['titleSearch']=unique([r['aliases'][0] for r in roles]+data['titleSearch'])
         elif name=='Staffing firm career feeds':data['titleSearch']=unique([r['aliases'][0]+':*' for r in roles]+data['titleSearch'])
-        elif name=='Glassdoor':
-            # Same total item limit and per-run cap; no budget expansion.
-            inputs=actor['inputs'];existing={i['keywords'] for i in inputs}
-            for q in queries:
-                if q+' contract' not in existing:inputs.append({**inputs[0],'keywords':q+' contract'})
-            for item in inputs:item['limit']=max(1,actor['max_items']//len(inputs))
     for feed in config['feeds']:
         if feed['kind']=='techfetch':feed['queries']=unique(queries+feed['queries'])
     config['tracked_roles']=[r['id'] for r in roles]

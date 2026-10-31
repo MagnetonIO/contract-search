@@ -236,7 +236,7 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 10
+          "limit": 40
         },
         {
           "keywords": "DevOps contract",
@@ -244,7 +244,7 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 10
+          "limit": 40
         },
         {
           "keywords": "data engineer contract",
@@ -252,79 +252,7 @@
           "daysOld": 7,
           "remoteWorkType": true,
           "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "CTO contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Lead Software Engineer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Software Engineering Manager contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Data Engineer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Full Stack Engineer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Forward Deployed Engineer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Chief Technology Officer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Lead Developer contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
-        },
-        {
-          "keywords": "Engineering Manager contract",
-          "location": "United States",
-          "daysOld": 7,
-          "remoteWorkType": true,
-          "sortBy": "date_desc",
-          "limit": 10
+          "limit": 40
         }
       ],
       "smoke_input": {
