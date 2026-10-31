@@ -81,7 +81,8 @@ async function handle(request: Request, context: Context) {
     const id=new URL(request.url).searchParams.get('id');if(!id||! /^[a-f0-9-]{36}$/.test(id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const a=(state.attempts as Record<string,any>)[id];if(!a?.resume_key)return json({error:'Resume unavailable'},404);
     const file=await readBytes(a.resume_key);if(!file)return json({error:'Resume unavailable'},404);
-    return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename=Resume_Matthew_Long.pdf','Cache-Control':'private, no-store'}});
+    const filename=String(a.resume_variant?.filename||'Resume_Matthew_Long.pdf').replace(/[^a-zA-Z0-9_.-]/g,'_').slice(0,150);
+    return new Response(new Uint8Array(file.value),{headers:{'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="${filename}"`,'Cache-Control':'private, no-store'}});
   }
   if (action === 'automation-evidence' && request.method === 'GET') {const data=await automationDashboard();return new Response(JSON.stringify({schema_version:1,exported_at:new Date().toISOString(),quota:data.quota,records:data.evidence_log},null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename=contract-desk-evidence.json','Cache-Control':'private, no-store'}});}
   if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
