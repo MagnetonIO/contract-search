@@ -10,6 +10,7 @@ const defaultStore = { read: key => readJson(key, null), write: writeJson, confl
 export async function sendDailyDigest({ now = new Date(), apiKey = process.env.RESEND_API_KEY,
   store = defaultStore, snapshotReader = readSnapshot, send = sendMail } = {}) {
   const window = digestWindow(now);
+  if (!window.weekday) return { status: 'weekend', day: window.day };
   if (!window.allowed) return { status: 'outside_morning_window', day: window.day };
   if (!apiKey) throw new Error('Daily email sending is not configured.');
   const snapshot = (await snapshotReader()).value;

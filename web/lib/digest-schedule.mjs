@@ -5,10 +5,11 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 export function digestWindow(now = new Date()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(now).map(part => [part.type, part.value]));
   const minute = Number(parts.hour) * 60 + Number(parts.minute);
-  return { day: `${parts.year}-${parts.month}-${parts.day}`, allowed: minute >= 9 * 60 + 17 && minute < 11 * 60 };
+  const weekday = !['Sat', 'Sun'].includes(parts.weekday);
+  return { day: `${parts.year}-${parts.month}-${parts.day}`, weekday, allowed: weekday && minute >= 9 * 60 + 17 && minute < 11 * 60 };
 }
 
 export function cronAuthorized(header, secret) {

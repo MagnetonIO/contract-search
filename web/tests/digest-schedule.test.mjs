@@ -17,13 +17,40 @@ test('morning window follows Chicago DST and refuses afternoon and early sends',
 
 test('both UTC cron slots cover the morning across DST changes', async () => {
   const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
-  for (const day of ['2026-07-15', '2026-01-15', '2026-03-08', '2026-11-01']) {
+  for (const day of ['2026-07-15', '2026-01-15', '2026-03-09', '2026-11-02']) {
     const allowed = config.crons.filter(job => job.path.includes('digest')).filter(job => {
       const [minute, hour] = job.schedule.split(' ');
       return digestWindow(new Date(`${day}T${hour.padStart(2,'0')}:${minute.padStart(2,'0')}:00Z`)).allowed;
     });
     assert.ok(allowed.length >= 1, day);
   }
+});
+
+test('Chicago weekends never send, read data, or advance the saved digest cutoff', async () => {
+  const unexpected = async () => { assert.fail('Weekend digest must not access data or send mail'); };
+  for (const date of [
+    '2026-10-31T14:17:00Z', '2026-11-01T15:17:00Z',
+    '2026-03-07T15:17:00Z', '2026-03-08T14:17:00Z',
+    '2026-11-02T05:30:00Z', // Still Sunday in Chicago, despite Monday UTC.
+  ]) {
+    const now = new Date(date);
+    assert.equal(digestWindow(now).allowed, false);
+    assert.equal((await sendDailyDigest({now, apiKey: null,
+      store: {read: unexpected, write: unexpected}, snapshotReader: unexpected, send: unexpected,
+    })).status, 'weekend');
+  }
+  assert.equal(digestWindow(new Date('2026-11-02T15:17:00Z')).allowed, true);
+});
+
+test('all primary and backup digest schedules are weekdays only', async () => {
+  const config = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url)));
+  const jobs = config.crons.filter(job => job.path.includes('digest'));
+  assert.equal(jobs.length, 3);
+  for (const job of jobs) assert.equal(job.schedule.split(' ')[4], '1-5');
+  const workflow = await readFile(new URL('../../.github/workflows/digest.yml', import.meta.url), 'utf8');
+  const schedules = [...workflow.matchAll(/cron: '([^']+)'/g)].map(match => match[1]);
+  assert.equal(schedules.length, 2);
+  for (const schedule of schedules) assert.equal(schedule.split(' ')[4], '1-5');
 });
 
 test('cron requires the exact server-side bearer secret', () => {

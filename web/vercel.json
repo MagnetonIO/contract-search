@@ -3,11 +3,11 @@
   "crons": [
     {
       "path": "/api/cron/digest",
-      "schedule": "17 14 * * *"
+      "schedule": "17 14 * * 1-5"
     },
     {
       "path": "/api/cron/digest-backup",
-      "schedule": "17 15 * * *"
+      "schedule": "17 15 * * 1-5"
     },
     {
       "path": "/api/cron/collect",
@@ -35,7 +35,7 @@
     },
     {
       "path": "/api/cron/digest-final",
-      "schedule": "17 16 * * *"
+      "schedule": "17 16 * * 1-5"
     },
     {
       "path": "/api/cron/applications",

@@ -3,9 +3,9 @@ on:
   schedule:
     # Primary delivery is Vercel Cron. These are morning-only fallbacks;
     # all triggers share one persisted daily idempotency record.
-    - cron: '37 9 * * *'
+    - cron: '37 9 * * 1-5'
       timezone: America/Chicago
-    - cron: '17 10 * * *'
+    - cron: '17 10 * * 1-5'
       timezone: America/Chicago
   workflow_dispatch:
 permissions:
