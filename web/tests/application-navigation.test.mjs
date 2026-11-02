@@ -19,6 +19,15 @@ test('native navigation preserves approved-answer and resume checks using the fr
  const missing=await navigationPreflight({scope,label:'Next',facts:{},attached:false,inspect:async()=>({approved_resume_attached:false,fields:[]})});assert.equal(missing.requires_upload_resume,true);
  assert.equal(resumeUploadClickOutcome(true).requires_upload_resume,undefined);assert.match(resumeUploadClickOutcome(true).action,/native next/);assert.equal(resumeUploadClickOutcome(false).requires_upload_resume,true);
 });
+test('a preselected default resume cannot advance when a tailored version is required',async()=>{
+ const filename='Resume_Matthew_Long_Data_Engineer_abcdef01.pdf';
+ const fields=[{visible:true,type:'radio',filled:true,label:'Resume_Matthew_Long.pdf',question:'Resume'}];
+ // Dice can render its uploader without a native button. The saved-file
+ // radio group is enough to identify the resume step and require the version.
+ const missing=await navigationPreflight({scope:{},facts:{},attached:false,label:'Next',inspect:async()=>({approved_resume_attached:false,approved_resume_filename:filename,fields})});
+ assert.equal(missing.requires_upload_resume,true);assert.match(missing.action,/Data_Engineer_abcdef01\.pdf/);
+ assert.equal(await navigationPreflight({scope:{},facts:{},attached:false,label:'Next',inspect:async()=>({approved_resume_attached:true,approved_resume_filename:filename,fields})}),null);
+});
 test('only known LinkedIn navigation failures can retry once; uncertain submissions remain locked',()=>{
  const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:1}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
 });

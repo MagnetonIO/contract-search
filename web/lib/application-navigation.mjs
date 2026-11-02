@@ -17,7 +17,8 @@ export async function navigationPreflight({scope,facts,attached,pending,label,in
   const known=knownChoiceAnswer(field.question,facts),selected=normalizedLabel(field.selected_label||field.label).toLowerCase();
   if(known&&['yes','no'].includes(selected)&&selected!==known.answer)return {blocked:true,action:'Correct the prefilled answer before advancing.',field:{index:field.index,label:field.label,question:field.question,selected,required_answer:known.answer,fact:known.fact},form};
  }
- const uploadAvailable=(await applicationButtons(scope)).some(b=>/upload|replace|choose|select/i.test(b.label+' '+b.text)&&/resume|résumé|\bcv\b/i.test(b.label+' '+b.text))||await scope.locator('input[type=file]').evaluateAll(items=>items.some(e=>/resume|résumé|\bcv\b/i.test([e.name,e.id,e.getAttribute('aria-label'),e.labels?.[0]?.innerText].join(' '))));
- if(!(form.approved_resume_selection_pending??pending)&&needsResumeUpload({attached:form.approved_resume_attached??attached,control:{label},uploadAvailable}))return {requires_upload_resume:true,action:'Select the approved saved résumé or upload the current master before continuing.'};
+ const resumeFields=(form.fields||[]).some(f=>! /cover[\s_-]*letter|photo|avatar/i.test(f.label+' '+f.question)&&(f.type==='file'||f.type==='radio'&&/resume|résumé|\.pdf\b/i.test(f.label+' '+f.question)));
+ const uploadAvailable=resumeFields||(await applicationButtons(scope)).some(b=>/upload|replace|choose|select/i.test(b.label+' '+b.text)&&/resume|résumé|\bcv\b/i.test(b.label+' '+b.text))||await scope.locator('input[type=file]').evaluateAll(items=>items.some(e=>/resume|résumé|\bcv\b/i.test([e.name,e.id,e.getAttribute('aria-label'),e.labels?.[0]?.innerText].join(' '))));
+ if(!(form.approved_resume_selection_pending??pending)&&needsResumeUpload({attached:form.approved_resume_attached??attached,control:{label},uploadAvailable}))return {requires_upload_resume:true,action:'Select or upload the approved file '+(form.approved_resume_filename||'for this application')+' before continuing. A different preselected résumé is not approved; use upload_resume if the approved file is not saved on this site.'};
  return null;
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
-import {approvedSiteResume,resumeUploadName,selectExistingResume,recoverableResumeBlock} from '../lib/resume-library.mjs';
+import {approvedSiteResume,resumeUploadName,selectExistingResume,recoverableResumeBlock,RESUME_RECOVERY_VERSION} from '../lib/resume-library.mjs';
 test('saved resume approvals are tied to the unchanged master version and site',()=>{
  const library={dice:{master_hash:'abcdef01',filename:'Resume_Matthew_Long.pdf',approval:'user'}};
  assert.equal(approvedSiteResume(library,'https://www.dice.com/jobs/a','abcdef01').filename,'Resume_Matthew_Long.pdf');
@@ -22,5 +22,9 @@ test('a page with many old job resumes selects only the approved exact filename'
 });
 
 test('resume repair retries only identified old blockers once and never an uncertain submission',()=>{
- const a={status:'needs_input',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:2}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:1}),true);assert.equal(recoverableResumeBlock({status:'needs_input',reason:'Missing Dialogflow years'}),false);
+ const a={status:'needs_input',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:RESUME_RECOVERY_VERSION}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:2}),true);assert.equal(recoverableResumeBlock({status:'needs_input',reason:'Missing Dialogflow years'}),false);
+ for(const reason of ['The approved résumé has not been selected or uploaded for this application.','Review step is open; the visible resume filename does not match the approved resume name.']){
+  assert.equal(recoverableResumeBlock({status:'failed',reason}),true);
+  assert.equal(recoverableResumeBlock({status:'submission_unknown',reason,submission_intent_at:'recorded'}),false);
+ }
 });
