@@ -1,40 +1,40 @@
 [
   {
     "source": "Dice",
-    "run_id": "HupdgCzeNl4HXrUie",
+    "run_id": "KjsIXXpt9Ijdpci9g",
     "cap_usd": 0.164172,
     "build": "0.1.62",
     "status": "SUCCEEDED",
-    "reservation_id": "2df737c8acbe4b04822c19da45411130",
-    "actual_charge_usd": 0.001,
-    "charge_snapshot_at": "2026-11-02T14:15:52.782489+00:00",
+    "reservation_id": "dfc0e328fd9e48a39dbf692457a8a7a1",
+    "actual_charge_usd": 0.07932,
+    "charge_snapshot_at": "2026-11-03T14:15:38.224884+00:00",
     "charged_event_counts": {
-      "job": 47,
+      "job": 119,
       "apify-actor-start": 1
     }
   },
   {
     "source": "Indeed",
-    "run_id": "2CDc4HYh2YYqtXRyu",
+    "run_id": "lGNEsfAajtS6YCcAe",
     "cap_usd": 0.37525,
     "build": "0.0.119",
     "status": "SUCCEEDED",
-    "reservation_id": "0a35b4ce8a9c40b280879e303f75f165",
-    "actual_charge_usd": 0.015,
-    "charge_snapshot_at": "2026-11-02T14:08:26.213562+00:00",
+    "reservation_id": "fcc98fb60b754b54bf3d989f764146a4",
+    "actual_charge_usd": 0.2,
+    "charge_snapshot_at": "2026-11-03T14:08:20.664653+00:00",
     "charged_event_counts": {
-      "result": 75
+      "result": 40
     }
   },
   {
     "source": "LinkedIn",
-    "run_id": "vAfjIKP8KKRLXR1Wf",
+    "run_id": "7mmM9tuJ7B7Un5AfB",
     "cap_usd": 0.37525,
     "build": "1.7.18",
     "status": "SUCCEEDED",
-    "reservation_id": "c6cae4034b794cc9a4c97c6a7367f0e3",
-    "actual_charge_usd": 0.28605,
-    "charge_snapshot_at": "2026-11-02T14:11:19.001599+00:00",
+    "reservation_id": "c45552ee149f49ae83faab4730559d16",
+    "actual_charge_usd": 0.29605,
+    "charge_snapshot_at": "2026-11-03T14:10:59.573550+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 296,
       "apify-actor-start": 1
@@ -42,13 +42,13 @@
   },
   {
     "source": "Employer ATS discovery",
-    "run_id": "ZLDRuc5j3noy3E3jR",
+    "run_id": "apROpYVV6t2jhbprM",
     "cap_usd": 0.37525,
     "build": "0.0.72",
     "status": "SUCCEEDED",
-    "reservation_id": "67f8b65471ad458a910cde06207d311b",
+    "reservation_id": "7a786c9836a44ae99b7c3f190f094940",
     "actual_charge_usd": 0.0001,
-    "charge_snapshot_at": "2026-11-02T14:08:34.531604+00:00",
+    "charge_snapshot_at": "2026-11-03T14:08:27.780510+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -56,13 +56,13 @@
   },
   {
     "source": "Glassdoor",
-    "run_id": "xwgU21bezEqR09UZI",
+    "run_id": "UuxqhsrgKDNyOKZJb",
     "cap_usd": 0.015635,
     "build": "0.0.11",
     "status": "SUCCEEDED",
-    "reservation_id": "fef0f92807a847e8acff767b70f6e31c",
+    "reservation_id": "2378376aaa414dcba3e467db861c5f91",
     "actual_charge_usd": 0.0009,
-    "charge_snapshot_at": "2026-11-02T14:08:47.549563+00:00",
+    "charge_snapshot_at": "2026-11-03T14:08:39.817721+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -70,13 +70,13 @@
   },
   {
     "source": "Glassdoor",
-    "run_id": "oRByxrviqMzvitli3",
+    "run_id": "xd8Ec8UfJFhwnAgfY",
     "cap_usd": 0.015635,
     "build": "0.0.11",
     "status": "SUCCEEDED",
-    "reservation_id": "4db02015aad24f5cae482c37e1807c26",
+    "reservation_id": "83e19fc4f21144f28998c038d7074abc",
     "actual_charge_usd": 0.0009,
-    "charge_snapshot_at": "2026-11-02T14:09:00.836480+00:00",
+    "charge_snapshot_at": "2026-11-03T14:08:46.684184+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -84,13 +84,13 @@
   },
   {
     "source": "Glassdoor",
-    "run_id": "aEO0gGNDfCFfWeMa8",
+    "run_id": "GQHDWKBOF8qncBjcq",
     "cap_usd": 0.015635,
     "build": "0.0.11",
     "status": "SUCCEEDED",
-    "reservation_id": "a3a7c3af2f194225abf4cd5286147edf",
+    "reservation_id": "ee0c785865974aa5880b90423c0e1b47",
     "actual_charge_usd": 0.0009,
-    "charge_snapshot_at": "2026-11-02T14:09:08.678649+00:00",
+    "charge_snapshot_at": "2026-11-03T14:08:53.367362+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -98,27 +98,27 @@
   },
   {
     "source": "Wellfound",
-    "run_id": "src6kelAKDic9b2Lm",
+    "run_id": "XFqqRZ8JwfTZVfPDP",
     "cap_usd": 0.117265,
     "build": "0.1.5",
     "status": "SUCCEEDED",
-    "reservation_id": "51542bbe36a4444783c0f356641c3939",
+    "reservation_id": "2b683b205b3b4d24b7ba1104bfe75cc4",
     "actual_charge_usd": 0.005,
-    "charge_snapshot_at": "2026-11-02T14:09:53.054501+00:00",
+    "charge_snapshot_at": "2026-11-03T14:10:57.702277+00:00",
     "charged_event_counts": {
       "start": 1,
-      "item": 13
+      "item": 30
     }
   },
   {
     "source": "Built In",
-    "run_id": "pQFk3XI63faqUWrf4",
+    "run_id": "JBd975vjgQ4MAtm4l",
     "cap_usd": 0.093812,
     "build": "1.0.9",
     "status": "TIMED-OUT",
-    "reservation_id": "65de0165e4b4457b91a2e35dc4335123",
+    "reservation_id": "e676cf799aab4c988b887b966d2a5676",
     "actual_charge_usd": 0.09313999999999999,
-    "charge_snapshot_at": "2026-11-02T14:18:00.453237+00:00",
+    "charge_snapshot_at": "2026-11-03T14:19:04.404706+00:00",
     "charged_event_counts": {
       "apify-actor-start": 1,
       "apify-default-dataset-item": 87
@@ -126,13 +126,13 @@
   },
   {
     "source": "Staffing firm career feeds",
-    "run_id": "PS3qUlEN0YEYNZVqS",
+    "run_id": "NrKGQFXiuLAVSjc6S",
     "cap_usd": 0.281438,
     "build": "0.0.72",
     "status": "SUCCEEDED",
-    "reservation_id": "dbf931d42c764dd8ad9456f488836f6a",
+    "reservation_id": "06c59d6674c340d7a2a3396337bbf315",
     "actual_charge_usd": 0.0001,
-    "charge_snapshot_at": "2026-11-02T14:11:38.829554+00:00",
+    "charge_snapshot_at": "2026-11-03T14:11:07.134149+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 0,
       "apify-actor-start": 1
@@ -140,13 +140,13 @@
   },
   {
     "source": "JobServe US",
-    "run_id": "eRH6WR59JuAwoSQug",
+    "run_id": "Tw1GUOVgvqobytUx0",
     "cap_usd": 0.164172,
     "build": "1.0.5",
-    "status": "SUCCEEDED",
-    "reservation_id": "acebd1d41e4f4aa2bc83df6264d0321c",
+    "status": "TIMED-OUT",
+    "reservation_id": "acf6de60ee8b4c0795165b10269bc29a",
     "actual_charge_usd": 0.16175,
-    "charge_snapshot_at": "2026-11-02T14:19:04.033314+00:00",
+    "charge_snapshot_at": "2026-11-03T14:19:09.124579+00:00",
     "charged_event_counts": {
       "apify-default-dataset-item": 55,
       "apify-actor-start": 1
