@@ -17,7 +17,7 @@ export default function AutomationPanel(){
  if(!data)return <p>{error||'Loading automation…'}</p>;
  const audit=data.audit||{total:0,evaluated:0,ready:0,held:0,skipped:0,pending:0,rows:[],groups:{}};
  const attempts:any[]=Object.values(data.attempts);
- const quota=data.quota||{confirmed:0,remaining:data.policy.daily_limit||50,limit:data.policy.daily_limit||50};
+ const quota=data.quota||{confirmed:0,remaining:data.policy.daily_limit??100,limit:data.policy.daily_limit??100};
  const rows=audit.rows.filter((r:any)=>(filter==='all'||r.status===filter)&&[r.title,r.company,r.reason].join(' ').toLowerCase().includes(search.toLowerCase())).sort((a:any,b:any)=>(b.score||0)-(a.score||0));
  const pages=Math.max(1,Math.ceil(rows.length/20));const currentPage=Math.min(page,pages-1);
  const charges=data.budget?.charges||[];const used=charges.filter((c:any)=>c.status==='settled').reduce((s:number,c:any)=>s+c.usd,0);const reserved=charges.filter((c:any)=>c.status!=='settled').reduce((s:number,c:any)=>s+c.usd,20);

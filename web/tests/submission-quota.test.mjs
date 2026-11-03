@@ -1,6 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {dailySubmissionQuota,reserveBudget} from '../lib/automation-policy.mjs';
 const now=new Date('2026-10-30T15:00:00Z'),success=(id,at='2026-10-30T14:00:00Z')=>({id,status:'submitted',receipt:'Application submitted',confirmed_at:at});
+test('the default daily quota allows 100 confirmed submissions and stops at the boundary',()=>{
+ const attempts=Object.fromEntries(Array.from({length:99},(_,i)=>['success'+i,success('success'+i)]));
+ for(let i=0;i<150;i++)attempts['failed'+i]={id:'failed'+i,status:'failed'};
+ assert.deepEqual(dailySubmissionQuota(attempts,{},now),{day:'2026-10-30',limit:100,confirmed:99,remaining:1,in_flight:0});
+ attempts.last=success('last');assert.equal(dailySubmissionQuota(attempts,undefined,now).remaining,0);
+});
 test('only confirmed successful applications use the daily quota; failed, closed, skipped and unconfirmed work do not',()=>{
  const attempts={one:success('one'),yesterday:success('yesterday','2026-10-30T04:59:59Z')};
  for(const status of ['failed','skipped','needs_input','queued','running','submitting','submission_unknown'])attempts[status]={id:status,status,created_at:now.toISOString(),submission_intent_at:now.toISOString()};
