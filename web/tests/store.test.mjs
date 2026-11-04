@@ -9,8 +9,13 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 const fixture = 'data:text/javascript,' + encodeURIComponent(\`
  let value = 'x'.repeat(2048), version = '"version-1"';
+ export const calls = {};
  export class BlobPreconditionFailedError extends Error {}
  export async function get(key, options) {
+   calls[key] = (calls[key] || 0) + 1;
+   if (key === 'transient.json' && calls[key] < 3) throw Error('Vercel Blob: Failed to fetch blob: 500 Internal Server Error');
+   if (key === 'unauthorized.json') throw Error('Vercel Blob: 401 Unauthorized');
+   if (key === 'unavailable.json') throw Error('Vercel Blob: 503 Service Unavailable');
    return { statusCode: 200, stream: new Response(value).body,
      blob: { etag: options.headers?.['accept-encoding'] === 'identity' ? version : 'W/' + version } };
  }
@@ -31,6 +36,11 @@ const nextVersion = await writeBytes('workflow.json', 'saved application', 'appl
 assert.equal(nextVersion, '"version-2"');
 await assert.rejects(writeBytes('workflow.json', 'stale edit', 'application/json', original.version), ConflictError);
 assert.equal((await readBytes('workflow.json')).value.toString(), 'saved application');
+const {calls} = await import('@vercel/blob');
+assert.equal((await readBytes('transient.json')).value.toString(), 'saved application');
+assert.equal(calls['transient.json'], 3, 'a transient storage error retries only the read');
+await assert.rejects(readBytes('unauthorized.json'), /401/);assert.equal(calls['unauthorized.json'], 1);
+await assert.rejects(readBytes('unavailable.json'), /503/);assert.equal(calls['unavailable.json'], 3, 'persistent outages remain bounded and fail closed');
 `
   });
 });

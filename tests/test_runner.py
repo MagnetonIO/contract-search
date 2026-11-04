@@ -258,6 +258,24 @@ class ProviderTests(unittest.TestCase):
             r.collect_actor(spec, 'fake-token')
         self.assertTrue(fetch.call_args_list[-1].args[0].endswith('/abort'))
 
+    @patch('runner.fetch')
+    def test_timed_out_actor_retains_completed_dataset_rows(self, fetch):
+        spec = json.loads(Path('config.json').read_text(encoding='utf-8'))['actors'][0]
+        setup = [
+            {'data': {'pricingInfos': [{'pricingModel': 'PAY_PER_EVENT', 'startedAt': '2026-01-01'}]}},
+            {'data': {'actorDefinition': {'input': {'properties': {k: {} for k in spec['input']}}}, 'buildNumber': '1'}},
+            {'data': {'id': 'run1', 'status': 'TIMED-OUT', 'defaultDatasetId': 'data1', 'usageTotalUsd': .01}},
+        ]
+        fetch.side_effect = setup + [[{'title': 'Completed listing'}]]
+        rows, record = r.collect_actor(spec, 'fake-token')
+        self.assertEqual(rows, [{'title': 'Completed listing'}])
+        self.assertTrue(record['partial'])
+        self.assertEqual(record['status'], 'TIMED-OUT')
+        self.assertEqual(record['actual_charge_usd'], .01)
+        fetch.side_effect = setup + [[]]
+        with self.assertRaisesRegex(r.SourceError, 'without usable dataset rows'):
+            r.collect_actor(spec, 'fake-token')
+
     def test_empty_report_honest_shortfall(self):
         with tempfile.TemporaryDirectory() as tmp, patch('sys.stdout', new_callable=io.StringIO):
             report = r.report(Path(tmp), [], [{'source': 'X', 'status': 'failed', 'detail': 'HTTP 403'}],

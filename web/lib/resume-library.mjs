@@ -1,5 +1,5 @@
 import {siteForUrl} from './browser-accounts.mjs';
-export const RESUME_RECOVERY_VERSION=3;
+export const RESUME_RECOVERY_VERSION=4;
 export const MASTER_RESUME_NAME='Resume_Matthew_Long.pdf';
 export function resumeSite(url){try{return siteForUrl(url)||new URL(url).hostname.toLowerCase();}catch{return null;}}
 export function approvedSiteResume(library,url,masterHash){const site=library?.[resumeSite(url)],entry=site?.master_hash===masterHash?site:site?.versions?.[masterHash];return entry?.master_hash===masterHash?entry:null;}
@@ -7,7 +7,24 @@ export function recordSiteResume(library,site,entry){const previous=library?.[si
 export function resumeUploadName(library,url,masterHash){const entry=approvedSiteResume(library,url,masterHash);return entry?.filename||'Resume_Matthew_Long_'+masterHash.slice(0,8)+'.pdf';}
 export function recoverableResumeBlock(attempt){
  if(attempt.submission_intent_at||attempt.resume_recovery_version>=RESUME_RECOVERY_VERSION||!['needs_input','failed'].includes(attempt.status))return false;
- return /(?:selection|approved answer).{0,100}Resume_Matthew_Long|attach.{0,30}approved PDF|approved résumé.{0,40}(?:not (?:selected|uploaded|attached)|not been (?:selected|uploaded|attached))|(?:visible resume (?:file)?name|resume filename).{0,50}(?:differ|match)/i.test(attempt.reason||'')||!attempt.selected_resume_filename&&!attempt.uploaded_resume_filename&&(attempt.visual_steps||[]).filter(s=>s.action==='submit'&&s.status==='blocked').length>=2;
+ return /(?:selection|approved answer).{0,100}Resume_Matthew_Long|attach.{0,30}approved PDF|approved (?:file|résumé).{0,40}Resume_Matthew_Long|approved résumé.{0,40}(?:not (?:selected|uploaded|attached)|not been (?:selected|uploaded|attached))|(?:visible resume (?:file)?name|resume filename).{0,50}(?:differ|match)|resume and cover letter.{0,30}swapped/i.test(attempt.reason||'')||!attempt.selected_resume_filename&&!attempt.uploaded_resume_filename&&(attempt.visual_steps||[]).filter(s=>s.action==='submit'&&s.status==='blocked').length>=2;
+}
+
+// An application may show one attached file in a labelled Resume card rather
+// than a radio group. Keep evidence inside that card, never a sibling cover
+// letter or a page-wide filename list.
+export async function resumeCardSelection(scope,filename){
+ const review=await scope.getByText(/^Review your application$/i).filter({visible:true}).count()===1;
+ const cards=await scope.locator('section,fieldset,article,div').filter({visible:true}).evaluateAll((items,{review})=>items.flatMap(e=>{
+  const text=String(e.innerText||'').trim(),lines=text.split(/\n+/).map(x=>x.trim());
+  if(!/^(?:resume|résumé)\s*\*?$/i.test(lines[0]||'')||/cover[\s_-]*letter/i.test(text)||e.querySelector('input[type=radio],[role=radio],select'))return [];
+  const files=[...new Set(text.match(/[^\s]+\.(?:pdf|docx?|rtf|txt)\b/gi)||[])];
+  if(files.length!==1)return [];
+  const attached=review||/\b(?:uploaded|attached|selected)\b/i.test(text)||[...e.querySelectorAll('button')].some(b=>/^file options$/i.test(b.getAttribute('aria-label')||b.innerText||''));
+  return attached?[files[0]]:[];
+ }),{review});
+ const names=[...new Set(cards)];
+ return names.length===1?{selected:names[0]===filename,filename,current_filename:names[0],method:review?'reviewed_saved_file':'attached_saved_file',card_present:true}:{selected:false,card_present:names.length>0};
 }
 
 // Only select the exact approved file. Never choose the first/latest file or
@@ -24,11 +41,10 @@ export async function selectExistingResume(scope,filename,{requested=false}={}){
   return [];
  }),filename);
  if(!matches.length){
+  const card=await resumeCardSelection(scope,filename);
+  if(card.selected||card.card_present)return card;
   const file=scope.getByText(filename,{exact:true}).filter({visible:true});
   if(await file.count()===1){
-   const review=scope.getByText(/^Review your application$/i).filter({visible:true});
-   const caption=scope.getByText(/^(?:Resume|Résumé)\s*\*?$/i).filter({visible:true});
-   if(await review.count()===1&&await caption.count()>=1)return {selected:true,filename,method:'reviewed_saved_file'};
    // Some boards draw file cards without a native/ARIA radio. Request this
    // exact file once; final review must still confirm it before submission.
    const upload=scope.getByText(/^Upload (?:resume|résumé)$/i).filter({visible:true});

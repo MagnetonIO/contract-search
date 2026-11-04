@@ -17,10 +17,20 @@ export async function readBytes(key: string): Promise<{ value: Buffer; version: 
   if (blobMode()) {
     // Compression changes the response ETag to a weak tag, which Blob rejects
     // for ifMatch writes. Read the identity representation to retain its version.
-    const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
-    if (!result) return null;
-    if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable');
-    return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
+        if (!result) return null;
+        if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable: HTTP ' + result.statusCode);
+        return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
+      } catch (error) {
+        // Retrying a read is safe. Never replay a browser action or an uncertain
+        // conditional write when the provider has a transient outage.
+        const message = String((error as Error).message || '');
+        if (attempt >= 2 || !/\b(?:408|429|500|502|503|504)\b|fetch failed|ECONNRESET|ETIMEDOUT/i.test(message)) throw error;
+        await new Promise(resolve => setTimeout(resolve, 150 * 2 ** attempt));
+      }
+    }
   }
   try {
     // Local state is read at runtime only; hosted deployments use the private Blob store.

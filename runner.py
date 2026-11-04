@@ -186,7 +186,7 @@ def collect_actor(spec, token, smoke=False, journal=None, budget=None):
                   charged_event_counts=run.get('chargedEventCounts', {}))
     if journal:
         journal(record)
-    if run['status'] != 'SUCCEEDED':
+    if run['status'] not in {'SUCCEEDED', 'TIMED-OUT'} or not run.get('defaultDatasetId'):
         raise SourceError('Actor ended ' + run['status'] + '; see run ' + run['id'])
     rows, offset = [], 0
     while offset < max_items:
@@ -198,6 +198,10 @@ def collect_actor(spec, token, smoke=False, journal=None, budget=None):
         if len(batch) < min(100, max_items-offset):
             break
         offset += len(batch)
+    if run['status'] == 'TIMED-OUT':
+        if not rows:
+            raise SourceError('Actor ended TIMED-OUT without usable dataset rows; see run ' + run['id'])
+        record['partial'] = True
     return rows, record
 
 
@@ -696,7 +700,11 @@ def main(argv=None):
         for spec, batch, records, errors in pool.map(collect_source, selected):
             rows.extend((spec['name'], r, False) for r in batch)
             status = 'scheduled' if errors and any('allowance' in e or 'budget' in e.lower() for e in errors) else 'not validated' if spec.get('enabled') is False and args.mode != 'smoke' else 'failed' if errors else 'ok'
+            if batch and (errors or any(r.get('partial') for r in records)):
+                status = 'partial'
             detail = '; '.join(errors) if errors else 'Capped runs '+', '.join(r['run_id'] for r in records)
+            if any(r.get('partial') for r in records):
+                detail += '; timed-out run retained completed dataset rows; search coverage is incomplete'
             if spec.get('adapter') == 'staffing': detail += '; provider ATS index; end client unverified'
             if len(batch)>=spec['max_items'] or any(r.get('actual_charge_usd',0)>=(r.get('cap_usd',1)*.9) for r in records):detail+='; configured result ceiling reached; coverage is partial'
             coverage.append({'source':spec['name'], 'status':status, 'raw':len(batch), 'detail':detail})
@@ -740,7 +748,7 @@ def main(argv=None):
             continue
         candidates.append(job)
     for item in coverage:
-        if item['status']=='ok' and not (item.get('query_count',0)>0 and item.get('cached_queries',0)==item.get('query_count')):
+        if item['status'] in {'ok', 'partial'} and not (item.get('query_count',0)>0 and item.get('cached_queries',0)==item.get('query_count')):
             item['last_success_at']=now.isoformat()
             state.db.execute('INSERT OR REPLACE INTO source_history VALUES (?,?)',(item['source'],now.isoformat()))
         item['retained'] = sum(j['source'] == item['source'] for j in candidates)

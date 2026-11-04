@@ -14,14 +14,16 @@ export function nextApplicationCheck(now=new Date()) {
 export function automationLocation(lead, facts, description='') {
  const assessment=lead.location_assessment||{};
  const restrictions=(assessment.restrictions||[]).join('\n');
- const clauses=(restrictions+'\n'+description).split(/(?<=[.!?;])\s+|\n|•/);
+ const clauses=(restrictions+'\n'+(lead.title||'')+'\n'+description).split(/(?<=[.!?;])\s+|\n|•/);
  const onsite=clauses.find(s=>/first (?:week|day).{0,40}on.?site|(?:required|must).{0,30}on.?site|must (?:be (?:able|willing) to )?travel\b|travel (?:is )?required|remote with travel|travel.{0,25}required|\bhybrid (?:work|schedule|role|position)\b|location\s*:\s*hybrid/i.test(s)&&! /no (?:travel|on.?site)|not required/i.test(s));
  if(onsite||assessment.status==='not_remote'||['onsite','hybrid'].includes(lead.work_arrangement))return {status:'blocked',reason:'Posting requires onsite work or travel.'};
  if(assessment.status==='us_excluded')return {status:'blocked',reason:'Posting excludes US applicants.'};
  // An office address is not a residency restriction. Require restrictive wording.
- const regional=clauses.find(s=>/must (?:reside|live|be based|be located)|(?:candidates|applicants|residents) (?:from|in) .{0,35}\bonly\b|only.{0,15}(?:candidates|applicants) (?:from|in|based in)|eligible states|excluding.{0,35}(?:states|Illinois|IL)\b/i.test(s)&&! /(?:based|located|reside|live) in (?:the )?(?:United States|U\.?S\.?A?\b)|authorized to work|visa|sponsor/i.test(s));
+ const residentState=clauses.find(s=>[...s.matchAll(/\b([A-Z]{2})\s+[Rr]esidents?\b/g)].some(m=>'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ').includes(m[1])));
+ const regional=residentState||clauses.find(s=>/must (?:reside|live|be based|be located)\s+(?:in|within|out of)\b|(?:candidates|applicants|residents) (?:from|in) .{0,35}\bonly\b|only.{0,15}(?:candidates|applicants) (?:from|in|based in)|eligible states|excluding.{0,35}(?:states|Illinois|IL)\b/i.test(s)&&! /(?:based|located|reside|live) in (?:the )?(?:United States|U\.?S\.?A?\b)|authorized to work|visa|sponsor/i.test(s));
  const national=regional&&/\b(?:reside|live|based|located)\s+(?:out of|in|within)\s+(?:the\s+)?(?:(?:continental|contiguous)\s+)?(?:united states|u\.?s\.?a?\b)/i.test(regional);
- if(regional&&!national&&!(/\bIllinois\b|\bChicago\b|\bIL\b/.test(regional)&&! /exclud|except|not eligible/i.test(regional)))return {status:'blocked',reason:'Explicit residency restriction conflicts with the Chicago applicant profile: '+regional.trim().slice(0,240)};
+ const central=regional&&facts?.state==='IL'&&/\bCentral\s+(?:time(?:\s+zone)?|timezone)\b|\b(?:CST|CDT)\b/i.test(regional)&&! /exclud|except|not eligible/i.test(regional);
+ if(regional&&!national&&!central&&!(/\bIllinois\b|\bChicago\b|\bIL\b/.test(regional)&&! /exclud|except|not eligible/i.test(regional)))return {status:'blocked',reason:'Explicit residency restriction conflicts with the Chicago applicant profile: '+regional.trim().slice(0,240)};
  const timezone=clauses.find(s=>/\bonly\s+(?:PST|PDT|EST|EDT|Pacific|Eastern)(?:\s+time)?\s+(?:candidates|applicants|residents)\b|(?:candidates|applicants|residents)\s+(?:in|from)\s+(?:PST|PDT|EST|EDT|Pacific|Eastern)(?:\s+time)?\s+only\b/i.test(s));
  if(timezone)return {status:'blocked',reason:'Explicit time-zone restriction conflicts with the Chicago applicant profile: '+timezone.trim().slice(0,200)};
  const remote=lead.work_arrangement==='remote'||/\bremote\b/i.test(lead.remote_location||'');

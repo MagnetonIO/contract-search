@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 
-export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:100,daily_quota_metric:'confirmed_submissions',monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:80,allow_unknown_terms:true});
+export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:100,daily_quota_metric:'confirmed_submissions',monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:70,allow_unknown_terms:true});
 export function chicagoDay(now=new Date()) {return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
 export function dailySubmissionQuota(attempts,policy=DEFAULT_AUTOMATION_POLICY,now=new Date()){
  const day=chicagoDay(now),identities=new Set();let in_flight=0;

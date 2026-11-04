@@ -14,6 +14,11 @@ test('US remote includes Chicago; Central time and higher offered pay are not mi
  assert.equal(automationLocation({...lead,remote_location:'Chicago, IL',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'allowed');
  assert.equal(automationLocation({...lead,remote_location:'Remote Canada',location_assessment:{status:'unclear',restrictions:[]}},applicant).status,'blocked');
  assert.equal(automationLocation(lead,applicant,'Must live in the Continental US.').status,'allowed');
+ assert.equal(automationLocation(lead,applicant,'Must reside in the Eastern or Central time zone.').status,'allowed');
+ assert.equal(automationLocation(lead,applicant,'Candidates must be based in Central Texas.').status,'blocked');
+ assert.equal(automationLocation(lead,applicant,'Candidates must be based on their professional experience, not certifications alone.').status,'allowed');
+ assert.equal(automationLocation({...lead,title:'Senior Full Stack Developer - REMOTE (WI Resident)'},applicant).status,'blocked');
+ assert.equal(automationLocation({...lead,title:'Senior Full Stack Developer - REMOTE (IL Resident)'},applicant).status,'allowed');
  assert.equal(automationLocation({...lead,location_assessment:{status:'us_remote_restricted',restrictions:['First week onsite at the client office.']}},applicant).status,'blocked');
 });
 test('automation totals use the same open-opportunity population as the sidebar',()=>{
