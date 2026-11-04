@@ -55,7 +55,7 @@ Dice uses “Your application is on its way” with an Applied Jobs notice on `/
 
 ## LinkedIn navigation
 
-The visual agent uses a named native `next` action for observed Next/Continue/Review buttons. The locator scrolls inside the current application dialog, preserving résumé and approved-answer checks; it cannot click final Submit/Apply controls or agreements. Résumé upload controls no longer request another upload when the approved file is already selected. LinkedIn résumé-tailoring/Premium links and `/job-apply-resources/` are excluded from application navigation. Identified older LinkedIn navigation failures may retry once with the repaired driver, only without any submission intent and after current eligibility checks.
+The visual agent uses a named native `next` action for observed Next/Continue/Review buttons. Missing or stale navigation labels return a fresh inspection for bounded recovery instead of immediately stopping the job. The locator scrolls inside the current application dialog, preserving résumé and approved-answer checks; it cannot click final Submit/Apply controls or agreements. Résumé upload controls no longer request another upload when the approved file is already selected. LinkedIn résumé-tailoring/Premium links and `/job-apply-resources/` are excluded from application navigation. Identified older navigation failures may retry once with the repaired driver, only without any submission intent and after current eligibility checks.
 
 When a board omits structured compensation, explicit hourly ranges in the selected posting text are still checked against the saved minimum. Annual salaries and non-USD quotes are not treated as USD hourly rates.
 

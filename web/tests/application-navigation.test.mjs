@@ -6,6 +6,8 @@ test('native Next scrolls inside the active application and cannot submit or ope
  const browser=await chromium.launch({...(process.env.CHROME_PATH?{executablePath:process.env.CHROME_PATH}:process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
  try{const page=await browser.newPage({viewport:{width:800,height:600}});await page.setContent('<dialog open aria-label="Application"><h2>Apply to Fixture</h2><form><div style="height:300px;overflow:auto"><div style="height:1200px">Approved résumé</div><a href="https://www.linkedin.com/job-apply-resources/">Tailor resume with AI</a><button type="button" aria-label="Continue to next step" onclick="document.body.dataset.advanced=1">Next</button></div><button type="submit">Submit application</button></form></dialog><script>window.submits=0;document.querySelector("form").onsubmit=e=>{e.preventDefault();window.submits++}</script>');
   assert.ok((await page.getByRole('button',{name:'Continue to next step'}).boundingBox()).y>600);assert.equal((await clickApplicationStep(page,'Continue to next step')).clicked,true);assert.equal(await page.locator('body').getAttribute('data-advanced'),'1');assert.equal((await clickApplicationStep(page,'Submit application')).requires_submit,true);assert.equal(await page.evaluate(()=>window.submits),0);
+  await page.getByRole('button',{name:'Continue to next step'}).evaluate(e=>e.remove());
+  const stale=await clickApplicationStep(page,'Next');assert.equal(stale.blocked,true);assert.match(stale.action,/guarded submit/);assert.equal(await page.evaluate(()=>window.submits),0);
  }finally{await browser.close();}
 });
 test('tailoring and premium links are excluded from application navigation',()=>{
@@ -29,5 +31,10 @@ test('a preselected default resume cannot advance when a tailored version is req
  assert.equal(await navigationPreflight({scope:{},facts:{},attached:false,label:'Next',inspect:async()=>({approved_resume_attached:true,approved_resume_filename:filename,fields})}),null);
 });
 test('only known LinkedIn navigation failures can retry once; uncertain submissions remain locked',()=>{
- const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:1}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
+ const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:2}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
+});
+
+test('a stale Next on final review can recover once without replaying a submission',()=>{
+ const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'Application navigation control is missing, disabled or ambiguous.',visual_steps:[{action:'next',status:'needs_input'}]};
+ assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:2}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
 });

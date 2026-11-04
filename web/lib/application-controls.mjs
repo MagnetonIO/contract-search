@@ -32,10 +32,10 @@ export async function applicationButtons(scope){
 export async function clickApplicationStep(page,label){
  const scope=await applicationScope(page),buttons=await applicationButtons(scope),requested=normalized(label);
  const matches=buttons.map((b,index)=>({...b,index})).filter(b=>b.label===requested||b.text===requested);
- if(matches.length!==1||matches[0].disabled)return {unsupported:true,reason:'Application navigation control is missing, disabled or ambiguous.'};
+ if(matches.length!==1||matches[0].disabled)return {unsupported:true,blocked:true,reason:'Application navigation control is missing, disabled or ambiguous.',action:'Inspect the current controls and scroll if needed. Request only an observed navigation label; use the guarded submit action for the final Submit button.'};
  const button=matches[0],kind=applicationControlKind(button);
  if(kind==='submission')return {requires_submit:true,action:'Use the submit tool for this final application action.'};
- if(kind==='unsupported')return {unsupported:true,reason:'Application control is not a supported navigation step.'};
+ if(kind==='unsupported')return {unsupported:true,blocked:true,reason:'Application control is not a supported navigation step.',action:'Inspect the current form and choose a supported application action.'};
  // Keep the locator tied to the observed label as the page changes. A moving
  // button index must never turn a Next click into a final submission.
  let control=scope.getByRole('button',{name:button.label,exact:true}).filter({visible:true});
@@ -43,7 +43,7 @@ export async function clickApplicationStep(page,label){
   const text=button.text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').split(/\s+/).join('\\s+');
   control=scope.getByRole('button').filter({visible:true,hasText:new RegExp('^\\s*'+text+'\\s*$')});
  }
- if(await control.count()!==1)return {unsupported:true,reason:'Application navigation changed; inspect the form again.'};
+ if(await control.count()!==1)return {unsupported:true,blocked:true,reason:'Application navigation changed; inspect the form again.'};
  await control.click({timeout:15000});
  return {clicked:true};
 }
