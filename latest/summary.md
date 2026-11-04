@@ -1,7 +1,7 @@
 # Contract search — 2026-11-04
 
-Mode: **daily**. New remote contracts: **66 / 50**. Secondary roles: **144**. Published project needs: **1**.
-Raw rows: 836; normalized relevant rows: 802; unique new relevant leads: 211; duplicates: 425; stale: 166; rejected: 34.
+Mode: **daily**. New remote contracts: **66 / 50**. Secondary roles: **217**. Published project needs: **1**.
+Raw rows: 978; normalized relevant rows: 888; unique new relevant leads: 284; duplicates: 434; stale: 170; rejected: 90.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
 
@@ -28,9 +28,9 @@ First-seen means new to this collector, not newly published. Unknown original da
 | Employer ATS discovery | ok | 28 | Capped runs kzf60YIz05CCOroSn |
 | Glassdoor | ok | 92 | Capped runs SzAdfaQcQmsoda5iV, beQD0bW081XQ5xNhI, 7zlrcEEsQ556z2KbF |
 | Wellfound | ok | 71 | Capped runs B9zZh6dptujeTR8IO |
-| Built In | failed | 0 | Actor ended TIMED-OUT; see run fUB8PeZr414ShT6dW |
+| Built In | partial | 87 | Recovered completed dataset rows from timed-out run fUB8PeZr414ShT6dW; search coverage is incomplete; no new actor run started |
 | Staffing firm career feeds | ok | 40 | Capped runs HuTCfpxbTwLVZyNez; provider ATS index; end client unverified; configured result ceiling reached; coverage is partial |
-| JobServe US | failed | 0 | Actor ended TIMED-OUT; see run TKHK5A6G40wHw163P |
+| JobServe US | partial | 55 | Recovered completed dataset rows from timed-out run TKHK5A6G40wHw163P; search coverage is incomplete; no new actor run started |
 | Remotive | ok | 11 |  |
 | We Work Remotely | ok | 25 |  |
 | We Work Remotely DevOps | ok | 32 |  |
@@ -38,6 +38,6 @@ First-seen means new to this collector, not newly published. Unknown original da
 | Myticas direct career feed | ok | 30 | Direct agency career feeds: Myticas Consulting; hiring client unverified |
 | TechFetch | disabled | 0 | Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access |
 
-Daily paid-run allowance $6; configured daily caps $1.99; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
+Daily paid-run allowance $6; configured daily caps $4.25; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
 Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published procurement notices are separate buying opportunities; delivery and vendor eligibility must be checked.

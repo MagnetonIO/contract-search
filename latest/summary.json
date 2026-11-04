@@ -1,14 +1,14 @@
 {
   "mode": "daily",
   "created_at": "2026-11-04T14:07:57.957894+00:00",
-  "raw": 836,
-  "relevant": 802,
-  "new_unique": 211,
-  "duplicates": 425,
-  "stale": 166,
-  "rejected": 34,
+  "raw": 978,
+  "relevant": 888,
+  "new_unique": 284,
+  "duplicates": 434,
+  "stale": 170,
+  "rejected": 90,
   "new_remote_contracts": 66,
-  "secondary": 144,
+  "secondary": 217,
   "published_project_needs": 1,
   "target": 50,
   "shortfall": 0,
@@ -63,10 +63,11 @@
     },
     {
       "source": "Built In",
-      "status": "failed",
-      "raw": 0,
-      "detail": "Actor ended TIMED-OUT; see run fUB8PeZr414ShT6dW",
-      "retained": 0
+      "status": "partial",
+      "raw": 87,
+      "detail": "Recovered completed dataset rows from timed-out run fUB8PeZr414ShT6dW; search coverage is incomplete; no new actor run started",
+      "retained": 78,
+      "last_success_at": "2026-11-04T17:24:55.452988+00:00"
     },
     {
       "source": "Staffing firm career feeds",
@@ -78,10 +79,11 @@
     },
     {
       "source": "JobServe US",
-      "status": "failed",
-      "raw": 0,
-      "detail": "Actor ended TIMED-OUT; see run TKHK5A6G40wHw163P",
-      "retained": 0
+      "status": "partial",
+      "raw": 55,
+      "detail": "Recovered completed dataset rows from timed-out run TKHK5A6G40wHw163P; search coverage is incomplete; no new actor run started",
+      "retained": 4,
+      "last_success_at": "2026-11-04T17:24:55.452988+00:00"
     },
     {
       "source": "Remotive",
@@ -262,7 +264,8 @@
       "charged_event_counts": {
         "apify-actor-start": 1,
         "apify-default-dataset-item": 87
-      }
+      },
+      "partial": true
     },
     {
       "source": "Staffing firm career feeds",
@@ -290,7 +293,25 @@
       "charged_event_counts": {
         "apify-default-dataset-item": 55,
         "apify-actor-start": 1
-      }
+      },
+      "partial": true
+    }
+  ],
+  "partial_recovery_at": "2026-11-04T17:24:55.452988+00:00",
+  "partial_recovery": [
+    {
+      "source": "Built In",
+      "raw": 87,
+      "retained": 78,
+      "new_unique": 73,
+      "new_remote_contracts": 0
+    },
+    {
+      "source": "JobServe US",
+      "raw": 55,
+      "retained": 4,
+      "new_unique": 0,
+      "new_remote_contracts": 0
     }
   ]
 }

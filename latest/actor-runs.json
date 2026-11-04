@@ -122,7 +122,8 @@
     "charged_event_counts": {
       "apify-actor-start": 1,
       "apify-default-dataset-item": 87
-    }
+    },
+    "partial": true
   },
   {
     "source": "Staffing firm career feeds",
@@ -150,6 +151,7 @@
     "charged_event_counts": {
       "apify-default-dataset-item": 55,
       "apify-actor-start": 1
-    }
+    },
+    "partial": true
   }
 ]
