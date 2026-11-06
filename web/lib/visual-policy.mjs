@@ -47,7 +47,7 @@ export function choiceMatches({fact,value,label,question,facts}){
  if(fact==='routine_privacy_consent')return expected==='yes'&&/privacy|personal data|accurac|accurate/i.test(question)&&! /terms|conditions|arbitration|background|signature/i.test(question);
  if(fact==='country'){
   if(!/country/i.test(question))return false;
-  if(/^(us|usa|united states)$/.test(expected))return /^(us|usa|united states)(?:\s*\(\+?1\))?$/.test(answer)||/^(us|usa|united states)$/.test(raw);
+  if(/^(us|usa|united states)$/.test(expected))return /^(us|usa|united states)(?:\s*(?:\(\+?1\)|\+1))?$/.test(answer)||/^(us|usa|united states)$/.test(raw);
  }
  return ['email','state','availability'].includes(fact)&&new RegExp(fact==='availability'?'availab|start':fact,'i').test(question)&&(answer===expected||raw===expected);
 }

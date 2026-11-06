@@ -80,3 +80,12 @@ test('employer entry buttons can open a form without bypassing final submission'
  assert.equal(visualClickKind({tag:'BUTTON',text:"I'm interested",type:'button',inForm:false}),'click');
  assert.equal(visualClickKind({tag:'BUTTON',text:'Apply for This Job',type:'submit',inForm:true}),'submission');
 });
+
+test('an employer Apply now button outside a form opens the form even with the default submit type',()=>{
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Apply now',type:'submit',inForm:false}),'click');
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Apply now',type:'submit',inForm:true}),'submission');
+});
+
+test('a US phone-country option may display the calling code without parentheses',()=>{
+ const facts={country:'United States'};assert.equal(choiceMatches({fact:'country',label:'United States +1',question:'Country*',facts}),true);assert.equal(choiceMatches({fact:'country',label:'Canada +1',question:'Country*',facts}),false);assert.equal(choiceMatches({fact:'country',label:'United States +44',question:'Country*',facts}),false);
+});

@@ -17,7 +17,7 @@ export function applicationControlKind({text='',label='',type='',inForm=false}={
  const name=normalized(text||label).toLowerCase();
  if(/submit|send application|complete application/.test(name))return 'submission';
  if(/sign|agree|accept|terms|purchase|pay|delete/.test(name))return 'unsupported';
- if(['apply','apply now'].includes(name))return inForm||type==='submit'?'submission':'entry';
+ if(['apply','apply now'].includes(name))return inForm?'submission':'entry';
  if(['easy apply','start application','apply for this job',"i'm interested"].includes(name))return inForm&&type==='submit'?'submission':'entry';
  if(/^(next|continue|review)(?: (?:to )?(?:the )?(?:next step|application|your application))?$/.test(name))return 'step';
  return 'unsupported';
@@ -75,9 +75,14 @@ export function applicationFields(items){
 export async function selectComboboxOption(page,input,value,approved){
  await input.click({timeout:5000});
  const options=page.getByRole('option').filter({visible:true});
- await options.first().waitFor({state:'visible',timeout:5000}).catch(()=>{});
+ // SSR fields can be clickable before their React listeners are attached.
+ // Retry opening only; an answer is committed once, below, after validation.
+ for(let opening=0;opening<2&&!await options.count();opening++){
+  await input.press('ArrowDown');
+  await options.first().waitFor({state:'visible',timeout:3000}).catch(()=>{});
+ }
  const observed=await options.evaluateAll(items=>items.map((e,index)=>({index,label:(e.innerText||e.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim(),value:e.getAttribute('data-value')||e.getAttribute('value')||e.innerText||''})));
- const matches=observed.filter(o=>(o.label===value||o.value===value)&&approved(o));
+ const matches=observed.filter(o=>(o.label===value||o.value===value||!value.includes('+')&&o.label.replace(/\s*\+\d+$/,'').trim()===value)&&approved(o));
  if(matches.length!==1)return {selected:false,blocked:true,reason:'No unique visible option matches the requested approved answer. Inspect the current options.'};
  await options.nth(matches[0].index).click({timeout:5000});return {selected:true,label:matches[0].label};
 }
