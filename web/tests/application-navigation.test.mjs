@@ -46,3 +46,11 @@ test('known cookie and employer entry failures can retry once even before a resu
  for(const a of [cookie,entry,country]){assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);}
  assert.equal(recoverableNavigationBlock({status:'failed',reason:'Use submit for this final action.'}),false);
 });
+
+test('employer control repair does not require a resume already saved on that website',async()=>{
+ const {recoverableApplicationBlock}=await import('../lib/application-navigation.mjs');assert.equal(typeof recoverableApplicationBlock,'function');
+ const entry={status:'failed',reason:'Automation could not complete click: This control is unsupported. Target: Apply for This Job'};
+ const resume={status:'failed',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};
+ assert.equal(recoverableApplicationBlock(entry,{savedResume:null}),true);assert.equal(recoverableApplicationBlock({...entry,submission_intent_at:'reserved'},{savedResume:null}),false);
+ assert.equal(recoverableApplicationBlock(resume,{savedResume:null}),false);assert.equal(recoverableApplicationBlock(resume,{savedResume:{filename:'Resume_Matthew_Long.pdf'}}),true);
+});

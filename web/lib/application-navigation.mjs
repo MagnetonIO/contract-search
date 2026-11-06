@@ -1,3 +1,4 @@
+import {recoverableResumeBlock} from './resume-library.mjs';
 import {applicationButtons} from './application-controls.mjs';
 import {knownChoiceAnswer,normalizedLabel,needsResumeUpload} from './visual-policy.mjs';
 export const NAVIGATION_REPAIR_VERSION=3;
@@ -13,6 +14,10 @@ export function recoverableNavigationBlock(attempt){
  if(!attempt.selected_resume_filename)return false;
  if(/Application navigation control is missing, disabled or ambiguous/i.test(attempt.reason||'')&&(attempt.visual_steps||[]).some(s=>s.action==='next'&&['blocked','needs_input'].includes(s.status)))return true;
  return /control.{0,70}(?:unsupported|unavailable)|Use upload_resume/i.test(attempt.reason||'')&&(attempt.visual_steps||[]).filter(s=>s.action==='click'&&s.status==='blocked').length>=2;
+}
+
+export function recoverableApplicationBlock(attempt,{savedResume}={}){
+ return recoverableNavigationBlock(attempt)||Boolean(savedResume)&&recoverableResumeBlock(attempt);
 }
 
 export async function navigationPreflight({scope,facts,attached,pending,label,inspect}){
