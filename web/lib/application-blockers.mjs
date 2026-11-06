@@ -1,3 +1,4 @@
+import {verificationEvidence,verificationAction} from './application-verification-policy.mjs';
 export const OPTIONAL_COVER_LETTER_POLICY='Skip optional cover letters. Do not create or upload a cover letter. If the employer requires one, skip this application and record that requirement.';
 export function coverLetterField(field){return /cover[\s_-]*letter/i.test([field.label,field.question,field.name].filter(Boolean).join(' '));}
 export function blockerFor(reason,{technical=false,site=null}={}){
@@ -11,6 +12,7 @@ export function blockerFor(reason,{technical=false,site=null}={}){
 }
 export function attemptBlocker(attempt){
  if(!['needs_input','failed','submission_unknown'].includes(attempt.status))return null;
+ if(attempt.submission_intent_at&&verificationEvidence(attempt))return verificationAction();
  if(attempt.status==='submission_unknown')return blockerFor('Submission result uncertain. '+(attempt.reason||''));
  if(attempt.required_action)return attempt.required_action;
  if(['needs_input','failed','submission_unknown'].includes(attempt.status)){

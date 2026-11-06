@@ -55,6 +55,7 @@ export async function screenBatch(){
  return true;
 }
 export async function nextAttempt(){
+ await (await import('./application-verification.mjs')).expireVerifications();
  await reconcileSavedReceipts();
  let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if(state.quota.remaining===0)return null;
  const [{value:snapshot},{value:workflow},{value:content}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('job-content.json',{postings:{}})]);

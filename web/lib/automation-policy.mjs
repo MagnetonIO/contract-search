@@ -5,7 +5,7 @@ export function chicagoDay(now=new Date()) {return new Intl.DateTimeFormat('en-C
 export function dailySubmissionQuota(attempts,policy=DEFAULT_AUTOMATION_POLICY,now=new Date()){
  const day=chicagoDay(now),identities=new Set();let in_flight=0;
  for(const a of Object.values(attempts||{})){
-  if(a.status==='submitting'&&a.submission_intent_at)in_flight++;
+  if(a.submission_intent_at&&(a.status==='submitting'||a.status==='needs_input'&&a.verification?.state==='active'))in_flight++;
   if(a.status!=='submitted'||!a.receipt||!Number.isFinite(Date.parse(a.confirmed_at||''))||chicagoDay(new Date(a.confirmed_at))!==day)continue;
   identities.add(a.target_identity||a.id||applicationIdentity(a));
  }

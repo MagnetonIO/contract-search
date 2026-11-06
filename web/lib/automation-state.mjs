@@ -21,6 +21,7 @@ export async function activity(kind,detail={}) {
  return event;
 }
 export async function automationDashboard(){
+ await (await import('./application-verification.mjs')).expireVerifications();
  await reconcileSavedReceipts();
  const state=await automationSettings();
  const [{value:snapshot},{value:workflow},{value:events},{value:live},{value:sites},{value:request},{value:login}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('automation-activity.json',[]),readJson('automation-browser.json',null),readJson('browser-sites.json',{}),readJson('automation-request.json',null),readJson('browser-login.json',null)]);
@@ -60,14 +61,14 @@ export async function reserve(id,usd,submit=false){const policy=(await readJson(
 export async function settle(id,usd){
  await mutate('automation-budget.json',old=>{const item=old?.charges?.find(c=>c.id===id);if(item){item.usd=Math.max(0,usd);item.status='settled';}return old;},null);
 }
-export async function patchAttempt(id,patch){
+export async function patchAttempt(id,patch,{updateRun=true}={}){
  const at=new Date().toISOString();const {evidence,...fields}=patch;
  const result=await mutate('application-attempts.json',old=>{
   const prior=old[id]||{},next={...prior,...fields,updated_at:at};
   if(OUTCOME_STATUSES.includes(patch.status)&&(prior.status!==patch.status||prior.reason!==patch.reason||evidence))next.outcome_history=[...attemptOutcomes(prior),outcomeRecord(next,{evidence},at)];
   return {...old,[id]:next};
  });
- if(patch.status)await activity('application_status',{phase:'applying',attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});
+ if(patch.status)await activity('application_status',{phase:updateRun?'applying':undefined,attempt_id:id,lead_id:result[id].lead_id,title:result[id].title,status:patch.status,message:patch.reason||patch.receipt||patch.status.replaceAll('_',' ')});
  return result;
 }
 export async function acquireCycle(manual=false,{now=new Date()}={}){

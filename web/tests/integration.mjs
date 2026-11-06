@@ -45,6 +45,9 @@ try {
  assert.equal((await request('role-resume?role=cto',{authenticated:false})).status,401);
  response=await request('data');assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);
  let data=await response.json();assert.equal(data.snapshot.leads.length,1);
+ assert.equal((await request('application-verification?id=11111111-1111-4111-8111-111111111111',{authenticated:false})).status,401);
+ assert.equal((await request('application-verification?id=invalid')).status,400);
+ assert.equal((await request('application-verification',{body:{id:'11111111-1111-4111-8111-111111111111',action:'open'},origin:'https://attacker.example'})).status,403);
  assert.equal((await request('automation',{authenticated:false})).status,401);
  assert.equal((await request('automation-evidence',{authenticated:false})).status,401);const exported=await request('automation-evidence');assert.equal(exported.status,200);assert.match(exported.headers.get('content-disposition'),/attachment/);assert.equal((await exported.json()).schema_version,1);
  assert.equal((await request('automation-screenshot?id=invalid',{authenticated:false})).status,401);assert.equal((await request('automation-screenshot?id=invalid')).status,400);assert.equal((await request('automation-screenshot?id=11111111-1111-4111-8111-111111111111')).status,404);assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');

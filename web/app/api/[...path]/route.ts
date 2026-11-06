@@ -102,6 +102,16 @@ async function handle(request: Request, context: Context) {
   if (action === 'browser-login-close' && request.method === 'POST') {const {closeLogin}=await import('../../../lib/login-browser.mjs');const input=await request.json();if(input.id&&!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid browser session'},400);return json(await closeLogin({expectedId:input.id}));}
   if (action === 'browser-login' && request.method === 'POST') {const {openLogin}=await import('../../../lib/application-browser.mjs');const input=await request.json();return json(await openLogin(input.site));}
   if (action === 'browser-login-finish' && request.method === 'POST') {const {finishLogin}=await import('../../../lib/application-browser.mjs');const input=await request.json();if(input.id&&!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid browser session'},400);return json(await finishLogin({expectedId:input.id}));}
+  if (action === 'application-verification' && ['GET','POST'].includes(request.method)) {
+    const input=request.method==='GET'?{id:new URL(request.url).searchParams.get('id'),action:'view'}:await request.json();
+    if(!/^[a-f0-9-]{36}$/.test(input.id||''))return json({error:'Invalid attempt'},400);
+    const verification=await import('../../../lib/application-verification.mjs');
+    if(request.method==='GET')return json(await verification.getVerificationView(input.id));
+    if(input.action==='open')return json(await verification.reopenVerification(input.id));
+    if(input.action==='check')return json(await verification.checkVerification(input.id));
+    if(input.action==='close')return json(await verification.closeVerification(input.id));
+    return json({error:'Unknown verification action'},400);
+  }
   if (action === 'automation-attempt' && request.method === 'POST') {
     const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];
