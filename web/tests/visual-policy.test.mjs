@@ -68,3 +68,15 @@ test('confirmed U.S. citizenship can answer the matching question without implyi
  assert.equal(choiceMatches({fact:'us_citizen',label:'Yes',question:'Are you a United States citizen?',facts}),true);
  assert.equal(knownChoiceAnswer('Are you a U.S. citizen with active Secret clearance?',facts),null);
 });
+
+test('cookie rejection does not become a job submission and acceptance of new agreements stays blocked',()=>{
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Decline all',type:'submit',inForm:true,cookieConsent:true}),'click');
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Accept all',type:'submit',inForm:true,cookieConsent:true}),'blocked');
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Decline all',type:'submit',inForm:true,cookieConsent:false}),'submission');
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Accept terms',type:'button',cookieConsent:true}),'blocked');
+});
+test('employer entry buttons can open a form without bypassing final submission',()=>{
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Apply for This Job',type:'button',inForm:false}),'click');
+ assert.equal(visualClickKind({tag:'BUTTON',text:"I'm interested",type:'button',inForm:false}),'click');
+ assert.equal(visualClickKind({tag:'BUTTON',text:'Apply for This Job',type:'submit',inForm:true}),'submission');
+});

@@ -31,10 +31,18 @@ test('a preselected default resume cannot advance when a tailored version is req
  assert.equal(await navigationPreflight({scope:{},facts:{},attached:false,label:'Next',inspect:async()=>({approved_resume_attached:true,approved_resume_filename:filename,fields})}),null);
 });
 test('only known LinkedIn navigation failures can retry once; uncertain submissions remain locked',()=>{
- const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:2}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
+ const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
 });
 
 test('a stale Next on final review can recover once without replaying a submission',()=>{
  const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'Application navigation control is missing, disabled or ambiguous.',visual_steps:[{action:'next',status:'needs_input'}]};
- assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:2}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
+ assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
+});
+
+test('known cookie and employer entry failures can retry once even before a resume step',()=>{
+ const cookie={status:'failed',reason:'Automation could not complete click: Use submit for this final action.',visual_steps:[{action:'click',status:'blocked',summary:'Cookie banner visible; accepting all cookies to proceed.'}]};
+ const entry={status:'failed',reason:"Automation could not complete click: This control is unsupported. Target: Apply for This Job"};
+ const country={status:'failed',reason:'The controller could not map the saved answer for question: Phone. Option: United States.'};
+ for(const a of [cookie,entry,country]){assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);}
+ assert.equal(recoverableNavigationBlock({status:'failed',reason:'Use submit for this final action.'}),false);
 });

@@ -1,5 +1,5 @@
 import {siteForUrl} from './browser-accounts.mjs';
-export const RESUME_RECOVERY_VERSION=4;
+export const RESUME_RECOVERY_VERSION=5;
 export const MASTER_RESUME_NAME='Resume_Matthew_Long.pdf';
 export function resumeSite(url){try{return siteForUrl(url)||new URL(url).hostname.toLowerCase();}catch{return null;}}
 export function approvedSiteResume(library,url,masterHash){const site=library?.[resumeSite(url)],entry=site?.master_hash===masterHash?site:site?.versions?.[masterHash];return entry?.master_hash===masterHash?entry:null;}
@@ -7,6 +7,8 @@ export function recordSiteResume(library,site,entry){const previous=library?.[si
 export function resumeUploadName(library,url,masterHash){const entry=approvedSiteResume(library,url,masterHash);return entry?.filename||'Resume_Matthew_Long_'+masterHash.slice(0,8)+'.pdf';}
 export function recoverableResumeBlock(attempt){
  if(attempt.submission_intent_at||attempt.resume_recovery_version>=RESUME_RECOVERY_VERSION||!['needs_input','failed'].includes(attempt.status))return false;
+ const error=attempt.outcome_history?.at(-1)?.error_message||'';
+ if(/locator\.check/.test(error)&&/input.*type.*radio/.test(error)&&/not visible/.test(error))return true;
  return /(?:selection|approved answer).{0,100}Resume_Matthew_Long|attach.{0,30}approved PDF|approved (?:file|résumé).{0,40}Resume_Matthew_Long|approved résumé.{0,40}(?:not (?:selected|uploaded|attached)|not been (?:selected|uploaded|attached))|(?:visible resume (?:file)?name|resume filename).{0,50}(?:differ|match)|resume and cover letter.{0,30}swapped/i.test(attempt.reason||'')||!attempt.selected_resume_filename&&!attempt.uploaded_resume_filename&&(attempt.visual_steps||[]).filter(s=>s.action==='submit'&&s.status==='blocked').length>=2;
 }
 
@@ -56,7 +58,19 @@ export async function selectExistingResume(scope,filename,{requested=false}={}){
  }
  if(matches.length!==1)return {selected:false,reason:matches.length?'Approved filename is ambiguous on this page.':'Approved saved résumé selection is not identified on this page.'};
  const match=matches[0],radio=radios.nth(match.index);
- if(!match.checked){if(match.native)await radio.check({timeout:5000});else await radio.click({timeout:5000});}
+ if(!match.checked){
+  if(await radio.isVisible()){if(match.native)await radio.check({timeout:5000});else await radio.click({timeout:5000});}
+  else if(match.native){
+   // Styled radios may be hidden while the associated label is the real UI.
+   // Click only a visible label bound to this exact, uniquely matched input.
+   const labels=await radio.evaluate(e=>[...(e.labels||[])].filter(l=>l.getClientRects().length).map(l=>({for:l.htmlFor,text:l.innerText})));
+   const id=await radio.getAttribute('id');
+   const visible=scope.locator('label').filter({visible:true});
+   const indices=await visible.evaluateAll((items,id)=>items.flatMap((e,index)=>id&&(e.htmlFor===id||e.control?.id===id)?[index]:[]),id);
+   if(indices.length!==1||labels.length!==1)return {selected:false,reason:'The approved résumé has no unique visible selection label.'};
+   await visible.nth(indices[0]).click({timeout:5000});
+  }else return {selected:false,reason:'The approved résumé radio is not visible.'};
+ }
  const selected=await radio.evaluate(e=>e.checked===true||e.getAttribute('aria-checked')==='true');
  return {selected,filename,method:'native_saved_file',...(!selected?{reason:'The approved résumé selection did not stay checked.'}:{})};
 }

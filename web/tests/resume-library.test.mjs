@@ -33,3 +33,16 @@ test('resume repair retries only identified old blockers once and never an uncer
   assert.equal(recoverableResumeBlock({status:'submission_unknown',reason,submission_intent_at:'recorded'}),false);
  }
 });
+
+test('a styled hidden resume radio uses its visible associated label and verifies checked state',async()=>{
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<fieldset><legend>Resume</legend><input type="radio" name="resume" checked aria-label="Old.pdf"><input id="approved" style="display:none" type="radio" name="resume" aria-label="Resume_Matthew_Long.pdf"><label for="approved">PDF Resume_Matthew_Long.pdf</label></fieldset>');
+ const result=await selectExistingResume(page.locator('body'),'Resume_Matthew_Long.pdf');assert.equal(result.selected,true);assert.equal(await page.locator('#approved').isChecked(),true);assert.equal(await page.locator('input').first().isChecked(),false);
+ await page.setContent('<label><input id="wrapped" style="display:none" type="radio" name="resume" aria-label="Resume_Matthew_Long.pdf">PDF Resume_Matthew_Long.pdf</label>');assert.equal((await selectExistingResume(page.locator('body'),'Resume_Matthew_Long.pdf')).selected,true);
+ }finally{await browser.close();}
+});
+
+test('hidden-radio timeout evidence can retry after repair without replaying a submission',()=>{
+ const a={status:'failed',reason:'Automation error: TimeoutError.',outcome_history:[{error_message:'locator.check: waiting for input[type=radio]; element is not visible'}]};
+ assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:RESUME_RECOVERY_VERSION}),false);
+});

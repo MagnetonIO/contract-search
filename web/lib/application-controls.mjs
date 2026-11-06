@@ -18,7 +18,7 @@ export function applicationControlKind({text='',label='',type='',inForm=false}={
  if(/submit|send application|complete application/.test(name))return 'submission';
  if(/sign|agree|accept|terms|purchase|pay|delete/.test(name))return 'unsupported';
  if(['apply','apply now'].includes(name))return inForm||type==='submit'?'submission':'entry';
- if(['easy apply','start application'].includes(name))return inForm&&type==='submit'?'submission':'entry';
+ if(['easy apply','start application','apply for this job',"i'm interested"].includes(name))return inForm&&type==='submit'?'submission':'entry';
  if(/^(next|continue|review)(?: (?:to )?(?:the )?(?:next step|application|your application))?$/.test(name))return 'step';
  return 'unsupported';
 }
@@ -58,4 +58,26 @@ export async function openLinkedInApplication(page){
  await entry.click({timeout:15000});
  await page.getByRole('dialog').filter({visible:true}).first().waitFor({state:'visible',timeout:5000}).catch(()=>{});
  return true;
+}
+
+// Serializable DOM reader shared by inspection and native field actions.
+export function applicationFields(items){
+ const clean=value=>String(value||'').replace(/\s+/g,' ').trim();
+ return items.map((e,index)=>{
+  const labelled=e.getAttribute('aria-labelledby')?.split(/\s+/).map(id=>e.ownerDocument.getElementById(id)?.textContent||'').join(' ');
+  const label=clean(e.getAttribute('aria-label')||labelled||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||e.name||e.id||'');
+  const legend=clean(e.closest('fieldset')?.querySelector('legend')?.innerText);
+  const question=['checkbox','radio'].includes(e.type)?legend||label:label||legend;
+  return {index,label,question,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?e.selectedOptions?.[0]?.text:undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
+ });
+}
+
+export async function selectComboboxOption(page,input,value,approved){
+ await input.click({timeout:5000});
+ const options=page.getByRole('option').filter({visible:true});
+ await options.first().waitFor({state:'visible',timeout:5000}).catch(()=>{});
+ const observed=await options.evaluateAll(items=>items.map((e,index)=>({index,label:(e.innerText||e.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim(),value:e.getAttribute('data-value')||e.getAttribute('value')||e.innerText||''})));
+ const matches=observed.filter(o=>(o.label===value||o.value===value)&&approved(o));
+ if(matches.length!==1)return {selected:false,blocked:true,reason:'No unique visible option matches the requested approved answer. Inspect the current options.'};
+ await options.nth(matches[0].index).click({timeout:5000});return {selected:true,label:matches[0].label};
 }

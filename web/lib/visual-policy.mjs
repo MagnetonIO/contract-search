@@ -21,6 +21,7 @@ export function experienceAnswer(question,facts){
 export function visualClickKind(control){
  if(!control||control.disabled)return 'blocked';
  const text=normalizedLabel(control.text||control.label);
+ if(control.cookieConsent)return /^(?:decline|reject)(?: all| optional cookies)?$|^(?:use|allow|accept) (?:only )?(?:necessary|essential) cookies$|^cookies? settings$/i.test(text)?'click':'blocked';
  if(applicationAuxiliaryUrl(control.href)||/tailor (?:my |your )?resum[eé]|create (?:a )?cover letter|help me stand out|upgrade|\bpremium\b/i.test(text))return 'blocked';
  if(control.applicationDialog&&/^(?:close|dismiss|cancel)$/i.test(text))return 'blocked';
  if(control.type==='password'||/sign.?in|log.?in|captcha|verify.*human|security check|agree|accept.*terms|purchase|pay|delete|withdraw|unsubscribe/i.test(text))return 'blocked';
