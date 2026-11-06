@@ -36,3 +36,14 @@ test('custom combobox choices require an exact visible option and approved appli
  assert.equal((await selectComboboxOption(page,page.getByRole('combobox'),'United States',approved)).selected,true);assert.equal(await page.evaluate(()=>window.committed),'US');
  }finally{await browser.close();}
 });
+
+test('decorative required markers do not masquerade as a changed form field',async()=>{
+ const {sameFieldLabel}=await import('../lib/application-controls.mjs');assert.equal(typeof sameFieldLabel,'function');assert.equal(sameFieldLabel('State *','State'),true);assert.equal(sameFieldLabel('State *','state'),true);assert.equal(sameFieldLabel('Country*','State'),false);assert.equal(sameFieldLabel('Phone country code','Phone'),false);assert.equal(sameFieldLabel('',''),false);
+});
+
+test('a visible menu can safely control a hidden native select without inventing an option value',async()=>{
+ const {chromium}=await import('playwright-core');const {applicationFields,selectComboboxOption}=await import('../lib/application-controls.mjs');const {choiceMatches}=await import('../lib/visual-policy.mjs');const b=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const p=await b.newPage();await p.setContent(`<label for="state">State *</label><div><button type="button" aria-label="State –Select–" aria-haspopup="true" onclick="document.querySelector('[role=menu]').hidden=false">–Select–</button><select id="state" aria-hidden="true" style="display:none" required><option value=""></option></select></div><div role="menu" hidden><div role="menuitem" onclick="document.querySelector('select').add(new Option('Illinois','12'));document.querySelector('select').value='12'">Illinois</div></div>`);
+ const fields=await p.locator('select').evaluateAll(applicationFields);assert.equal(fields[0].visible,true);const selected=await selectComboboxOption(p,p.locator('select'),'IL',o=>choiceMatches({fact:'state',label:o.label,value:o.value,question:'State *',facts:{state:'IL'}}));assert.equal(selected.selected,true);assert.equal(await p.locator('select').inputValue(),'12');
+ }finally{await b.close();}
+});

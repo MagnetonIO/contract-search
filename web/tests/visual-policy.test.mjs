@@ -89,3 +89,7 @@ test('an employer Apply now button outside a form opens the form even with the d
 test('a US phone-country option may display the calling code without parentheses',()=>{
  const facts={country:'United States'};assert.equal(choiceMatches({fact:'country',label:'United States +1',question:'Country*',facts}),true);assert.equal(choiceMatches({fact:'country',label:'Canada +1',question:'Country*',facts}),false);assert.equal(choiceMatches({fact:'country',label:'United States +44',question:'Country*',facts}),false);
 });
+
+test('state selectors accept the full name of the confirmed state without accepting another state',()=>{
+ assert.equal(choiceMatches({fact:'state',label:'Illinois',value:'12',question:'State *',facts:{state:'IL'}}),true);assert.equal(choiceMatches({fact:'state',label:'California',value:'5',question:'State *',facts:{state:'IL'}}),false);assert.equal(choiceMatches({fact:'state',label:'IL',question:'State *',facts:{state:'Illinois'}}),true);
+});

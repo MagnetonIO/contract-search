@@ -68,21 +68,34 @@ export function applicationFields(items){
   const label=clean(e.getAttribute('aria-label')||labelled||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||e.name||e.id||'');
   const legend=clean(e.closest('fieldset')?.querySelector('legend')?.innerText);
   const question=['checkbox','radio'].includes(e.type)?legend||label:label||legend;
-  return {index,label,question,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?e.selectedOptions?.[0]?.text:undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
+  const toggles=e.tagName==='SELECT'&&e.getAttribute('aria-hidden')==='true'?[...e.parentElement.querySelectorAll('button[aria-haspopup]')].filter(b=>b.getClientRects().length):[];const proxy=toggles.length===1?toggles[0]:null;
+  return {index,label,question,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(proxy)||Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?(proxy?clean(proxy.innerText):e.selectedOptions?.[0]?.text):undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
  });
 }
 
 export async function selectComboboxOption(page,input,value,approved){
- await input.click({timeout:5000});
- const options=page.getByRole('option').filter({visible:true});
- // SSR fields can be clickable before their React listeners are attached.
- // Retry opening only; an answer is committed once, below, after validation.
- for(let opening=0;opening<2&&!await options.count();opening++){
-  await input.press('ArrowDown');
-  await options.first().waitFor({state:'visible',timeout:3000}).catch(()=>{});
+ if(!approved({label:value,value}))return {selected:false,blocked:true,reason:'The requested option is not an approved applicant answer.'};
+ let toggle=input;
+ if(await input.evaluate(e=>e.tagName==='SELECT')&&!await input.isVisible()){
+  const buttons=input.locator('..').locator('button[aria-haspopup]').filter({visible:true});
+  if(await buttons.count()!==1)return {selected:false,blocked:true,reason:'The hidden select has no unique visible menu control.'};
+  toggle=buttons;
  }
+ await toggle.click({timeout:5000});
+ const options=page.locator('[role=option],[role=menuitem]').filter({visible:true});
+ for(let opening=0;opening<2&&!await options.count();opening++){
+  await options.first().waitFor({state:'visible',timeout:1500}).catch(()=>{});
+  if(!await options.count())await toggle.press('ArrowDown');
+ }
+ await options.first().waitFor({state:'visible',timeout:3000}).catch(()=>{});
  const observed=await options.evaluateAll(items=>items.map((e,index)=>({index,label:(e.innerText||e.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim(),value:e.getAttribute('data-value')||e.getAttribute('value')||e.innerText||''})));
- const matches=observed.filter(o=>(o.label===value||o.value===value||!value.includes('+')&&o.label.replace(/\s*\+\d+$/,'').trim()===value)&&approved(o));
+ const allowed=observed.filter(approved);const exact=allowed.filter(o=>o.label===value||o.value===value||!value.includes('+')&&o.label.replace(/\s*\+\d+$/,'').trim()===value);
+ const matches=exact.length?exact:allowed;
  if(matches.length!==1)return {selected:false,blocked:true,reason:'No unique visible option matches the requested approved answer. Inspect the current options.'};
  await options.nth(matches[0].index).click({timeout:5000});return {selected:true,label:matches[0].label};
+}
+
+export function sameFieldLabel(actual,requested){
+ const canonical=value=>String(value||'').replace(/\s+/g,' ').replace(/\s*\*+$/,'').trim().toLowerCase();
+ return Boolean(canonical(actual))&&canonical(actual)===canonical(requested);
 }
