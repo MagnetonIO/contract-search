@@ -30,3 +30,9 @@ test('repeated submit failures retain the real error and request automation repa
 test('a mandatory cover letter is skipped without a model call or letter generation',async()=>{
  let skipped=false;await runVisualApplication({getPage:()=>({url:()=> 'https://example.com/job'}),inspect:async()=>({fields:[{visible:true,required:true,label:'Cover Letter',type:'textarea'}]}),guard:async()=>{},stopped:async()=>false,job:{},facts:{},record:async()=>{},invoke:async name=>{assert.equal(name,'skipCoverLetter');skipped=true;},generate:()=>{throw Error('No model call for a mandatory cover letter');}});assert.equal(skipped,true);
 });
+
+test('grouped contact entry still checks every fact and stops before later fields when one is blocked',async()=>{
+ let done=false;const calls=[];const page={url:()=> 'https://example.com/job',locator:()=>({filter:()=>({count:async()=>0})}),evaluate:async()=>({width:800,height:600}),screenshot:async()=>Buffer.from('frame')};
+ await runVisualApplication({getPage:()=>page,inspect:async()=>({fields:[],text:'Contact information'}),guard:async()=>{},stopped:async()=>done,job:{},facts:{name:'Applicant',email:'applicant@example.com'},record:async()=>{},generate:async()=>({output:{action:{type:'fill_known_fields',fields:[{index:0,label:'Name',fact:'name'},{index:1,label:'Unsupported question',fact:'email'},{index:2,label:'Email',fact:'email'}]},summary:'Entering saved contact information'},usage:{}}),invoke:async(name,input)=>{assert.equal(name,'fillKnown');calls.push(input.label);if(input.index===1){done=true;return {paused:true};}return {filled:input.label};},maxSteps:2});
+ assert.deepEqual(calls,['Name','Unsupported question']);
+});
