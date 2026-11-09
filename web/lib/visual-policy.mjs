@@ -44,6 +44,10 @@ export function needsResumeUpload({attached,control,uploadAvailable}){
 export function choiceMatches({fact,value,label,question,facts}){
  const expected=normalizedLabel(facts?.[fact]).toLowerCase(),answer=normalizedLabel(label||value).toLowerCase(),raw=normalizedLabel(value).toLowerCase();
  if(!expected)return false;
+ if(fact==='verified_experience'){
+  const confirmed=experienceAnswer(question,facts),option=answer.match(/^(\d+(?:\.\d+)?)\s*(\+)?\s*(?:years?)?$/);
+  return Boolean(confirmed&&option&&(option[2]?Number(confirmed.answer)>=Number(option[1]):Number(confirmed.answer)===Number(option[1])));
+ }
  if(['work_authorization','sponsorship','us_citizen'].includes(fact)){const known=knownChoiceAnswer(question,facts);return known?.fact===fact&&answer===known.answer;}
  if(fact==='routine_privacy_consent')return expected==='yes'&&/privacy|personal data|accurac|accurate/i.test(question)&&! /terms|conditions|arbitration|background|signature/i.test(question);
  if(fact==='country'){

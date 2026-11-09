@@ -93,3 +93,11 @@ test('a US phone-country option may display the calling code without parentheses
 test('state selectors accept the full name of the confirmed state without accepting another state',()=>{
  assert.equal(choiceMatches({fact:'state',label:'Illinois',value:'12',question:'State *',facts:{state:'IL'}}),true);assert.equal(choiceMatches({fact:'state',label:'California',value:'5',question:'State *',facts:{state:'IL'}}),false);assert.equal(choiceMatches({fact:'state',label:'IL',question:'State *',facts:{state:'Illinois'}}),true);
 });
+
+test('experience dropdowns accept a matching confirmed duration without borrowing years from another skill',()=>{
+ const facts={verified_experience:'User-confirmed application answer: 10 years of hands-on work experience with Conversational AI.\nUser-confirmed application answer: 3 years of hands-on work experience with Palantir/Foundry.'};
+ assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with Conversational AI?',value:'10',label:'10 years',facts}),true);
+ assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with Conversational AI?',value:'5',label:'5 years',facts}),false);
+ assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with Data Governance?',value:'3',label:'3 years',facts}),false);
+ assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with AI Agent development?',value:'10',label:'10 years',facts}),false);
+});
