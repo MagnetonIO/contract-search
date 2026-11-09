@@ -44,7 +44,7 @@ export async function applyAttempt(id,{sessionFactory=browserSession,connect=url
   const response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:30000});
   const livePosting=parsePostingStatus(lead,{status:response?.status()||0,html:await page.content()});
   if(livePosting.status!=='unknown'){const {description,...metadata}=livePosting;await mutate('posting-status.json',old=>({...old,postings:{...old.postings,[lead.id]:{...metadata,checked_at:new Date().toISOString(),source_url:target}}}),{postings:{},hosts:{}});}
-  const closedPattern=/no longer accepting applications|position has been filled|job is no longer available|posting has expired/i;
+  const closedPattern=/no longer accepting applications|not currently accepting applications|position has been filled|job is no longer available|posting has expired/i;
   const notice=page.getByText(closedPattern).first();let closedForThisJob=livePosting.status==='closed';
   if(await notice.isVisible().catch(()=>false)){const scoped=await notice.evaluate(e=>e.closest('article,section')?.innerText||'');closedForThisJob=closedForThisJob||scoped.toLowerCase().includes(lead.title.toLowerCase())||await page.getByRole('heading',{name:closedPattern}).first().isVisible().catch(()=>false);}
   if(!closedForThisJob&&await notice.isVisible().catch(()=>false))closedForThisJob=await page.getByRole('heading',{name:lead.title,exact:true}).first().isVisible().catch(()=>false);

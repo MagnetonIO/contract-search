@@ -24,3 +24,9 @@ test('closure evidence retains the exact matched site notice',()=>{
  const result=parsePostingStatus(lead,{status:200,html:'<h1>'+lead.title+'</h1><div role="alert">Sorry, this job is no longer available.</div>'});
  assert.equal(result.status,'closed');assert.equal(result.site_notice,'Sorry, this job is no longer available.');
 });
+
+test('LinkedIn not-currently-accepting text closes only the current listing',()=>{
+ const result=parsePostingStatus(lead,{status:200,html:page('<div role="alert">Not currently accepting applications</div>')});
+ assert.equal(result.status,'closed');assert.equal(result.site_notice,'Not currently accepting applications');
+ assert.equal(parsePostingStatus(lead,{status:200,html:page('<h2>Similar Jobs</h2><section>Not currently accepting applications</section>')}).status,'open');
+});

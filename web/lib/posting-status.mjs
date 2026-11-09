@@ -27,7 +27,7 @@ export function parsePostingStatus(lead,{status,html=''}){
  if([404,410].includes(status))return {...base,status:'closed',reason:'The posting returned HTTP '+status+'.'};
  if(status!==200)return {...base,status:'unknown',reason:[403,429].includes(status)?'Public access is restricted; availability will be checked in the application browser.':'Public availability could not be confirmed.'};
  if(!matching)return {...base,status:'unknown',reason:'The response did not identify the selected posting.'};
- const closed=/no longer accepting applications|(?:this )?job is no longer available|(?:this )?position has been filled|posting has expired/i;
+ const closed=/no longer accepting applications|not currently accepting applications|(?:this )?job is no longer available|(?:this )?position has been filled|posting has expired/i;
  const alerts=$('[role="alert"],.alert-type-page,.artdeco-inline-feedback,[data-testid*="expired"]').toArray().map(e=>$(e).text());
  const siteNotice=alerts.find(t=>closed.test(t));
  if(siteNotice)return {...base,status:'closed',site_notice:siteNotice.replace(/\s+/g,' ').trim().slice(0,1000),reason:'The selected posting explicitly reports that applications are closed.'};
