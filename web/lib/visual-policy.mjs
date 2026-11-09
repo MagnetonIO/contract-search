@@ -23,7 +23,7 @@ export function experienceAnswer(question,facts){
 // Credentials, legal declarations and numeric durations have separate checks.
 export function technicalExperienceAnswer(question,facts){
  if(/years?|certif|licen[cs]e|clearance|citizen|sponsor|authoriz|degree|willing|agree|criminal|veteran|gender|disabil|medical/i.test(question))return null;
- const match=String(question).match(/^(?:do you have|have you had)\s+(?:(?:hands[- ]on|professional|work|working|practical|production)\s+)*experience\s+(?:with|in|using)\s+(.+?)[?*.\s]*$/i);
+ const match=String(question).match(/^(?:do you have|have you had)\s+(?:(?:hands[- ]on|professional|work|working|practical|production)\s+)*experience(?:\s+(?:developing|building|deploying|implementing|maintaining|designing|testing|supporting|programming|coding)(?:\s+(?:applications?|software|systems?|services?|solutions?|code))?)?\s+(?:with|in|using)\s+(.+?)[?*.\s]*$/i);
  if(!match)return null;
  const normalize=value=>String(value||'').toLowerCase().replace(/microsoft azure/g,'azure').replace(/amazon web services/g,'aws').replace(/google cloud(?: platform)?/g,'gcp').replace(/[^a-z0-9+#]+/g,' ').replace(/\s+/g,' ').trim();
  const topic=normalize(match[1]);if(topic.length<3||topic.length>100||/\b(?:and|or)\b/.test(topic))return null;

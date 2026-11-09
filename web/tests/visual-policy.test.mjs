@@ -108,10 +108,12 @@ test('experience range boundaries contain the confirmed years without overstatin
 });
 
 test('documented hands-on technical skills can answer Yes without a separate repeated confirmation',()=>{
- const facts={verified_experience:'Designed private Azure infrastructure using modular Bicep for Container Apps and PostgreSQL. Skills: Python, Kubernetes.'};
+ const facts={verified_experience:'Designed private Azure infrastructure using modular Bicep for Container Apps and PostgreSQL. Skills: Python, Kubernetes, Java/Spring.'};
  const match=(question,label,f=facts)=>choiceMatches({fact:'verified_experience',question,label,value:label,facts:f});
  assert.equal(match('Do you have hands-on experience with Microsoft Azure?','Yes'),true);
  assert.equal(match('Do you have experience with Kubernetes?','Yes'),true);
+ assert.equal(match('Do you have professional experience developing applications using Java?','Yes'),true);
+ assert.equal(match('Do you have professional experience developing applications using Java?','Yes',{verified_experience:'Skills: JavaScript.'}),false);
  assert.equal(match('Do you have experience with an undocumented product?','Yes'),false);
  assert.equal(match('Do you have experience with Microsoft Azure?','No'),false);
  assert.equal(match('Do you have a Microsoft Azure certification?','Yes'),false);

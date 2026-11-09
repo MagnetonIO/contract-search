@@ -24,5 +24,9 @@ test('newly confirmed experience unblocks that question once and never replays a
 
 test('a documented technical Yes/No blocker receives one repair retry without needing another profile edit',()=>{
  const facts={version:'current',verified_experience:'Designed production Azure infrastructure.'};const a={status:'needs_input',profile_version:'current',reason:'No approved answer is saved for question: Do you have hands-on experience with Microsoft Azure?. Option: Yes.'};
- return import('../lib/application-blockers.mjs').then(({experienceRetry})=>{assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,technical_answer_recovery_version:1},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'reserved'},facts),false);});
+ return import('../lib/application-blockers.mjs').then(({experienceRetry})=>{assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,answer_control_recovery_version:1},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'reserved'},facts),false);});
+});
+
+test('legacy technical answer failures get one retry when the saved facts now support the question',async()=>{
+ const {experienceRetry}=await import('../lib/application-blockers.mjs');const facts={version:'current',verified_experience:'Skills: Java/Spring.'};const a={status:'failed',profile_version:'current',reason:'Automation could not complete choose: The requested option does not match the approved answer for Do you have professional experience developing applications using Java?. Next step: Inspect the fresh field.'};assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,answer_control_recovery_version:1},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'recorded'},facts),false);
 });

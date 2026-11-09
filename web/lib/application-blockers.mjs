@@ -35,10 +35,11 @@ export function queuedAttemptId(state){
 // A new saved answer is enough to retry its paused form. Updating the attempt
 // to the current profile version makes this a single retry for that answer.
 export function experienceRetry(attempt,facts){
- if(!facts?.version||attempt.status!=='needs_input'||attempt.submission_intent_at)return false;
- const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question):\s*(.+?)(?:\. Option:.*)?$/)?.[1];
+ if(!facts?.version||!['needs_input','failed'].includes(attempt.status)||attempt.submission_intent_at)return false;
+ const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question):\s*(.+?)(?:\. Option:.*)?$/)?.[1]||String(attempt.reason||'').match(/^Automation could not complete choose: The requested option does not match the approved answer for (.+?)(?:\. Next step:|$)/i)?.[1];
  if(!question)return false;
  const technical=technicalExperienceAnswer(question,facts);
- if(attempt.profile_version===facts.version)return Boolean(technical&&!attempt.technical_answer_recovery_version);
+ if(attempt.status==='failed')return Boolean((experienceAnswer(question,facts)||technical)&&!attempt.answer_control_recovery_version);
+ if(attempt.profile_version===facts.version)return Boolean(technical&&!attempt.answer_control_recovery_version);
  return Boolean(experienceAnswer(question,facts)||technical);
 }
