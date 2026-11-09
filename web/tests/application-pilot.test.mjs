@@ -13,6 +13,6 @@ test('the non-Dice pilot has ten browser slots and separately reports technical 
  for(let i=0;i<9;i++)attempts[i]={id:String(i),pilot_id:'pilot',last_started_at:'2026-11-09',status:'failed',reason:'Worker interrupted'};
  assert.equal(pilotAllows('LinkedIn',policy,attempts),true);
  attempts.tenth={id:'tenth',pilot_id:'pilot',last_started_at:'2026-11-09',status:'needs_input',reason:'CAPTCHA'};
- assert.equal(pilotAllows('LinkedIn',policy,attempts),false);
+ assert.equal(pilotAllows('LinkedIn',policy,attempts),false);assert.equal(pilotAllows('Dice',policy,attempts),true,'normal Dice work can resume after the protected non-Dice sample is full');
  const report=pilotReport(policy,attempts);assert.equal(report.attempted,10);assert.equal(report.technical,9);assert.equal(report.human_checks,1);assert.equal(report.confirmed,0);assert.equal(report.complete,true);
 });

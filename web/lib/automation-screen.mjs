@@ -63,7 +63,7 @@ export async function nextAttempt(){
  await reconcileSavedReceipts();
  let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if(state.quota.remaining===0)return null;
  const [{value:snapshot},{value:workflow},{value:content}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('job-content.json',{postings:{}})]);
- const queued=Object.values(state.attempts).find(a=>a.status==='queued'&&(!state.policy.visual_pilot?.enabled||a.pilot_id===state.policy.visual_pilot.id));if(queued)return queued.id;
+ const queued=Object.values(state.attempts).find(a=>a.status==='queued'&&(!state.policy.visual_pilot?.enabled||a.pilot_id===state.policy.visual_pilot.id||a.source==='Dice'&&pilotAllows('Dice',state.policy,state.attempts)));if(queued)return queued.id;
  const library=(await readJson('resume-site-files.json',{})).value,byId=new Map((snapshot?.leads||[]).map(l=>[l.id,l])),retries=new Map();
  for(const attempt of Object.values(state.attempts)){
   const lead=byId.get(attempt.lead_id);if(!lead||!leadInView(lead,workflow[lead.id],'opportunities')||screenGate(lead,content.postings[lead.id]?.text,workflow[lead.id],state.policy)||state.screens[lead.id]?.score<state.policy.minimum_score)continue;

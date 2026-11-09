@@ -14,7 +14,8 @@ export function pilotReport(policy,attempts,usage={generations:{}}){
 }
 export function pilotAllows(source,policy,attempts){
  const pilot=policy.visual_pilot;if(!pilot?.enabled)return true;
- return source!=='Dice'&&Object.values(attempts).filter(a=>a.pilot_id===pilot.id&&(a.last_started_at||a.status==='queued')).length<pilot.limit;
+ const full=Object.values(attempts).filter(a=>a.pilot_id===pilot.id&&(a.last_started_at||a.status==='queued')).length>=pilot.limit;
+ return full?source==='Dice':source!=='Dice';
 }
 export function pilotFields(policy,source){
  return policy.visual_pilot?.enabled&&source!=='Dice'?{pilot_id:policy.visual_pilot.id,visual_fallback_model:policy.visual_pilot.model}:{};

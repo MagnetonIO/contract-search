@@ -29,7 +29,7 @@ export function toolOutcomeDetail(outcome){
 }
 export function queuedAttemptId(state){
  if(!state.policy?.enabled||!state.facts?.confirmed||state.quota?.remaining===0)return null;
- return Object.values(state.attempts||{}).find(a=>a.status==='queued'&&!a.submission_intent_at&&(!state.policy.visual_pilot?.enabled||a.pilot_id===state.policy.visual_pilot.id))?.id||null;
+ return Object.values(state.attempts||{}).find(a=>a.status==='queued'&&!a.submission_intent_at&&(!state.policy.visual_pilot?.enabled||a.pilot_id===state.policy.visual_pilot.id||a.source==='Dice'&&Object.values(state.attempts||{}).filter(x=>x.pilot_id===state.policy.visual_pilot.id&&(x.last_started_at||x.status==='queued')).length>=state.policy.visual_pilot.limit))?.id||null;
 }
 
 // A new saved answer is enough to retry its paused form. Updating the attempt
