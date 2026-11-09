@@ -41,3 +41,11 @@ First-seen means new to this collector, not newly published. Unknown original da
 Daily paid-run allowance $6; configured daily caps $1.99; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
 Remotive listings are delayed by its public API. We Work Remotely and all other sources are credited with original posting links. Published procurement notices are separate buying opportunities; delivery and vendor eligibility must be checked.
+
+Additional public-source refresh 2026-11-09T16:45:08.293286+00:00. Original publication dates and original paid-source collection time are preserved.
+
+|Source|Returned|Retained before deduplication|New unique|
+|---|---:|---:|---:|
+|Direct employer boards (Ashby)|31|29|24|
+|Himalayas|116|92|79|
+|Jobicy|144|125|120|

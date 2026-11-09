@@ -1,14 +1,14 @@
 {
   "mode": "daily",
   "created_at": "2026-11-09T14:07:47.201141+00:00",
-  "raw": 1001,
-  "relevant": 919,
-  "new_unique": 296,
-  "duplicates": 451,
+  "raw": 1292,
+  "relevant": 1165,
+  "new_unique": 519,
+  "duplicates": 474,
   "stale": 172,
   "rejected": 82,
-  "new_remote_contracts": 103,
-  "secondary": 190,
+  "new_remote_contracts": 187,
+  "secondary": 329,
   "published_project_needs": 3,
   "target": 50,
   "shortfall": 0,
@@ -138,6 +138,30 @@
       "raw": 0,
       "detail": "Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access",
       "retained": 0
+    },
+    {
+      "source": "Direct employer boards (Ashby)",
+      "status": "ok",
+      "raw": 31,
+      "retained": 29,
+      "last_success_at": "2026-11-09T16:45:08.293286+00:00",
+      "detail": "Live public feed; original publication dates preserved. Active listings refreshed directly; closed/expired listings excluded."
+    },
+    {
+      "source": "Himalayas",
+      "status": "ok",
+      "raw": 116,
+      "retained": 92,
+      "last_success_at": "2026-11-09T16:45:08.293286+00:00",
+      "detail": "Live public feed; original publication dates preserved. Active listings refreshed directly; closed/expired listings excluded."
+    },
+    {
+      "source": "Jobicy",
+      "status": "ok",
+      "raw": 144,
+      "retained": 125,
+      "last_success_at": "2026-11-09T16:45:08.293286+00:00",
+      "detail": "Live public feed; original publication dates preserved. Active listings refreshed directly; closed/expired listings excluded."
     }
   ],
   "actor_runs": [
@@ -294,5 +318,6 @@
         "apify-actor-start": 1
       }
     }
-  ]
+  ],
+  "public_refresh_at": "2026-11-09T16:45:08.293286+00:00"
 }
