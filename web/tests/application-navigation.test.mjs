@@ -78,3 +78,8 @@ test('repaired external popup and banner failures retry once without replaying a
  assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);
  }
 });
+
+test('observed nonexistent native options can recover before a resume step once after repair',()=>{
+ const a={status:'failed',reason:'Automation could not complete choose: locator.selectOption: Timeout',visual_steps:[{action:'choose',status:'blocked',result_detail:{message:'locator.selectOption: Timeout; did not find some options'}}]};
+ assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,visual_steps:[]}),false);
+});
