@@ -3,8 +3,10 @@ import {readJson,writeJson,ConflictError} from './store.ts';
 
 // Hosted requests belong to this Vercel project, even if a shared key is set.
 export function projectGateway(){
- const token=process.env.VERCEL_OIDC_TOKEN;
- return createGateway({...(token?{apiKey:token,headers:{'ai-gateway-auth-method':'oidc'}}:{}),fetch:(url,init)=>fetch(url,{...init,...(/\/v1\/(?:generation|credits)/.test(String(url))?{signal:AbortSignal.timeout(5000)}:{})})});
+ // An empty explicit key bypasses an ambient shared key and lets the SDK
+ // obtain/refresh project OIDC from the current request context or environment.
+ const oidc=Boolean(process.env.VERCEL||process.env.VERCEL_OIDC_TOKEN);
+ return createGateway({...(oidc?{apiKey:''}:{}),fetch:(url,init)=>fetch(url,{...init,...(/\/v1\/(?:generation|credits)/.test(String(url))?{signal:AbortSignal.timeout(5000)}:{})})});
 }
 export const gatewayModel=id=>projectGateway()(id);
 export async function reservationCost(cost_id,estimated_ai_usd,browser_estimate_usd=0){
