@@ -67,7 +67,12 @@ export function choiceMatches({fact,value,label,question,facts}){
   if(range)return Number(range[1])<=years&&years<=Number(range[2]);
   return Boolean(option&&(option[2]?years>=Number(option[1]):years===Number(option[1])));
  }
- if(['work_authorization','sponsorship','us_citizen'].includes(fact)){const known=knownChoiceAnswer(question,facts);return known?.fact===fact&&answer===known.answer;}
+ if(['work_authorization','sponsorship','us_citizen'].includes(fact)){
+  // Some employer forms ask authorization through visa-category options.
+  // Only an explicitly saved citizenship fact can select that exact category.
+  if(fact==='us_citizen'&&expected==='yes'&&/authoriz|eligible.*work|legal.*work/i.test(question)&&! /clearance|criminal|signature|penalty|background|sponsor/i.test(question)&&/^(?:u\.?s\.?|united states)\s+citizen$/.test(answer))return true;
+  const known=knownChoiceAnswer(question,facts);return known?.fact===fact&&answer===known.answer;
+ }
  if(fact==='routine_privacy_consent')return expected==='yes'&&/privacy|personal data|accurac|accurate/i.test(question)&&! /terms|conditions|arbitration|background|signature/i.test(question);
  if(fact==='country'){
   if(!/country/i.test(question))return false;

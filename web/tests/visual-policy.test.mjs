@@ -120,3 +120,12 @@ test('documented hands-on technical skills can answer Yes without a separate rep
  const zeroAlias={verified_experience:'User-confirmed application answer: 0 years of hands-on work experience with Microsoft Azure.'};assert.equal(match('Do you have hands-on experience with Microsoft Azure?','No',zeroAlias),true);
  const zero={verified_experience:'User-confirmed application answer: 0 years of hands-on work experience with Azure.'};assert.equal(match('Do you have hands-on experience with Microsoft Azure?','No',zero),true);assert.equal(match('Do you have hands-on experience with Microsoft Azure?','Yes',zero),false);
 });
+
+test('authorization categories use confirmed citizenship without substituting for clearance or sponsorship',()=>{
+ const args={fact:'us_citizen',label:'U.S. Citizen',question:'What is your current work authorization?*',facts:{us_citizen:'yes',work_authorization:'yes'}};
+ assert.equal(choiceMatches(args),true);
+ assert.equal(choiceMatches({...args,facts:{work_authorization:'yes'}}),false);
+ assert.equal(choiceMatches({...args,label:'Green Card'}),false);
+ assert.equal(choiceMatches({...args,question:'Work authorization and active clearance?'}),false);
+ assert.equal(choiceMatches({...args,question:'Work authorization without sponsorship?'}),false);
+});
