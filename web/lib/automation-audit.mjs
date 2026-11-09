@@ -11,8 +11,22 @@ export function nextApplicationCheck(now=new Date()) {
  return null;
 }
 
+const regionNames=new Intl.DisplayNames(['en'],{type:'region'});
+const countries=Array.from({length:26*26},(_,n)=>String.fromCharCode(65+Math.floor(n/26),65+n%26)).map(code=>({code,name:regionNames.of(code)})).filter(r=>r.name!==r.code&&r.code!=='US');
+
 export function automationLocation(lead, facts, description='') {
  const assessment=lead.location_assessment||{};
+ // A country-specific requisition's title and advertised location outrank
+ // generic worldwide boilerplate reused across the employer's postings.
+ const advertised=String(lead.remote_location||'');
+ if(!/United States|\bU\.?S\.?A?\b|worldwide|anywhere/i.test(advertised)){
+  const country=countries.find(({code,name})=>{
+   const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+   return new RegExp('\\b'+escaped+'\\b','i').test(advertised)&&new RegExp('(?:[-–]|\\()\\s*(?:'+escaped+'|'+code+')\\)?$','i').test(lead.title||'');
+  });
+  if(country)return {status:'blocked',reason:'Country-specific requisition advertises '+country.name+' in both its title and location; this does not establish US eligibility.'};
+ }
+
  const restrictions=(assessment.restrictions||[]).join('\n');
  const clauses=(restrictions+'\n'+(lead.title||'')+'\n'+description).split(/(?<=[.!?;])\s+|\n|•/);
  const onsite=clauses.find(s=>/first (?:week|day).{0,40}on.?site|(?:required|must).{0,30}on.?site|must (?:be (?:able|willing) to )?travel\b|travel (?:is )?required|remote with travel|travel.{0,25}required|\bhybrid (?:work|schedule|role|position)\b|location\s*:\s*hybrid/i.test(s)&&! /no (?:travel|on.?site)|not required/i.test(s));

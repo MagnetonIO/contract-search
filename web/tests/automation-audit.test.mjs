@@ -46,3 +46,8 @@ test('source health separates confirmed receipts from failed and input-blocked a
  const {applicationSourceHealth}=await import('../lib/automation-audit.mjs');const leads=[{id:'d',source:'Dice',pipeline:'contract'},{id:'l',source:'LinkedIn',pipeline:'contract'}];const attempts={d:{id:'d',lead_id:'d',status:'submitted',receipt:'Received',confirmed_at:'2026-11-09T16:00:00Z'},l:{id:'l',lead_id:'l',status:'needs_input',reason:'Missing applicant answer'}};
  const rows=applicationSourceHealth(leads,{}, {},attempts,new Date('2026-11-09T17:00:00Z'));assert.equal(rows.find(r=>r.source==='Dice').confirmed_today,1);assert.equal(rows.find(r=>r.source==='LinkedIn').confirmed_today,0);assert.equal(rows.find(r=>r.source==='LinkedIn').needs_attention,1);
 });
+
+test('country-specific requisitions outrank worldwide boilerplate without excluding US-inclusive location lists',()=>{
+ for(const country of ['Argentina','Canada','Germany']){const restricted={...lead,title:'Senior Engineer - '+country,remote_location:country,location_assessment:{status:'worldwide_remote_advertised',restrictions:[]}};assert.equal(automationLocation(restricted,applicant,'Contract | Remote, worldwide').status,'blocked');assert.equal(automationLocation({...restricted,remote_location:country+', United States'},applicant,'Remote, worldwide').status,'allowed');}
+ assert.equal(automationLocation({...lead,title:'Engineer - NZ',remote_location:'New Zealand'},applicant).status,'blocked');
+});
