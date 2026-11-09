@@ -58,3 +58,11 @@ test('a prior upload record cannot prevent restoring a role file missing from th
  await page.setContent('<label><input type="radio">Required_Role.pdf</label><label><input type="radio">Required_Role.pdf</label><button>Upload resume</button>');assert.notEqual((await selectExistingResume(scope,'Required_Role.pdf')).missing,true,'ambiguity must not trigger duplicate uploads');
  }finally{await browser.close();}
 });
+
+test('independent employer boards do not share a saved applicant resume library',async()=>{
+ const {resumeSite}=await import('../lib/resume-library.mjs');
+ assert.notEqual(resumeSite('https://jobs.ashbyhq.com/one/job/application'),resumeSite('https://jobs.ashbyhq.com/two/job/application'));
+ assert.equal(resumeSite('https://jobs.ashbyhq.com/one/job/application'),resumeSite('https://jobs.ashbyhq.com/one/another/application'));
+ assert.notEqual(resumeSite('https://jobs.lever.co/one/a'),resumeSite('https://jobs.lever.co/two/b'));
+ assert.equal(resumeSite('https://www.linkedin.com/jobs/view/1'),'linkedin');
+});

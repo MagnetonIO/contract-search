@@ -69,3 +69,15 @@ export function reserveBudget(ledger,reservation,now=new Date(),policy=DEFAULT_A
  state.charges.push({...reservation,reserved_at:now.toISOString(),status:'reserved'});
  return state;
 }
+
+// Rotate ready sources by today's started applications; receipt-only quotas
+// remain independent. Fit scores break ties within the same source allowance.
+export function orderApplicationSources(leads,screens,attempts,allLeads=leads,now=new Date()){
+ const sources=new Map(allLeads.map(l=>[l.id,l.source||'Other'])),counts=new Map(),day=chicagoDay(now);
+ for(const a of Object.values(attempts||{})){
+  const started=a.last_started_at||a.visual_steps?.[0]?.at||(a.session_id?a.created_at:null);
+  if(!started||!Number.isFinite(Date.parse(started))||chicagoDay(new Date(started))!==day)continue;
+  const source=sources.get(a.lead_id)||a.source||'Other';counts.set(source,(counts.get(source)||0)+1);
+ }
+ return [...leads].sort((a,b)=>(counts.get(a.source||'Other')||0)-(counts.get(b.source||'Other')||0)||(screens[b.id]?.score||0)-(screens[a.id]?.score||0));
+}

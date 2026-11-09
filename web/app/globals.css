@@ -75,3 +75,5 @@
 .application-resolution{padding:12px;margin:12px 0;background:#f5f8fc;border:1px solid var(--line);border-radius:6px;overflow-wrap:anywhere}.application-resolution p:last-child{margin-bottom:0}
 
 .role-library{margin-top:24px}.role-library article{padding:12px 0;border-top:1px solid var(--line)}.role-library article p{margin:5px 0;font-size:12px;overflow-wrap:anywhere}.role-library small{color:var(--muted)}
+
+.application-source-table{max-width:100%;overflow-x:auto}.application-source-table table{border-collapse:collapse;width:100%;text-align:left}.application-source-table th,.application-source-table td{padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}.application-source-table th{font-size:12px;color:var(--muted)}

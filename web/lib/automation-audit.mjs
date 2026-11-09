@@ -1,5 +1,5 @@
 import {leadInView} from './shared.mjs';
-import {applicationWindow} from './automation-policy.mjs';
+import {chicagoDay,applicationWindow} from './automation-policy.mjs';
 
 export function nextApplicationCheck(now=new Date()) {
  const candidate=new Date(now);candidate.setUTCSeconds(0,0);candidate.setUTCMinutes(30);
@@ -41,4 +41,17 @@ export function automationAudit(leads, workflow, screens) {
  const count=status=>rows.filter(r=>r.status===status).length;
  const groups={};for(const row of rows){const key=row.status==='held'?(row.reason.startsWith('Location')||/location|region|time.zone/i.test(row.reason)?'Location needs confirmation':'Qualifications / facts need confirmation'):row.status==='skipped'?(row.score===0?row.reason:'Below fit threshold or unmet requirements'):row.status==='eligible'?'Ready to apply':'Waiting for evaluation';groups[key]=(groups[key]||0)+1;}
  return {total:open.length,evaluated:rows.filter(r=>r.status!=='pending').length,ready:count('eligible'),held:count('held'),skipped:count('skipped'),pending:count('pending'),outside_opportunities:leads.length-open.length,groups,rows};
+}
+
+export function applicationSourceHealth(leads,workflow,screens,attempts,now=new Date()){
+ const rows=new Map(),byId=new Map(leads.map(l=>[l.id,l])),day=chicagoDay(now);
+ const row=source=>{source=source||'Other';if(!rows.has(source))rows.set(source,{source,open:0,strong_matches:0,confirmed_today:0,confirmed_total:0,needs_attention:0});return rows.get(source);};
+ for(const lead of leads){const r=row(lead.source);if(leadInView(lead,workflow[lead.id],'opportunities')){r.open++;if(screens[lead.id]?.status==='eligible')r.strong_matches++;}}
+ const receipts=new Set();
+ for(const a of Object.values(attempts||{})){
+  const r=row(byId.get(a.lead_id)?.source||a.source),identity=a.target_identity||a.id;
+  if(a.status==='submitted'&&a.receipt&&Number.isFinite(Date.parse(a.confirmed_at||''))&&!receipts.has(identity)){receipts.add(identity);r.confirmed_total++;if(chicagoDay(new Date(a.confirmed_at))===day)r.confirmed_today++;}
+  else if(['failed','needs_input','submission_unknown'].includes(a.status))r.needs_attention++;
+ }
+ return [...rows.values()].filter(r=>r.open||r.confirmed_total||r.needs_attention).sort((a,b)=>a.source.localeCompare(b.source));
 }

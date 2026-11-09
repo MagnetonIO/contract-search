@@ -3,7 +3,7 @@ import {readJson,writeJson,ConflictError} from './store.ts';
 import {DEFAULT_AUTOMATION_POLICY,applicationWindow,fingerprint,reserveBudget,applicationIdentity,dailySubmissionQuota} from './automation-policy.mjs';
 import {readSnapshot} from './snapshot.mjs';
 import {siteForUrl,loginExpiresAt} from './browser-accounts.mjs';
-import {automationAudit,nextApplicationCheck} from './automation-audit.mjs';
+import {automationAudit,applicationSourceHealth,nextApplicationCheck} from './automation-audit.mjs';
 import {OUTCOME_STATUSES,outcomeRecord,attemptOutcomes,outcomeLog,preserveScreeningHistory} from './outcome-evidence.mjs';
 import {reconcileSavedReceipts} from './application-reconciliation.mjs';
 import {startRequestState} from './automation-start.mjs';
@@ -29,7 +29,8 @@ export async function automationDashboard(){
  const {screens,...visible}=state;
  const postings=(await readJson('posting-status.json',{postings:{}})).value;
  const evidence_log=outcomeLog(snapshot?.leads||[],workflow,screens,state.attempts,postings.postings);
- return {...visible,evidence_log,start_status:startRequestState(request, state.run,{windowOpen:applicationWindow()}).status,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
+ const byId=new Map((snapshot?.leads||[]).map(l=>[l.id,l]));
+ return {...visible,attempts:Object.fromEntries(Object.entries(state.attempts).map(([id,a])=>[id,{...a,source:byId.get(a.lead_id)?.source||a.source||'Other'}])),source_health:applicationSourceHealth(snapshot?.leads||[],workflow,screens,state.attempts),evidence_log,start_status:startRequestState(request, state.run,{windowOpen:applicationWindow()}).status,next_check_at:state.policy.enabled?nextApplicationCheck():null,audit:automationAudit(snapshot?.leads||[],workflow,screens),activity:events,live_browser:activeLive,site_accounts:sites,last_request:request,login:login?.id?{id:login.id,site:login.site,live_url:login.live_url,viewer_url:'/browser-login?id='+login.id,expires_at:loginExpiresAt(login),closing:Boolean(login.close_reason)}:null};
 }
 export async function automationSettings(){
  const [settings,facts,budget,screens,attempts,profile,run]=await Promise.all([
@@ -79,7 +80,7 @@ export async function acquireCycle(manual=false,{now=new Date()}={}){
 }
 export async function failCycle(id){await mutate('automation-run.json',old=>old?.id===id?{...old,outcome:'failed'}:old,null);await activity('run_failed',{message:'Run interrupted by an error. Saved decisions and submission safeguards are preserved.'});}
 export async function releaseCycle(id){const result=await mutate('automation-run.json',old=>old?.id===id?{...old,active:false,phase:old.outcome==='failed'?'failed':'finished',current_job:null,finished_at:new Date().toISOString()}:old,null);await activity('run_finished',{message:result?.outcome==='failed'?'Run ended after an error. Check the last activity before starting another run.':'Run finished. See job decisions and application results below.'});}
-export async function claimAttempt(id){let claimed=false;await mutate('application-attempts.json',old=>{claimed=false;if(old[id]?.status!=='queued')return old;claimed=true;return {...old,[id]:{...old[id],status:'running',updated_at:new Date().toISOString()}};});return claimed;}
+export async function claimAttempt(id){let claimed=false;await mutate('application-attempts.json',old=>{claimed=false;if(old[id]?.status!=='queued')return old;claimed=true;return {...old,[id]:{...old[id],status:'running',last_started_at:new Date().toISOString(),updated_at:new Date().toISOString()}};});return claimed;}
 export async function submissionIntent(id,url,{now=new Date()}={}){const policy=(await readJson('automation-settings.json',DEFAULT_AUTOMATION_POLICY)).value;await mutate('application-attempts.json',old=>{const attempt=old[id];if(attempt?.status!=='running'||attempt.submission_intent_at)throw Error('Submission already reserved or application stopped');const quota=dailySubmissionQuota(old,policy,now);if(quota.remaining===0)throw Error('Daily submission limit reached');if(quota.confirmed+quota.in_flight>=quota.limit)throw Error('Another submission is awaiting confirmation before the last daily slot can be used');const resolved=applicationIdentity({application_url:url});if(Object.values(old).some(other=>other.id!==id&&other.submission_intent_at&&other.application_url&&applicationIdentity({application_url:other.application_url})===resolved))throw Error('Another record already attempted this resolved application; reconcile before retrying');return {...old,[id]:{...attempt,status:'submitting',submission_intent_at:now.toISOString(),application_url:url}};});}
 export async function reviseAttempt(id,action){
  const state=await automationSettings();

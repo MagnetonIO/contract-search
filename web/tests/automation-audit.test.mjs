@@ -41,3 +41,8 @@ test('next application check skips nights/weekends and follows Chicago DST',()=>
  assert.equal(nextApplicationCheck(new Date('2026-11-06T20:30:00Z')),'2026-11-09T14:30:00.000Z');
  assert.equal(nextApplicationCheck(new Date('2026-10-30T22:30:00Z')),'2026-11-02T14:30:00.000Z');
 });
+
+test('source health separates confirmed receipts from failed and input-blocked applications',async()=>{
+ const {applicationSourceHealth}=await import('../lib/automation-audit.mjs');const leads=[{id:'d',source:'Dice',pipeline:'contract'},{id:'l',source:'LinkedIn',pipeline:'contract'}];const attempts={d:{id:'d',lead_id:'d',status:'submitted',receipt:'Received',confirmed_at:'2026-11-09T16:00:00Z'},l:{id:'l',lead_id:'l',status:'needs_input',reason:'Missing applicant answer'}};
+ const rows=applicationSourceHealth(leads,{}, {},attempts,new Date('2026-11-09T17:00:00Z'));assert.equal(rows.find(r=>r.source==='Dice').confirmed_today,1);assert.equal(rows.find(r=>r.source==='LinkedIn').confirmed_today,0);assert.equal(rows.find(r=>r.source==='LinkedIn').needs_attention,1);
+});

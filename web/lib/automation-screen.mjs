@@ -8,7 +8,7 @@ import {reconcileSavedReceipts} from './application-reconciliation.mjs';
 import {recoverableNavigationBlock,recoverableApplicationBlock,NAVIGATION_REPAIR_VERSION} from './application-navigation.mjs';
 import {approvedSiteResume,RESUME_RECOVERY_VERSION} from './resume-library.mjs';
 import {automationSettings,reviseAttempt,updateScreenings,mutate,reserve,settle,patchAttempt,activity,resumeAfterSiteLogin} from './automation-state.mjs';
-import {screenGate,fingerprint,applicationIdentity,applicationRunAllowed} from './automation-policy.mjs';
+import {orderApplicationSources,screenGate,fingerprint,applicationIdentity,applicationRunAllowed} from './automation-policy.mjs';
 import {leadInView} from './shared.mjs';
 import {automationLocation} from './automation-audit.mjs';
 import {qualificationDecision} from './qualification-policy.mjs';
@@ -66,7 +66,7 @@ export async function nextAttempt(){
  const library=(await readJson('resume-site-files.json',{})).value;
  const recover=Object.values(state.attempts).find(a=>{const lead=snapshot?.leads.find(l=>l.id===a.lead_id);return lead&&leadInView(lead,workflow[lead.id],'opportunities')&&!screenGate(lead,content.postings[lead.id]?.text,workflow[lead.id],state.policy)&&recoverableApplicationBlock(a,{savedResume:approvedSiteResume(library,lead.application_url||lead.source_url,state.resume_hash)});});
  if(recover){try{await reviseAttempt(recover.id,'resume');await patchAttempt(recover.id,{resume_recovery_version:RESUME_RECOVERY_VERSION,...(recoverableNavigationBlock(recover)?{navigation_recovery_version:NAVIGATION_REPAIR_VERSION}:{})});return recover.id;}catch(error){if(!/allowance exhausted|Daily submission limit/.test(error.message))throw error;return null;}}
- const leads=(snapshot?.leads||[]).filter(l=>(state.screens[l.id]?.status==='eligible'||state.screens[l.id]?.eligibility_review&&state.screens[l.id]?.eligibility_review_version!==ELIGIBILITY_REVIEW_VERSION)&&!workflow[l.id]?.disposition&&workflow[l.id]?.stage!=='applied').sort((a,b)=>state.screens[b.id].score-state.screens[a.id].score);
+ const leads=orderApplicationSources((snapshot?.leads||[]).filter(l=>(state.screens[l.id]?.status==='eligible'||state.screens[l.id]?.eligibility_review&&state.screens[l.id]?.eligibility_review_version!==ELIGIBILITY_REVIEW_VERSION)&&!workflow[l.id]?.disposition&&workflow[l.id]?.stage!=='applied'),state.screens,state.attempts,snapshot?.leads||[]);
  for(const lead of leads){const identity=applicationIdentity(lead);const previous=(snapshot?.leads||[]).filter(l=>workflow[l.id]?.stage==='applied');if(previous.some(l=>applicationIdentity(l)===identity||l.company_agency?.toLowerCase()===lead.company_agency?.toLowerCase()&&l.title?.toLowerCase()===lead.title?.toLowerCase())){await updateScreenings(old=>({...old,[lead.id]:{...old[lead.id],status:'skipped',decision_basis:'screening_rule',reason:'Matches an existing application identity or employer/title; held to avoid duplicates.'}}));continue;}if(Object.values(state.attempts).some(a=>a.target_identity===identity&&!['cancelled','skipped'].includes(a.status)))continue;
  // Professional qualifications are match notes; explicit legal restrictions
  // use confirmed reusable answers before the browser is reserved.
@@ -78,7 +78,7 @@ export async function nextAttempt(){
   const decision=qualificationDecision(cached.eligibility_review,state.facts,text);
   if(decision.status!=='eligible')continue;
   const id=randomUUID();try{await reserve(id,2.5,true);}catch(e){if(/allowance exhausted|Daily submission limit/.test(e.message))return null;throw e;}
-  await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;
+  await patchAttempt(id,{id,title:lead.title,source:lead.source,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;
  }
  const reviewId='eligibility-'+randomUUID();
  try{await reserve(reviewId,0.1);}catch(e){if(/allowance exhausted/.test(e.message))return null;throw e;}
@@ -92,7 +92,7 @@ export async function nextAttempt(){
  await activity('qualification_result',{lead_id:lead.id,title:lead.title,status:decision.status,message:decision.reason});
  if(decision.status!=='eligible')continue;
  const id=randomUUID();try{await reserve(id,2.5,true);}catch(e){if(/allowance exhausted|Daily submission limit/.test(e.message))return null;throw e;}
- await patchAttempt(id,{id,title:lead.title,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;}
+ await patchAttempt(id,{id,title:lead.title,source:lead.source,company:lead.company_agency,lead_id:lead.id,target_identity:identity,status:'queued',application_url:lead.application_url||lead.source_url,profile_version:state.facts.version,resume_hash:state.resume_hash,created_at:new Date().toISOString()});return id;}
  return null;
 }
 

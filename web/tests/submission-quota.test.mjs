@@ -23,3 +23,10 @@ test('money reservations and legacy failed-attempt counters cannot consume succe
  assert.equal(ledger.charges.length,1);assert.equal(ledger.submissions,undefined);assert.equal(ledger.legacy_attempt_reservations.length,50);
  assert.throws(()=>reserveBudget(ledger,{id:'over-budget',usd:50},now),/Monthly/);
 });
+
+test('ready sources get a turn before repeatedly selecting the busiest board',async()=>{
+ const {orderApplicationSources}=await import('../lib/automation-policy.mjs');const now=new Date('2026-11-09T17:00:00Z');const leads=[{id:'dice',source:'Dice'},{id:'linkedin',source:'LinkedIn'},{id:'direct',source:'Direct employer boards'}],screens={dice:{score:99},linkedin:{score:95},direct:{score:90}};
+ const attempts={d:{lead_id:'dice',last_started_at:'2026-11-09T16:00:00Z',status:'failed'},l:{lead_id:'linkedin',last_started_at:'2026-11-09T16:00:00Z',status:'needs_input'}};
+ assert.deepEqual(orderApplicationSources(leads,screens,attempts,leads,now).map(l=>l.id),['direct','dice','linkedin']);
+ assert.equal(orderApplicationSources(leads,screens,{},leads,now)[0].id,'dice','fit score breaks ties without changing eligibility');
+});

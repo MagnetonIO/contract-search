@@ -535,6 +535,57 @@
       ],
       "enabled": false,
       "reason": "Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access"
+    },
+    {
+      "name": "Direct employer boards (Ashby)",
+      "kind": "ashby",
+      "max_age_days": 60,
+      "max_items": 300,
+      "boards": [
+        {
+          "slug": "stelloagents",
+          "company": "Stello Agents"
+        },
+        {
+          "slug": "withstevens",
+          "company": "Stevens"
+        },
+        {
+          "slug": "aescape",
+          "company": "Aescape"
+        },
+        {
+          "slug": "g2i",
+          "company": "G2i"
+        },
+        {
+          "slug": "balorgames",
+          "company": "Balor Games"
+        },
+        {
+          "slug": "teal-health",
+          "company": "Teal Health"
+        }
+      ]
+    },
+    {
+      "name": "Himalayas",
+      "kind": "himalayas",
+      "queries": [
+        "engineer",
+        "architect",
+        "CTO",
+        "engineering manager"
+      ],
+      "max_pages": 2,
+      "max_age_days": 60,
+      "max_items": 160
+    },
+    {
+      "name": "Jobicy",
+      "kind": "jobicy",
+      "max_pages": 2,
+      "max_items": 200
     }
   ],
   "unconfigured_sources": {},

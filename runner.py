@@ -30,7 +30,7 @@ from credentials import load_secret
 UTC = timezone.utc
 API = 'https://api.apify.com/v2'
 TERMINAL = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'}
-SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
+SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|devsecops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
 ROLE_CATALOG = json.loads((Path(__file__).resolve().parent / 'web/lib/role-catalog.json').read_text(encoding='utf-8'))
 AGENCIES = r'\b(?:recruitment|recruiting|staffing|talent|tek.?systems|insight global|robert half|randstad|kforce|apex systems|motion recruitment|dice job bot)\b'
 FIELDS = ['title', 'company_agency', 'source', 'source_job_id', 'source_posted_at',
@@ -236,7 +236,10 @@ def normalize(row, source, now, project=False):
         company = company.get('name', '')
     title = plain(pick(row, 'title', 'positionName', 'jobTitle', 'job_title'))
     source_url = canonical(pick(row, 'link', 'url', 'jobUrl', 'job_url', 'source_url'))
-    app_url = canonical(pick(row, 'externalApplyLink', 'applyUrl', 'apply_url', 'applicationUrl')) or source_url
+    original_apply = pick(row, 'externalApplyLink', 'applyUrl', 'apply_url', 'applicationUrl')
+    app_url = canonical(original_apply) or source_url
+    if row.get('_preserve_apply_url') and isinstance(original_apply,str) and original_apply.startswith('https://') and canonical(original_apply):
+        app_url = original_apply
     if not title or not source_url:
         return None
     desc = plain(pick(row, 'description', 'descriptionText', 'descriptionHtml', 'descriptionHTML', 'description_text', 'jobDescription'))
@@ -270,13 +273,13 @@ def normalize(row, source, now, project=False):
                     if re.search(r'(?:must (?:reside|live|be (?:based|located))|citizen|work authori|no sponsorship|within the (?:us|united states)|us.only|security clearance|work.{0,15}abroad)', s, re.I)]
     if row.get('location_requirements'):
         restrictions.append('Source location requirements: '+plain(row['location_requirements']))
-    rate = None
+    rate = rate_upper = None
     pay_text = salary or desc
-    match = re.search(r'(?:USD\s*|\$)\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*[-–]\s*\$?\s*\d{2,3}(?:\.\d{1,2})?)?\s*(?:/\s*(?:h(?:ou)?r|hour)|per hour|an hour|hourly)', pay_text, re.I)
+    match = re.search(r'(?:USD\s*|\$)\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*[-–]\s*\$?\s*(\d{2,3}(?:\.\d{1,2})?))?\s*(?:/\s*(?:h(?:ou)?r|hour)|per hour|an hour|hourly)', pay_text, re.I)
     if row.get('_salary_estimate'):
         match = None
     if match and not re.search(r'\b(?:CAD|AUD|NZD)\b', pay_text[max(0, match.start()-10):match.end()+10], re.I):
-        rate = float(match[1])
+        rate = float(match[1]); rate_upper = float(match[2] or match[1])
     skills = sorted(set(m.group().lower() for m in re.finditer(SKILLS, title+' '+desc, re.I)))
     # Recognize explicit target titles even when a leadership posting has no
     # named programming language. Role labels do not bypass contract/location policy.
@@ -294,16 +297,16 @@ def normalize(row, source, now, project=False):
         evidence = 'Official procurement feed publishes the named buyer and open tender: '+source_url
     elif contract and arrangement == 'remote' and c2c == 'explicitly accepted' and rate is not None and rate >= 100 and geography in ('US', 'worldwide'):
         pipeline, tier = 'contract', '1 - remote C2C USD100+/hr'
-    elif contract and arrangement == 'remote' and not w2 and c2c != 'not accepted' and (rate is None or rate >= 100):
+    elif contract and arrangement == 'remote' and not w2 and c2c != 'not accepted' and (rate_upper is None or rate_upper >= 100):
         pipeline, tier = 'contract', '2 - remote contract; terms to verify'
     else:
         pipeline, tier = 'secondary', ('3 - W2 / C2C excluded' if w2 or no_c2c else
-                                     '4 - lower-rate contract' if contract and rate is not None and rate < 100 else
+                                     '4 - lower-rate contract' if contract and rate_upper is not None and rate_upper < 100 else
                                      '5 - hybrid / on-site / remote unknown' if contract else '6 - permanent / contract unconfirmed')
     duration = re.search(r'\b\d+\s*(?:[-–]\s*\d+\s*)?(?:month|week|year)s?\b', desc, re.I)
     contact = sorted(set(re.findall(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b', desc, re.I)))
     source_date = pick(row, 'postingDateParsed', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate', 'postedAt')
-    return reassess(dict(title=title, role_families=roles, company_agency=plain(company), source=source,
+    return reassess(dict(source_active_at=row.get('_source_active_at',''),_source_max_age_days=row.get('_source_max_age_days'),title=title, role_families=roles, company_agency=plain(company), source=source,
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
                 source_posted_at=parse_date(source_date, now), source_date_text=plain(row.get('postedAt') or source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),
@@ -343,7 +346,14 @@ def collect_staffing(spec):
     return rows
 
 
+def collection_age_days(job,default):
+    return max(default,min(60,int(job.get('_source_max_age_days') or default))) if job.get('source_active_at') else default
+
+
 def collect_feed(spec):
+    if spec['kind'] in ('himalayas','jobicy','ashby'):
+        from public_jobs import collect_public
+        return collect_public(spec,fetch)
     if spec['kind']=='techfetch':
         from techfetch import collect
         return collect(spec,spec.get('_smoke',False))
@@ -720,7 +730,7 @@ def main(argv=None):
                     spec = {**spec, 'state_path': str(Path(args.state).with_name('sam.sqlite3')), '_persist': lambda: persist_budget('sam.sqlite3')}
                 batch = collect_feed(spec)
                 rows.extend((spec['name'], r, spec['kind'] in ('ocds', 'sam')) for r in batch)
-                coverage.append({'source': spec['name'], 'status': 'ok', 'raw': len(batch), 'cached_queries':spec.get('_sam_cache_hits',0), 'query_count':spec.get('_sam_query_count',0), **({'detail': 'Direct agency career feeds: '+', '.join(site['company'] for site in spec['sites'])+'; hiring client unverified'} if spec['kind'] == 'staffing' else {'detail': f"Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; {spec.get('_sam_cache_hits',0)} cached queries; 10 requests per rolling 24h; federal projects, not individual jobs"} if spec['kind'] == 'sam' else {})})
+                coverage.append({'source': spec['name'], 'status': 'partial' if spec.get('_source_warnings') else 'ok', **({'detail':'; '.join(spec['_source_warnings'])} if spec.get('_source_warnings') else {}), 'raw': len(batch), 'cached_queries':spec.get('_sam_cache_hits',0), 'query_count':spec.get('_sam_query_count',0), **({'detail': 'Direct agency career feeds: '+', '.join(site['company'] for site in spec['sites'])+'; hiring client unverified'} if spec['kind'] == 'staffing' else {'detail': f"Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; {spec.get('_sam_cache_hits',0)} cached queries; 10 requests per rolling 24h; federal projects, not individual jobs"} if spec['kind'] == 'sam' else {})})
             except SamDeferred as exc:
                 coverage.append({'source':spec['name'], 'status':'scheduled', 'raw':0, 'detail':'Refresh scheduled; saved opportunities remain available', 'last_attempt_status':'deferred', 'eligible_at':datetime.fromtimestamp(exc.retry_at,UTC).isoformat() if exc.retry_at else None})
             except CredentialMissing as exc:
@@ -743,7 +753,7 @@ def main(argv=None):
             counts['rejected'] += 1
             continue
         counts['relevant'] += 1
-        if job['source_posted_at'] and datetime.fromisoformat(job['source_posted_at']) < now-timedelta(days=config['max_age_days']):
+        if job['source_posted_at'] and datetime.fromisoformat(job['source_posted_at']) < now-timedelta(days=collection_age_days(job,config['max_age_days'])):
             counts['stale'] += 1
             continue
         candidates.append(job)
