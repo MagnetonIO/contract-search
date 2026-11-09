@@ -1,3 +1,4 @@
+import {experienceAnswer} from './visual-policy.mjs';
 import {verificationEvidence,verificationAction} from './application-verification-policy.mjs';
 export const OPTIONAL_COVER_LETTER_POLICY='Skip optional cover letters. Do not create or upload a cover letter. If the employer requires one, skip this application and record that requirement.';
 export function coverLetterField(field){return /cover[\s_-]*letter/i.test([field.label,field.question,field.name].filter(Boolean).join(' '));}
@@ -29,4 +30,12 @@ export function toolOutcomeDetail(outcome){
 export function queuedAttemptId(state){
  if(!state.policy?.enabled||!state.facts?.confirmed||state.quota?.remaining===0)return null;
  return Object.values(state.attempts||{}).find(a=>a.status==='queued'&&!a.submission_intent_at)?.id||null;
+}
+
+// A new saved answer is enough to retry its paused form. Updating the attempt
+// to the current profile version makes this a single retry for that answer.
+export function experienceRetry(attempt,facts){
+ if(!facts?.version||attempt.status!=='needs_input'||attempt.submission_intent_at||attempt.profile_version===facts.version)return false;
+ const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question):\s*(.+?)(?:\. Option:.*)?$/)?.[1];
+ return Boolean(question&&experienceAnswer(question,facts));
 }

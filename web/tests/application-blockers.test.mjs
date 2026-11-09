@@ -15,3 +15,9 @@ test('cover letters are omitted, while native required fields are identified exp
 test('controller results expose the real blocker instead of repeating model intent',()=>{
  const detail=toolOutcomeDetail({requires_upload_resume:true,reason:'Approved resume not selected',action:'Go Back to select the saved resume'});assert.equal(detail.message,'Approved resume not selected');assert.match(detail.action,/Go Back/);assert.equal(detail.requires_upload_resume,true);
 });
+
+test('newly confirmed experience unblocks that question once and never replays a submission',async()=>{
+ const {experienceRetry}=await import('../lib/application-blockers.mjs');const facts={version:'new',verified_experience:'User-confirmed application answer: 4 years of hands-on work experience with Full Stack.'};
+ const a={status:'needs_input',profile_version:'old',reason:'Answer needs verified experience: How many years of experience you have in Full Stack?'};
+ assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,profile_version:'new'},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'recorded'},facts),false);assert.equal(experienceRetry({...a,reason:'Required education dates are missing'},facts),false);assert.equal(experienceRetry({...a,status:'submission_unknown'},facts),false);assert.equal(experienceRetry({...a,reason:'Answer needs verified experience: How many years of experience with Data Governance?'},facts),false);
+});

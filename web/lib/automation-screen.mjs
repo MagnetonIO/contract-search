@@ -1,3 +1,4 @@
+import {experienceRetry} from './application-blockers.mjs';
 import {generateText,Output} from 'ai';
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
@@ -60,6 +61,8 @@ export async function nextAttempt(){
  let state=await automationSettings();if(!state.policy.enabled||!applicationRunAllowed(state))return null;await resumeAfterSiteLogin();state=await automationSettings();if(state.quota.remaining===0)return null;
  const [{value:snapshot},{value:workflow},{value:content}]=await Promise.all([readSnapshot(),readJson('workflow.json',{}),readJson('job-content.json',{postings:{}})]);
  const queued=Object.values(state.attempts).find(a=>a.status==='queued');if(queued)return queued.id;
+ const answered=Object.values(state.attempts).find(a=>{const lead=snapshot?.leads.find(l=>l.id===a.lead_id);return experienceRetry(a,state.facts)&&lead&&leadInView(lead,workflow[lead.id],'opportunities')&&!screenGate(lead,content.postings[lead.id]?.text,workflow[lead.id],state.policy);});
+ if(answered){try{await reviseAttempt(answered.id,'resume');return answered.id;}catch(error){if(!/allowance exhausted|Daily submission limit/.test(error.message))throw error;return null;}}
  const library=(await readJson('resume-site-files.json',{})).value;
  const recover=Object.values(state.attempts).find(a=>{const lead=snapshot?.leads.find(l=>l.id===a.lead_id);return lead&&leadInView(lead,workflow[lead.id],'opportunities')&&!screenGate(lead,content.postings[lead.id]?.text,workflow[lead.id],state.policy)&&recoverableApplicationBlock(a,{savedResume:approvedSiteResume(library,lead.application_url||lead.source_url,state.resume_hash)});});
  if(recover){try{await reviseAttempt(recover.id,'resume');await patchAttempt(recover.id,{resume_recovery_version:RESUME_RECOVERY_VERSION,...(recoverableNavigationBlock(recover)?{navigation_recovery_version:NAVIGATION_REPAIR_VERSION}:{})});return recover.id;}catch(error){if(!/allowance exhausted|Daily submission limit/.test(error.message))throw error;return null;}}
