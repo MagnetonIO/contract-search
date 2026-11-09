@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload,experienceAnswer,optionalTopChoice,knownChoiceAnswer} from '../lib/visual-policy.mjs';
+import {visualClickKind,choiceMatches,humanCheckText,needsResumeUpload,experienceAnswer,optionalTopChoice,knownChoiceAnswer,visualTextFactAllowed} from '../lib/visual-policy.mjs';
 test('numeric experience comes only from the matching explicit user-confirmed answer',()=>{
  const sentence='User-confirmed application answer: 3 years of hands-on work experience with Palantir/Foundry.';
  const facts={verified_experience:sentence};
@@ -128,4 +128,10 @@ test('authorization categories use confirmed citizenship without substituting fo
  assert.equal(choiceMatches({...args,label:'Green Card'}),false);
  assert.equal(choiceMatches({...args,question:'Work authorization and active clearance?'}),false);
  assert.equal(choiceMatches({...args,question:'Work authorization without sponsorship?'}),false);
+});
+
+test('visual typing uses only matching routine facts and location options respect the saved region',()=>{
+ const facts={city:'Chicago',state:'IL',country:'United States',work_authorization:'yes'};
+ assert.equal(visualTextFactAllowed('Location *','city',facts),true);assert.equal(visualTextFactAllowed('Years of experience?','city',facts),false);assert.equal(visualTextFactAllowed('Password','city',facts),false);assert.equal(visualTextFactAllowed('Location','work_authorization',facts),false);
+ assert.equal(choiceMatches({fact:'city',label:'Chicago, Illinois, United States',question:'Location',facts}),true);assert.equal(choiceMatches({fact:'city',label:'Chicago, Ontario, Canada',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, Wisconsin, United States',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, WI',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, IL',question:'Location',facts}),true);
 });

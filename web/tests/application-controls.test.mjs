@@ -65,3 +65,9 @@ test('styled answer radios use the associated visible label and expose the real 
  const yes=page.locator('#yes'),no=page.locator('#no');const metadata=await page.locator('input').evaluateAll(applicationFields);assert.equal(metadata[0].option_label,'Yes');assert.equal(metadata[1].option_label,'No');assert.equal((await yes.evaluate(radioOptionEvidence)).label,'Yes');assert.equal((await no.evaluate(radioOptionEvidence)).label,'No');assert.equal((await checkApplicationOption(page.locator('body'),yes)).selected,true);assert.equal(await yes.isChecked(),true);assert.equal(await no.isChecked(),false);
  }finally{await browser.close();}
 });
+
+test('custom location search uses its nearby single-field label instead of an unrelated placeholder',async()=>{
+ const {chromium}=await import('playwright-core');const {applicationFields}=await import('../lib/application-controls.mjs');const {pointControl}=await import('../lib/application-visual.mjs');
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<form><div><label>Location</label><div><input role="combobox" placeholder="Start typing..."></div></div><div><label>Email</label><input type="email"></div></form>');const fields=await page.locator('input').evaluateAll(applicationFields);assert.equal(fields[0].label,'Location');assert.equal(fields[1].label,'Email');const bounds=await page.locator('input').first().boundingBox();assert.equal((await pointControl(page,bounds.x+5,bounds.y+5)).question,'Location');}finally{await browser.close();}
+});

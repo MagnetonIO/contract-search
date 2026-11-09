@@ -65,7 +65,12 @@ export function applicationFields(items){
  const clean=value=>String(value||'').replace(/\s+/g,' ').trim();
  return items.map((e,index)=>{
   const labelled=e.getAttribute('aria-labelledby')?.split(/\s+/).map(id=>e.ownerDocument.getElementById(id)?.textContent||'').join(' ');
-  const label=clean(e.getAttribute('aria-label')||labelled||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||e.name||e.id||'');
+  let nearbyLabel='';
+  for(let row=e.parentElement,depth=0;row&&depth<3;row=row.parentElement,depth++){
+   if(row.querySelectorAll('input:not([type=hidden]),textarea,select').length!==1)break;
+   const labels=row.querySelectorAll('label');if(labels.length===1){nearbyLabel=clean(labels[0].innerText);break;}
+  }
+  const label=clean(e.getAttribute('aria-label')||labelled||e.labels?.[0]?.innerText||nearbyLabel||e.getAttribute('placeholder')||e.name||e.id||'');
   const legend=clean(e.closest('fieldset')?.querySelector('legend')?.innerText);
   let option_label;
   if(e.type==='radio'){

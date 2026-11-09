@@ -1,6 +1,11 @@
 import {applicationControlKind,applicationAuxiliaryUrl} from './application-controls.mjs';
 const stateNames=Object.fromEntries('AL:Alabama|AK:Alaska|AZ:Arizona|AR:Arkansas|CA:California|CO:Colorado|CT:Connecticut|DE:Delaware|DC:District of Columbia|FL:Florida|GA:Georgia|HI:Hawaii|ID:Idaho|IL:Illinois|IN:Indiana|IA:Iowa|KS:Kansas|KY:Kentucky|LA:Louisiana|ME:Maine|MD:Maryland|MA:Massachusetts|MI:Michigan|MN:Minnesota|MS:Mississippi|MO:Missouri|MT:Montana|NE:Nebraska|NV:Nevada|NH:New Hampshire|NJ:New Jersey|NM:New Mexico|NY:New York|NC:North Carolina|ND:North Dakota|OH:Ohio|OK:Oklahoma|OR:Oregon|PA:Pennsylvania|RI:Rhode Island|SC:South Carolina|SD:South Dakota|TN:Tennessee|TX:Texas|UT:Utah|VT:Vermont|VA:Virginia|WA:Washington|WV:West Virginia|WI:Wisconsin|WY:Wyoming|PR:Puerto Rico|GU:Guam|VI:U.S. Virgin Islands|AS:American Samoa|MP:Northern Mariana Islands'.split('|').map(pair=>pair.split(':')));
 export const normalizedLabel=value=>String(value||'').replace(/\s+/g,' ').trim();
+export function visualTextFactAllowed(question,fact,facts){
+ if(!facts?.[fact]||/password|sponsor|authoriz|citizen|clearance|years?|experience|certif|signature|agree|birth|social.security/i.test(question))return false;
+ const labels={name:/^(?:full |your )?name\b/i,first_name:/first name/i,last_name:/last name|surname/i,email:/email/i,phone:/phone|mobile/i,city:/city|location/i,state:/state|province/i,country:/country/i,zip:/zip|postal/i,street:/street|address/i,linkedin:/linkedin/i,website:/website|portfolio/i};
+ return Boolean(labels[fact]?.test(question));
+}
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
 export const optionalTopChoice=control=>['checkbox','radio'].includes(control?.type)&&/\b(?:mark (?:this )?job as a )?top choice\b/i.test(normalizedLabel(control?.question||control?.label));
 export function knownChoiceAnswer(question,facts){
@@ -79,5 +84,15 @@ export function choiceMatches({fact,value,label,question,facts}){
   if(/^(us|usa|united states)$/.test(expected))return /^(us|usa|united states)(?:\s*(?:\(\+?1\)|\+1))?$/.test(answer)||/^(us|usa|united states)$/.test(raw);
  }
  if(fact==='state'){const state=value=>(stateNames[normalizedLabel(value).toUpperCase()]||normalizedLabel(value)).toLowerCase();return /state|province/i.test(question)&&(state(answer)===state(expected)||state(raw)===state(expected));}
+ if(fact==='city'){
+  if(!/city|location/i.test(question))return false;
+  const escaped=expected.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  if(!new RegExp('(^|[^a-z])'+escaped+'(?=$|[^a-z])').test(answer))return false;
+  if(/canada|united kingdom|australia|india/i.test(answer)&&/united states|^us$/i.test(facts.country))return false;
+  const namedState=Object.values(stateNames).find(s=>new RegExp('\\b'+s+'\\b','i').test(answer));
+  const abbreviation=answer.match(/,\s*([a-z]{2})(?:,|$)/i)?.[1]?.toUpperCase();
+  if(abbreviation&&stateNames[abbreviation]&&abbreviation!==String(facts.state).toUpperCase()&&stateNames[abbreviation].toLowerCase()!==String(facts.state).toLowerCase())return false;
+  return !namedState||namedState.toLowerCase()===(stateNames[String(facts.state).toUpperCase()]||facts.state||'').toLowerCase();
+ }
  return ['email','state','availability'].includes(fact)&&new RegExp(fact==='availability'?'availab|start':fact,'i').test(question)&&(answer===expected||raw===expected);
 }
