@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {chromium} from 'playwright-core';
-import {navigationPreflight,recoverableNavigationBlock,resumeUploadClickOutcome} from '../lib/application-navigation.mjs';
+import {navigationPreflight,recoverableNavigationBlock,resumeUploadClickOutcome,NAVIGATION_REPAIR_VERSION} from '../lib/application-navigation.mjs';
 import {clickApplicationStep,applicationAuxiliaryUrl} from '../lib/application-controls.mjs';
 import {visualClickKind} from '../lib/visual-policy.mjs';
 test('native Next scrolls inside the active application and cannot submit or open tailoring',async()=>{
@@ -31,19 +31,19 @@ test('a preselected default resume cannot advance when a tailored version is req
  assert.equal(await navigationPreflight({scope:{},facts:{},attached:false,label:'Next',inspect:async()=>({approved_resume_attached:true,approved_resume_filename:filename,fields})}),null);
 });
 test('only known LinkedIn navigation failures can retry once; uncertain submissions remain locked',()=>{
- const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
+ const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'This control is unsupported',visual_steps:[{action:'click',status:'blocked'},{action:'click',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,reason:'Missing required experience answer'}),false);
 });
 
 test('a stale Next on final review can recover once without replaying a submission',()=>{
  const a={status:'failed',selected_resume_filename:'approved.pdf',reason:'Application navigation control is missing, disabled or ambiguous.',visual_steps:[{action:'next',status:'needs_input'}]};
- assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
+ assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
 });
 
 test('known cookie and employer entry failures can retry once even before a resume step',()=>{
  const cookie={status:'failed',reason:'Automation could not complete click: Use submit for this final action.',visual_steps:[{action:'click',status:'blocked',summary:'Cookie banner visible; accepting all cookies to proceed.'}]};
  const entry={status:'failed',reason:"Automation could not complete click: This control is unsupported. Target: Apply for This Job"};
  const country={status:'failed',reason:'The controller could not map the saved answer for question: Phone. Option: United States.'};
- for(const a of [cookie,entry,country]){assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:3}),false);}
+ for(const a of [cookie,entry,country]){assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);}
  assert.equal(recoverableNavigationBlock({status:'failed',reason:'Use submit for this final action.'}),false);
 });
 
@@ -53,4 +53,28 @@ test('employer control repair does not require a resume already saved on that we
  const resume={status:'failed',reason:'Selection needs a matching approved answer: Resume_Matthew_Long.pdf'};
  assert.equal(recoverableApplicationBlock(entry,{savedResume:null}),true);assert.equal(recoverableApplicationBlock({...entry,submission_intent_at:'reserved'},{savedResume:null}),false);
  assert.equal(recoverableApplicationBlock(resume,{savedResume:null}),false);assert.equal(recoverableApplicationBlock(resume,{savedResume:{filename:'Resume_Matthew_Long.pdf'}}),true);
+});
+
+test('an asynchronous external Apply popup becomes the active application page',async()=>{
+ const {clickApplicationTarget}=await import('../lib/application-navigation.mjs');
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.context().route('https://fixture.test/**',route=>route.fulfill({contentType:'text/html',body:'<h1>Employer application</h1>'}));
+ await page.setContent(`<button onclick="setTimeout(()=>window.open('https://fixture.test/apply','_blank'),150)">Apply</button>`);
+ const popup=await clickApplicationTarget(page,()=>page.getByRole('button',{name:'Apply',exact:true}).click());
+ assert.notEqual(popup,page);assert.equal(popup.url(),'https://fixture.test/apply');assert.match(await popup.locator('body').innerText(),/Employer application/);
+ }finally{await browser.close();}
+});
+
+test('a cookie rejection in an unlabelled banner is safe while an application Reject all is not',async()=>{
+ const {pointControl}=await import('../lib/application-visual.mjs');
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<form><button type="button">Reject all</button></form><div><p>This website uses cookies and analytics technologies.</p><button type="button">REJECT ALL</button><button type="button">ALLOW</button></div>');
+ const buttons=page.getByRole('button');for(const [index,expected] of [[0,'blocked'],[1,'click'],[2,'blocked']]){const b=await buttons.nth(index).boundingBox();assert.equal(visualClickKind(await pointControl(page,b.x+b.width/2,b.y+b.height/2)),expected);}
+ }finally{await browser.close();}
+});
+
+test('repaired external popup and banner failures retry once without replaying a submission',()=>{
+ for(const a of [{status:'needs_input',reason:'The external application flow did not open; still on LinkedIn.'},{status:'failed',reason:'Unsupported. Target: REJECT ALL',visual_steps:[{summary:'Clicked Reject All on the cookie banner.'}]}]){
+ assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);
+ }
 });

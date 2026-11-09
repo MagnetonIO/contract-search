@@ -1,5 +1,5 @@
 import {siteForUrl} from './browser-accounts.mjs';
-export const RESUME_RECOVERY_VERSION=5;
+export const RESUME_RECOVERY_VERSION=6;
 export const MASTER_RESUME_NAME='Resume_Matthew_Long.pdf';
 export function resumeSite(url){try{return siteForUrl(url)||new URL(url).hostname.toLowerCase();}catch{return null;}}
 export function approvedSiteResume(library,url,masterHash){const site=library?.[resumeSite(url)],entry=site?.master_hash===masterHash?site:site?.versions?.[masterHash];return entry?.master_hash===masterHash?entry:null;}
@@ -43,6 +43,11 @@ export async function selectExistingResume(scope,filename,{requested=false}={}){
   return [];
  }),filename);
  if(!matches.length){
+  // A prior upload is provenance, not proof that a capped site library still
+  // contains it. Restore only after observing a loaded, fully expanded list.
+  const upload=scope.getByRole('button',{name:/^Upload (?:resume|résumé)$/i}).filter({visible:true});
+  const more=scope.getByRole('button',{name:/show (?:more|all).*resum/i}).filter({visible:true});
+  if(await radios.count()>0&&await upload.count()===1&&await more.count()===0)return {selected:false,missing:true,filename,reason:'The approved file is absent from the current resume list; restore this exact version.'};
   const card=await resumeCardSelection(scope,filename);
   if(card.selected||card.card_present)return card;
   const file=scope.getByText(filename,{exact:true}).filter({visible:true});

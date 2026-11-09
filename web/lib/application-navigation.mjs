@@ -1,13 +1,24 @@
 import {recoverableResumeBlock} from './resume-library.mjs';
 import {applicationButtons} from './application-controls.mjs';
 import {knownChoiceAnswer,normalizedLabel,needsResumeUpload} from './visual-policy.mjs';
-export const NAVIGATION_REPAIR_VERSION=3;
+export const NAVIGATION_REPAIR_VERSION=4;
+// Register before clicking: external boards open asynchronously, often after
+// the click promise has resolved. A synchronous pages() snapshot misses them.
+export async function clickApplicationTarget(page,click,{timeout=2000}={}){
+ const popup=page.waitForEvent('popup',{timeout}).catch(()=>null);
+ await click();const opened=await popup;
+ if(!opened)return page;
+ await opened.waitForLoadState('domcontentloaded',{timeout:15000}).catch(()=>{});
+ return opened;
+}
 export function resumeUploadClickOutcome(attached){
  return attached?{blocked:true,reason:'The approved résumé is already selected. This is Upload resume, not the Next button.',action:'Use the native next action with the observed Next, Continue or Review label. It will scroll the navigation button into view. Do not upload again.'}:{requires_upload_resume:true,action:'Use upload_resume for the approved PDF, or select the approved saved résumé.'};
 }
 export function recoverableNavigationBlock(attempt){
  if(attempt.submission_intent_at||attempt.navigation_recovery_version>=NAVIGATION_REPAIR_VERSION||!['failed','needs_input'].includes(attempt.status))return false;
  const reason=attempt.reason||'';
+ if(/external application (?:flow )?(?:did not|has not) open/i.test(reason))return true;
+ if(/Target: REJECT ALL/i.test(reason)&&(attempt.visual_steps||[]).some(s=>/cookie banner/i.test(s.summary||'')))return true;
  if(/Use submit for this final action/.test(reason)&&(attempt.visual_steps||[]).some(s=>s.action==='click'&&/cookie/i.test(s.summary||'')))return true;
  if(/control.{0,70}unsupported/i.test(reason)&&/Target: (?:Apply for This Job|I'm interested)(?:$| Next step)/i.test(reason))return true;
  if(/saved answer for question: Phone\. Option: United States\./.test(reason))return true;

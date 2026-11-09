@@ -46,3 +46,15 @@ test('hidden-radio timeout evidence can retry after repair without replaying a s
  const a={status:'failed',reason:'Automation error: TimeoutError.',outcome_history:[{error_message:'locator.check: waiting for input[type=radio]; element is not visible'}]};
  assert.equal(recoverableResumeBlock(a),true);assert.equal(recoverableResumeBlock({...a,submission_intent_at:'reserved'}),false);assert.equal(recoverableResumeBlock({...a,resume_recovery_version:RESUME_RECOVERY_VERSION}),false);
 });
+
+test('a prior upload record cannot prevent restoring a role file missing from the current resume library',async()=>{
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage(),scope=page.locator('body');
+ await page.setContent('<fieldset><legend>Resume</legend><label><input type="radio" name="resume" checked>Resume_Matthew_Long.pdf</label><label><input type="radio" name="resume">Lead.pdf</label></fieldset><button>Upload resume</button>');
+ assert.equal((await selectExistingResume(scope,'Required_Role.pdf')).missing,true);
+ await page.getByRole('button').evaluate(e=>e.insertAdjacentHTML('beforebegin','<button>Show more resumes</button>'));
+ assert.notEqual((await selectExistingResume(scope,'Required_Role.pdf')).missing,true,'expand the library before uploading a duplicate');
+ await page.setContent('<button>Upload resume</button>');assert.notEqual((await selectExistingResume(scope,'Required_Role.pdf')).missing,true,'an unloaded library is not evidence of absence');
+ await page.setContent('<label><input type="radio">Required_Role.pdf</label><label><input type="radio">Required_Role.pdf</label><button>Upload resume</button>');assert.notEqual((await selectExistingResume(scope,'Required_Role.pdf')).missing,true,'ambiguity must not trigger duplicate uploads');
+ }finally{await browser.close();}
+});
