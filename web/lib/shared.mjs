@@ -1,3 +1,4 @@
+export function sourceExpired(lead,now=Date.now()){const expiry=Date.parse(lead?.source_expires_at||'');return Number.isFinite(expiry)&&expiry<=Number(now);}
 export function safeWebUrl(value) {
   try {
     const parsed = new URL(value);
@@ -15,9 +16,10 @@ export function leadInView(lead, progress, view) {
   if (progress?.disposition?.status === 'not_a_fit') return view === 'not_a_fit';
   if (progress?.disposition) return view === 'removed';
   if (progress?.stage === 'not_a_fit') return view === 'not_a_fit';
+  const stage = progress?.stage || 'new';
+  if(sourceExpired(lead)&&stage!=='applied')return view==='removed'||view==='applied'&&stage==='applying';
   if (view === 'not_a_fit') return false;
   if (view === 'removed') return false;
-  const stage = progress?.stage || 'new';
   switch (view) {
     case 'opportunities': return lead.pipeline === 'contract' && stage !== 'applied';
     case 'email_review': return lead.pipeline === 'email_review' && stage !== 'applied';

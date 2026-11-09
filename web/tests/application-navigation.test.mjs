@@ -83,3 +83,7 @@ test('observed nonexistent native options can recover before a resume step once 
  const a={status:'failed',reason:'Automation could not complete choose: locator.selectOption: Timeout',visual_steps:[{action:'choose',status:'blocked',result_detail:{message:'locator.selectOption: Timeout; did not find some options'}}]};
  assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);assert.equal(recoverableNavigationBlock({...a,visual_steps:[]}),false);
 });
+
+test('observed hidden answer radios recover once after the visible-label repair',()=>{
+ const a={status:'failed',reason:'Automation could not complete choose: locator.check: Timeout',visual_steps:[{action:'choose',status:'blocked',result_detail:{message:'locator.check: input type=radio; element is not visible'}}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
+});

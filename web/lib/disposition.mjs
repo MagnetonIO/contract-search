@@ -1,3 +1,4 @@
+import {sourceExpired} from './shared.mjs';
 export function recordDisposition(current, action, now = new Date().toISOString()) {
   const old = current || { stage: 'new', notes: '', updated_at: now };
   if (action === 'restore') {
@@ -21,4 +22,12 @@ export function purgeRemoved(workflow, ids, now = new Date().toISOString(), sect
     count++;
   }
   return { workflow: next, count };
+}
+
+export function archiveSourceExpirations(workflow,leads,now=new Date()){
+ let next=workflow;
+ for(const lead of leads||[]){const old=next[lead.id];if(!sourceExpired(lead,now.getTime())||old?.disposition||old?.stage==='applied')continue;
+  if(next===workflow)next={...workflow};next[lead.id]={...recordDisposition(old,'closed',now.toISOString()),availability_reason:'Source-declared application deadline has passed.',availability_evidence:{status:'closed',checked_at:now.toISOString(),source_url:lead.source_url,site_notice:'Source expiry: '+lead.source_expires_at}};
+ }
+ return next;
 }

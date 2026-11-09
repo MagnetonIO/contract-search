@@ -89,3 +89,8 @@ test('Not a fit bulk deletion includes legacy decisions but protects Removed and
   }
   assert.equal(purgeRemoved(result.workflow, ['decision', 'legacy'], undefined, 'not_a_fit').count, 0);
 });
+
+test('source expiration is a durable removal and preserves prior decisions and submitted history',async()=>{
+ const {archiveSourceExpirations}=await import('../lib/disposition.mjs');const now=new Date('2026-11-09T17:00:00Z'),leads=[{id:'open',source_expires_at:'2026-11-01T00:00:00Z',source_url:'https://example.com/job'},{id:'applied',source_expires_at:'2026-11-01T00:00:00Z'},{id:'dismissed',source_expires_at:'2026-11-01T00:00:00Z'}],workflow={open:{stage:'saved',notes:'Keep my notes'},applied:{stage:'applied'},dismissed:{disposition:{status:'not_a_fit'}}};
+ const closed=archiveSourceExpirations(workflow,leads,now);assert.equal(closed.open.disposition.status,'closed');assert.equal(closed.open.notes,'Keep my notes');assert.equal(closed.applied.stage,'applied');assert.equal(closed.dismissed.disposition.status,'not_a_fit');assert.equal(archiveSourceExpirations(closed,[{...leads[0],source_expires_at:'2027-01-01T00:00:00Z'}],now),closed);
+});

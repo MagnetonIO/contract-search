@@ -58,3 +58,10 @@ test('a confirmed duration selects the actual offered experience range, never a 
  await input.selectOption('none');assert.equal((await selectNativeOption(input,'7+ years',approved)).selected,true,'the controller uses the uniquely supported range rather than trusting an unsupported model value');assert.equal(await input.inputValue(),'4-6 years');
  }finally{await browser.close();}
 });
+
+test('styled answer radios use the associated visible label and expose the real Yes/No meaning',async()=>{
+ const {chromium}=await import('playwright-core');const {checkApplicationOption,radioOptionEvidence,applicationFields}=await import('../lib/application-controls.mjs');const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<fieldset><legend>Do you have experience with Azure?</legend><div><div><input id="yes" type="radio" name="q" style="display:none" aria-label="Do you have experience with Azure?"><label for="yes" style="display:inline-block;width:20px;height:20px"></label></div><span>Yes</span></div><div><div><input id="no" type="radio" name="q" style="display:none" aria-label="Do you have experience with Azure?"><label for="no" style="display:inline-block;width:20px;height:20px"></label></div><span>No</span></div></fieldset>');
+ const yes=page.locator('#yes'),no=page.locator('#no');const metadata=await page.locator('input').evaluateAll(applicationFields);assert.equal(metadata[0].option_label,'Yes');assert.equal(metadata[1].option_label,'No');assert.equal((await yes.evaluate(radioOptionEvidence)).label,'Yes');assert.equal((await no.evaluate(radioOptionEvidence)).label,'No');assert.equal((await checkApplicationOption(page.locator('body'),yes)).selected,true);assert.equal(await yes.isChecked(),true);assert.equal(await no.isChecked(),false);
+ }finally{await browser.close();}
+});

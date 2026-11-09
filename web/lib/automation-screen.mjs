@@ -33,7 +33,7 @@ export async function screenBatch(){
   if(screeningCurrent(state.screens[lead.id],version))continue;
   const reason=screenGate(lead,posting?.text,progress[lead.id],state.policy);
   const location=automationLocation(lead,state.facts,posting?.text);
-  const base={version,title:lead.title,source_url:lead.application_url||lead.source_url,decision_basis:'screening_rule',score:0,profile_version:state.facts.version,resume_hash:state.resume_hash,minimum_score:state.policy.minimum_score,rule_inputs:{pay:lead.pay,c2c_status:lead.c2c_status,work_arrangement:lead.work_arrangement,remote_location:lead.remote_location,restrictions:lead.location_assessment?.restrictions,minimum_hourly_usd:state.policy.minimum_hourly_usd},screened_at:new Date().toISOString()};
+  const base={version,title:lead.title,source_url:lead.application_url||lead.source_url,decision_basis:'screening_rule',score:0,profile_version:state.facts.version,resume_hash:state.resume_hash,minimum_score:state.policy.minimum_score,rule_inputs:{source_expires_at:lead.source_expires_at,pay:lead.pay,c2c_status:lead.c2c_status,work_arrangement:lead.work_arrangement,remote_location:lead.remote_location,restrictions:lead.location_assessment?.restrictions,minimum_hourly_usd:state.policy.minimum_hourly_usd},screened_at:new Date().toISOString()};
   if(reason){decisions[lead.id]={...base,status:'skipped',reason};continue;}
   if(location.status!=='allowed'){decisions[lead.id]={...base,status:location.status==='blocked'?'skipped':'held',reason:'Location: '+location.reason};continue;}
   batch.push({id:lead.id,source_url:lead.application_url||lead.source_url,title:lead.title,company:lead.company_agency,text:posting.text.slice(0,18000),version});

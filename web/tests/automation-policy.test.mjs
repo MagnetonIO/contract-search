@@ -59,3 +59,8 @@ test('explicit hourly rates in posting text are checked when the board omitted s
  assert.equal(screenGate({...lead,pay:'unknown'},'Remote contract: $90 - $120/hr.'),null);
  assert.equal(screenGate({...lead,pay:'unknown'},'Remote contract: CAD $90/hr.'),null);
 });
+
+test('source-declared expiration removes a listing from opportunities while keeping application history',async()=>{
+ const {leadInView}=await import('../lib/shared.mjs');const lead={pipeline:'contract',source_expires_at:'2000-01-01T00:00:00Z'};
+ assert.equal(leadInView(lead,{},'opportunities'),false);assert.equal(leadInView(lead,{},'removed'),true);assert.equal(leadInView(lead,{stage:'applied'},'applied'),true);assert.equal(screenGate(lead,'Remote US contract'), 'Posting has expired');
+});

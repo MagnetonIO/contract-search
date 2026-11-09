@@ -1,3 +1,4 @@
+import {checkApplicationOption} from './application-controls.mjs';
 import {siteForUrl} from './browser-accounts.mjs';
 export const RESUME_RECOVERY_VERSION=6;
 export const MASTER_RESUME_NAME='Resume_Matthew_Long.pdf';
@@ -64,17 +65,9 @@ export async function selectExistingResume(scope,filename,{requested=false}={}){
  if(matches.length!==1)return {selected:false,reason:matches.length?'Approved filename is ambiguous on this page.':'Approved saved résumé selection is not identified on this page.'};
  const match=matches[0],radio=radios.nth(match.index);
  if(!match.checked){
-  if(await radio.isVisible()){if(match.native)await radio.check({timeout:5000});else await radio.click({timeout:5000});}
-  else if(match.native){
-   // Styled radios may be hidden while the associated label is the real UI.
-   // Click only a visible label bound to this exact, uniquely matched input.
-   const labels=await radio.evaluate(e=>[...(e.labels||[])].filter(l=>l.getClientRects().length).map(l=>({for:l.htmlFor,text:l.innerText})));
-   const id=await radio.getAttribute('id');
-   const visible=scope.locator('label').filter({visible:true});
-   const indices=await visible.evaluateAll((items,id)=>items.flatMap((e,index)=>id&&(e.htmlFor===id||e.control?.id===id)?[index]:[]),id);
-   if(indices.length!==1||labels.length!==1)return {selected:false,reason:'The approved résumé has no unique visible selection label.'};
-   await visible.nth(indices[0]).click({timeout:5000});
-  }else return {selected:false,reason:'The approved résumé radio is not visible.'};
+  if(match.native){const result=await checkApplicationOption(scope,radio);if(!result.selected)return {selected:false,reason:result.reason};}
+  else if(await radio.isVisible())await radio.click({timeout:5000});
+  else return {selected:false,reason:'The approved résumé radio is not visible.'};
  }
  const selected=await radio.evaluate(e=>e.checked===true||e.getAttribute('aria-checked')==='true');
  return {selected,filename,method:'native_saved_file',...(!selected?{reason:'The approved résumé selection did not stay checked.'}:{})};

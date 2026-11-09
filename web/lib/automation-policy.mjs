@@ -1,3 +1,4 @@
+import {sourceExpired} from './shared.mjs';
 import {createHash} from 'node:crypto';
 
 export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:100,daily_quota_metric:'confirmed_submissions',monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:70,allow_unknown_terms:true});
@@ -30,6 +31,7 @@ export function applicationIdentity(lead) {
 export function excluded(lead,progress) {
  if(progress?.disposition||progress?.stage==='not_a_fit')return 'Previously dismissed';
  if(progress?.stage==='applied'||progress?.application?.submission_recorded_at)return 'Already submitted';
+ if(sourceExpired(lead))return 'Posting has expired';
  if(lead.pipeline!=='contract')return 'Not an individual contract opening';
  return null;
 }

@@ -48,7 +48,7 @@ def collect_public(spec,fetch,*,now=None):
                     zones=job.get('timezoneRestrictions',[])
                     if zones and -6 not in zones:continue
                     if job.get('employmentType') not in ('Contractor','Temporary'):continue
-                    add(active({'id':job.get('guid'),'url':job.get('guid'),'applyUrl':job.get('applicationLink'),'_preserve_apply_url':True,'title':job.get('title'),'companyName':job.get('companyName'),'jobType':job.get('employmentType'),'workplaceType':'remote','location':', '.join(job.get('locationRestrictions') or ['Worldwide']),'description':job.get('description'),'postedDate':stamp(job.get('pubDate')),'salaryInfo':money(job.get('minSalary'),job.get('maxSalary'),job.get('currency'),job.get('salaryPeriod'))}))
+                    add(active({'id':job.get('guid'),'url':job.get('guid'),'applyUrl':job.get('applicationLink'),'_preserve_apply_url':True,'_source_expires_at':expiry,'title':job.get('title'),'companyName':job.get('companyName'),'jobType':job.get('employmentType'),'workplaceType':'remote','location':', '.join(job.get('locationRestrictions') or ['Worldwide']),'description':job.get('description'),'postedDate':stamp(job.get('pubDate')),'salaryInfo':money(job.get('minSalary'),job.get('maxSalary'),job.get('currency'),job.get('salaryPeriod'))}))
                 if len(data['jobs'])<20:break
     elif kind=='jobicy':
         cursor=None

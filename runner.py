@@ -306,7 +306,7 @@ def normalize(row, source, now, project=False):
     duration = re.search(r'\b\d+\s*(?:[-–]\s*\d+\s*)?(?:month|week|year)s?\b', desc, re.I)
     contact = sorted(set(re.findall(r'\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b', desc, re.I)))
     source_date = pick(row, 'postingDateParsed', 'date_posted', 'datePosted', 'publication_date', 'date', 'postedDate', 'postedAt')
-    return reassess(dict(source_active_at=row.get('_source_active_at',''),_source_max_age_days=row.get('_source_max_age_days'),title=title, role_families=roles, company_agency=plain(company), source=source,
+    return reassess(dict(source_active_at=row.get('_source_active_at',''),source_expires_at=row.get('_source_expires_at',''),_source_max_age_days=row.get('_source_max_age_days'),title=title, role_families=roles, company_agency=plain(company), source=source,
                 source_job_id=plain(pick(row, 'id', 'jobId', 'job_id', 'requisitionId')),
                 source_posted_at=parse_date(source_date, now), source_date_text=plain(row.get('postedAt') or source_date),
                 first_seen=now.isoformat(), pay=salary or (match[0] if match else 'unknown'),

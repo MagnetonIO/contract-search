@@ -67,9 +67,20 @@ export function applicationFields(items){
   const labelled=e.getAttribute('aria-labelledby')?.split(/\s+/).map(id=>e.ownerDocument.getElementById(id)?.textContent||'').join(' ');
   const label=clean(e.getAttribute('aria-label')||labelled||e.labels?.[0]?.innerText||e.getAttribute('placeholder')||e.name||e.id||'');
   const legend=clean(e.closest('fieldset')?.querySelector('legend')?.innerText);
+  let option_label;
+  if(e.type==='radio'){
+   const labels=[...(e.labels||[])].map(l=>clean(l.innerText)).filter(Boolean);
+   option_label=labels.find(v=>/^(yes|no)$/i.test(v));
+   for(let row=e.parentElement,depth=0;!option_label&&row&&depth<6;row=row.parentElement,depth++){
+    if(row.querySelectorAll('input[type=radio],[role=radio]').length>1)break;
+    option_label=String(row.innerText||'').split(/\n+/).map(clean).find(v=>/^(yes|no)$/i.test(v));
+   }
+   option_label=option_label||(/^(yes|no)$/i.test(e.value)?e.value:labels[0]||e.getAttribute('value')||'');
+  }
+
   const question=['checkbox','radio'].includes(e.type)?legend||label:label||legend;
   const toggles=e.tagName==='SELECT'&&e.getAttribute('aria-hidden')==='true'?[...e.parentElement.querySelectorAll('button[aria-haspopup]')].filter(b=>b.getClientRects().length):[];const proxy=toggles.length===1?toggles[0]:null;
-  return {index,label,question,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(proxy)||Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?(proxy?clean(proxy.innerText):e.selectedOptions?.[0]?.text):undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
+  return {index,label,question,option_label,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(proxy)||Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?(proxy?clean(proxy.innerText):e.selectedOptions?.[0]?.text):undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
  });
 }
 
@@ -109,4 +120,28 @@ export async function selectNativeOption(input,requested,approved){
  const candidates=exact.length?exact:allowed;
  if(candidates.length!==1)return {blocked:true,reason:'No unique approved option exists in this dropdown.',options};
  const option=candidates[0];await input.selectOption({value:option.value},{timeout:5000});return {selected:true,...option};
+}
+
+// Runs against one bound native radio. Its own aria-label can be the question,
+// so recover the displayed answer only inside an ancestor owning this one input.
+export function radioOptionEvidence(e){
+ const clean=v=>String(v||'').replace(/\s+/g,' ').trim(),value=e.getAttribute('value')||'';
+ const labels=[...(e.labels||[])].map(l=>clean(l.innerText)).filter(Boolean);
+ let label=labels.find(v=>/^(yes|no)$/i.test(v));
+ for(let row=e.parentElement,depth=0;!label&&row&&depth<6;row=row.parentElement,depth++){
+  if(row.querySelectorAll('input[type=radio],[role=radio]').length>1)break;
+  label=String(row.innerText||'').split(/\n+/).map(clean).find(v=>/^(yes|no)$/i.test(v));
+ }
+ return {value,label:label||(/^(yes|no)$/i.test(value)?value:labels[0]||value)};
+}
+export async function checkApplicationOption(scope,input){
+ if(await input.isChecked())return {selected:true};
+ if(await input.isVisible())await input.check({timeout:5000});
+ else{
+  const id=await input.getAttribute('id'),labels=scope.locator('label').filter({visible:true});
+  const matches=await labels.evaluateAll((items,id)=>items.flatMap((e,index)=>id&&(e.htmlFor===id||e.control?.id===id)?[index]:[]),id);
+  if(matches.length!==1)return {blocked:true,reason:'This native option has no unique visible associated label.'};
+  await labels.nth(matches[0]).click({timeout:5000});
+ }
+ return await input.isChecked()?{selected:true}:{blocked:true,reason:'The chosen option did not remain checked.'};
 }
