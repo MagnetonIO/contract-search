@@ -36,3 +36,9 @@ test('grouped contact entry still checks every fact and stops before later field
  await runVisualApplication({getPage:()=>page,inspect:async()=>({fields:[],text:'Contact information'}),guard:async()=>{},stopped:async()=>done,job:{},facts:{name:'Applicant',email:'applicant@example.com'},record:async()=>{},generate:async()=>({output:{action:{type:'fill_known_fields',fields:[{index:0,label:'Name',fact:'name'},{index:1,label:'Unsupported question',fact:'email'},{index:2,label:'Email',fact:'email'}]},summary:'Entering saved contact information'},usage:{}}),invoke:async(name,input)=>{assert.equal(name,'fillKnown');calls.push(input.label);if(input.index===1){done=true;return {paused:true};}return {filled:input.label};},maxSteps:2});
  assert.deepEqual(calls,['Name','Unsupported question']);
 });
+
+test('two native-control failures escalate to the stronger model while retaining guarded execution',async()=>{
+ const models=[],calls=[];let done=false;const page={url:()=> 'https://example.com/job',locator:()=>({filter:()=>({count:async()=>0})}),evaluate:async()=>({width:800,height:600}),screenshot:async()=>Buffer.from('frame')};
+ await runVisualApplication({getPage:()=>page,inspect:async()=>({fields:[],text:'Application form'}),guard:async()=>{},stopped:async()=>done,job:{},facts:{},record:async()=>{},fallbackModel:'openai/gpt-5.4',generate:async args=>{models.push(args.model.modelId);return {output:{action:{type:'next',label:'Next'},summary:'Next'},usage:{}};},invoke:async(name)=>{calls.push(name);if(calls.length>=3){done=true;return {submitted:true};}return {blocked:true,reason:'Stale native control'};},maxSteps:4});
+ assert.deepEqual(models,['openai/gpt-5.4-mini','openai/gpt-5.4-mini','openai/gpt-5.4']);assert.deepEqual(calls,['next','next','next']);
+});

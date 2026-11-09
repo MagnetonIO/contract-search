@@ -64,3 +64,10 @@ test('source-declared expiration removes a listing from opportunities while keep
  const {leadInView}=await import('../lib/shared.mjs');const lead={pipeline:'contract',source_expires_at:'2000-01-01T00:00:00Z'};
  assert.equal(leadInView(lead,{},'opportunities'),false);assert.equal(leadInView(lead,{},'removed'),true);assert.equal(leadInView(lead,{stage:'applied'},'applied'),true);assert.equal(screenGate(lead,'Remote US contract'), 'Posting has expired');
 });
+
+test('provider-enforced budgets do not mistake historical estimated reservations for a real credit balance',()=>{
+ const now=new Date('2026-11-09T20:00:00Z');const ledger={month:'2026-11',charges:[{id:'legacy-estimate',usd:49,status:'settled'}]};
+ assert.throws(()=>reserveBudget(ledger,{id:'next',usd:2.5},now),/Monthly/);
+ const updated=reserveBudget(ledger,{id:'next',usd:2.5},now,{monthly_limit_usd:50,browser_subscription_usd:20,budget_mode:'gateway'});
+ assert.equal(updated.charges.length,2);assert.equal(updated.charges[0].usd,49);
+});

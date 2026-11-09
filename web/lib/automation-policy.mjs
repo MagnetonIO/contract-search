@@ -67,7 +67,7 @@ export function reserveBudget(ledger,reservation,now=new Date(),policy=DEFAULT_A
  if(state.month!==month){state.month=month;state.charges=[];}
  if(state.charges.some(c=>c.id===reservation.id))return state;
  const spent=state.charges.reduce((sum,c)=>sum+c.usd,policy.browser_subscription_usd);
- if(spent+reservation.usd>policy.monthly_limit_usd+1e-9)throw Error('Monthly automation allowance exhausted');
+ if(policy.budget_mode!=='gateway'&&spent+reservation.usd>policy.monthly_limit_usd+1e-9)throw Error('Monthly automation allowance exhausted');
  state.charges.push({...reservation,reserved_at:now.toISOString(),status:'reserved'});
  return state;
 }
