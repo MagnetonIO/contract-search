@@ -1,4 +1,4 @@
-import {experienceAnswer} from './visual-policy.mjs';
+import {experienceAnswer,technicalExperienceAnswer} from './visual-policy.mjs';
 import {verificationEvidence,verificationAction} from './application-verification-policy.mjs';
 export const OPTIONAL_COVER_LETTER_POLICY='Skip optional cover letters. Do not create or upload a cover letter. If the employer requires one, skip this application and record that requirement.';
 export function coverLetterField(field){return /cover[\s_-]*letter/i.test([field.label,field.question,field.name].filter(Boolean).join(' '));}
@@ -35,7 +35,10 @@ export function queuedAttemptId(state){
 // A new saved answer is enough to retry its paused form. Updating the attempt
 // to the current profile version makes this a single retry for that answer.
 export function experienceRetry(attempt,facts){
- if(!facts?.version||attempt.status!=='needs_input'||attempt.submission_intent_at||attempt.profile_version===facts.version)return false;
+ if(!facts?.version||attempt.status!=='needs_input'||attempt.submission_intent_at)return false;
  const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question):\s*(.+?)(?:\. Option:.*)?$/)?.[1];
- return Boolean(question&&experienceAnswer(question,facts));
+ if(!question)return false;
+ const technical=technicalExperienceAnswer(question,facts);
+ if(attempt.profile_version===facts.version)return Boolean(technical&&!attempt.technical_answer_recovery_version);
+ return Boolean(experienceAnswer(question,facts)||technical);
 }

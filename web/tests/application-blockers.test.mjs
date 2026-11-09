@@ -21,3 +21,8 @@ test('newly confirmed experience unblocks that question once and never replays a
  const a={status:'needs_input',profile_version:'old',reason:'Answer needs verified experience: How many years of experience you have in Full Stack?'};
  assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,profile_version:'new'},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'recorded'},facts),false);assert.equal(experienceRetry({...a,reason:'Required education dates are missing'},facts),false);assert.equal(experienceRetry({...a,status:'submission_unknown'},facts),false);assert.equal(experienceRetry({...a,reason:'Answer needs verified experience: How many years of experience with Data Governance?'},facts),false);
 });
+
+test('a documented technical Yes/No blocker receives one repair retry without needing another profile edit',()=>{
+ const facts={version:'current',verified_experience:'Designed production Azure infrastructure.'};const a={status:'needs_input',profile_version:'current',reason:'No approved answer is saved for question: Do you have hands-on experience with Microsoft Azure?. Option: Yes.'};
+ return import('../lib/application-blockers.mjs').then(({experienceRetry})=>{assert.equal(experienceRetry(a,facts),true);assert.equal(experienceRetry({...a,technical_answer_recovery_version:1},facts),false);assert.equal(experienceRetry({...a,submission_intent_at:'reserved'},facts),false);});
+});

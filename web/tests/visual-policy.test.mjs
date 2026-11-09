@@ -106,3 +106,15 @@ test('experience range boundaries contain the confirmed years without overstatin
  const facts={verified_experience:'User-confirmed application answer: 4 years of hands-on work experience with Data Governance.'};const match=label=>choiceMatches({fact:'verified_experience',question:'How many years experience in Data Governance do you have?',value:label,label,facts});
  assert.equal(match('4-6 years'),true);assert.equal(match('1-3 years'),false);assert.equal(match('7+ years'),false);assert.equal(match('4+ years'),true);assert.equal(match('6-4 years'),false);
 });
+
+test('documented hands-on technical skills can answer Yes without a separate repeated confirmation',()=>{
+ const facts={verified_experience:'Designed private Azure infrastructure using modular Bicep for Container Apps and PostgreSQL. Skills: Python, Kubernetes.'};
+ const match=(question,label,f=facts)=>choiceMatches({fact:'verified_experience',question,label,value:label,facts:f});
+ assert.equal(match('Do you have hands-on experience with Microsoft Azure?','Yes'),true);
+ assert.equal(match('Do you have experience with Kubernetes?','Yes'),true);
+ assert.equal(match('Do you have experience with an undocumented product?','Yes'),false);
+ assert.equal(match('Do you have experience with Microsoft Azure?','No'),false);
+ assert.equal(match('Do you have a Microsoft Azure certification?','Yes'),false);
+ const zeroAlias={verified_experience:'User-confirmed application answer: 0 years of hands-on work experience with Microsoft Azure.'};assert.equal(match('Do you have hands-on experience with Microsoft Azure?','No',zeroAlias),true);
+ const zero={verified_experience:'User-confirmed application answer: 0 years of hands-on work experience with Azure.'};assert.equal(match('Do you have hands-on experience with Microsoft Azure?','No',zero),true);assert.equal(match('Do you have hands-on experience with Microsoft Azure?','Yes',zero),false);
+});

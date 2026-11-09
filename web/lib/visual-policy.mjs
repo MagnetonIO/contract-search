@@ -19,6 +19,21 @@ export function experienceAnswer(question,facts){
  if(!answers.length||new Set(answers.map(a=>Number(a[1]))).size!==1)return null;
  const years=Number(answers[0][1]);return years>=0&&years<=60?{answer:String(years),evidence:answers[0][0]}:null;
 }
+// Only direct technical-experience questions can use documented resume skills.
+// Credentials, legal declarations and numeric durations have separate checks.
+export function technicalExperienceAnswer(question,facts){
+ if(/years?|certif|licen[cs]e|clearance|citizen|sponsor|authoriz|degree|willing|agree|criminal|veteran|gender|disabil|medical/i.test(question))return null;
+ const match=String(question).match(/^(?:do you have|have you had)\s+(?:(?:hands[- ]on|professional|work|working|practical|production)\s+)*experience\s+(?:with|in|using)\s+(.+?)[?*.\s]*$/i);
+ if(!match)return null;
+ const normalize=value=>String(value||'').toLowerCase().replace(/microsoft azure/g,'azure').replace(/amazon web services/g,'aws').replace(/google cloud(?: platform)?/g,'gcp').replace(/[^a-z0-9+#]+/g,' ').replace(/\s+/g,' ').trim();
+ const topic=normalize(match[1]);if(topic.length<3||topic.length>100||/\b(?:and|or)\b/.test(topic))return null;
+ const duration=experienceAnswer('How many years of experience with '+topic+'?',facts);
+ if(duration)return {answer:Number(duration.answer)>0?'yes':'no',evidence:duration.evidence};
+ const escaped=topic.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),source=normalize(facts?.verified_experience);
+ if(new RegExp('\\b0 years of hands on work experience with '+escaped+'(?=$|[^a-z0-9+#])').test(source))return {answer:'no',evidence:'Explicit zero experience in saved facts'};
+ if(new RegExp('\\b(?:no|without) (?:hands on )?experience (?:with|in|using) '+escaped+'\\b').test(source))return {answer:'no',evidence:'Explicit experience denial in saved facts'};
+ return new RegExp('(^|[^a-z0-9+#])'+escaped+'(?=$|[^a-z0-9+#])').test(source)?{answer:'yes',evidence:'Documented skill: '+topic}:null;
+}
 export function visualClickKind(control){
  if(!control||control.disabled)return 'blocked';
  const text=normalizedLabel(control.text||control.label);
@@ -45,6 +60,7 @@ export function choiceMatches({fact,value,label,question,facts}){
  const expected=normalizedLabel(facts?.[fact]).toLowerCase(),answer=normalizedLabel(label||value).toLowerCase(),raw=normalizedLabel(value).toLowerCase();
  if(!expected)return false;
  if(fact==='verified_experience'){
+  const technical=technicalExperienceAnswer(question,facts);if(technical)return answer===technical.answer;
   const confirmed=experienceAnswer(question,facts),option=answer.match(/^(\d+(?:\.\d+)?)\s*(\+)?\s*(?:years?)?$/),range=answer.match(/^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(?:years?)?$/);
   if(!confirmed)return false;
   const years=Number(confirmed.answer);
