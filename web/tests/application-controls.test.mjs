@@ -47,3 +47,14 @@ test('a visible menu can safely control a hidden native select without inventing
  const fields=await p.locator('select').evaluateAll(applicationFields);assert.equal(fields[0].visible,true);const selected=await selectComboboxOption(p,p.locator('select'),'IL',o=>choiceMatches({fact:'state',label:o.label,value:o.value,question:'State *',facts:{state:'IL'}}));assert.equal(selected.selected,true);assert.equal(await p.locator('select').inputValue(),'12');
  }finally{await b.close();}
 });
+
+test('a confirmed duration selects the actual offered experience range, never a nonexistent numeric option',async()=>{
+ const {chromium}=await import('playwright-core');const {selectNativeOption}=await import('../lib/application-controls.mjs');const {choiceMatches}=await import('../lib/visual-policy.mjs');
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<label>How many years experience in Data Governance do you have?<select><option value="none">-- No answer --</option><option>1-3 years</option><option>4-6 years</option><option>7+ years</option></select></label>');
+ const input=page.locator('select'),facts={verified_experience:'User-confirmed application answer: 4 years of hands-on work experience with Data Governance.'},question='How many years experience in Data Governance do you have?';
+ const approved=option=>choiceMatches({fact:'verified_experience',question,...option,facts});
+ const result=await selectNativeOption(input,'4',approved);assert.equal(result.selected,true);assert.equal(await input.inputValue(),'4-6 years');
+ await input.selectOption('none');assert.equal((await selectNativeOption(input,'7+ years',approved)).selected,true,'the controller uses the uniquely supported range rather than trusting an unsupported model value');assert.equal(await input.inputValue(),'4-6 years');
+ }finally{await browser.close();}
+});

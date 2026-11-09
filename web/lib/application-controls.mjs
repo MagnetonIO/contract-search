@@ -99,3 +99,14 @@ export function sameFieldLabel(actual,requested){
  const canonical=value=>String(value||'').replace(/\s+/g,' ').replace(/\s*\*+$/,'').trim().toLowerCase();
  return Boolean(canonical(actual))&&canonical(actual)===canonical(requested);
 }
+
+// Native values may be opaque or ranges. Resolve only among the actual,
+// enabled choices whose displayed meaning matches a saved applicant fact.
+export async function selectNativeOption(input,requested,approved){
+ const options=await input.evaluate(e=>[...e.options].filter(o=>!o.disabled&&!o.parentElement?.disabled).map(o=>({value:o.value,label:o.text.trim()})));
+ const allowed=options.filter(approved),normalize=value=>String(value||'').trim().toLowerCase();
+ const exact=allowed.filter(o=>normalize(o.value)===normalize(requested)||normalize(o.label)===normalize(requested));
+ const candidates=exact.length?exact:allowed;
+ if(candidates.length!==1)return {blocked:true,reason:'No unique approved option exists in this dropdown.',options};
+ const option=candidates[0];await input.selectOption({value:option.value},{timeout:5000});return {selected:true,...option};
+}

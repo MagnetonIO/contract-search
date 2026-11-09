@@ -101,3 +101,8 @@ test('experience dropdowns accept a matching confirmed duration without borrowin
  assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with Data Governance?',value:'3',label:'3 years',facts}),false);
  assert.equal(choiceMatches({fact:'verified_experience',question:'How many years of experience do you have with AI Agent development?',value:'10',label:'10 years',facts}),false);
 });
+
+test('experience range boundaries contain the confirmed years without overstating them',()=>{
+ const facts={verified_experience:'User-confirmed application answer: 4 years of hands-on work experience with Data Governance.'};const match=label=>choiceMatches({fact:'verified_experience',question:'How many years experience in Data Governance do you have?',value:label,label,facts});
+ assert.equal(match('4-6 years'),true);assert.equal(match('1-3 years'),false);assert.equal(match('7+ years'),false);assert.equal(match('4+ years'),true);assert.equal(match('6-4 years'),false);
+});
