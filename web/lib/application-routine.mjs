@@ -6,7 +6,7 @@ export function routineAction(form,facts){
  const contact=[];
  for(const field of form.fields||[]){
   if(!field.visible||field.role==='combobox'||!['text','email','tel','url','textarea'].includes(field.type))continue;
-  const fact=['first_name','last_name','email','phone','linkedin','website','city','state','zip','country','street','name'].find(key=>visualTextFactAllowed(field.label,key,facts));
+  const fact=['first_name','last_name','email','phone','linkedin','github','website','city','state','zip','country','street','name'].find(key=>visualTextFactAllowed(field.label,key,facts));
   if(fact&&String(field.current_value||'').trim()!==String(facts[fact]).trim())contact.push({index:field.index,label:field.label,fact});
  }
  if(contact.length)return {type:'fill_known_fields',fields:contact.slice(0,8)};

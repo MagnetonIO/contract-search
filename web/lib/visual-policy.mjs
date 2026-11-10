@@ -4,7 +4,8 @@ export const normalizedLabel=value=>String(value||'').replace(/\s+/g,' ').trim()
 export function visualTextFactAllowed(question,fact,facts){
  if(!facts?.[fact]||/^(?:are|do|does|have|has|will|would|can|could|did|is|what|when|how)\b/i.test(question.trim())||/password|sponsor|authoriz|citizen|clearance|years?|experience|certif|signature|agree|birth|social.security/i.test(question))return false;
  if(fact==='city'&&/country|state|province|postal|zip|street|address/i.test(question)||fact==='state'&&/country|\bcity\b/i.test(question)||fact==='street'&&/email|website|linkedin|url/i.test(question))return false;
- const labels={name:/^(?:full |your )?name\b/i,first_name:/first name/i,last_name:/last name|surname/i,email:/email/i,phone:/phone|mobile/i,city:/\bcity\b|\blocation\b/i,state:/\b(?:state|province)\b/i,country:/country/i,zip:/zip|postal/i,street:/street|address/i,linkedin:/linkedin/i,website:/website|portfolio/i};
+ if(fact==='website'&&/github|linkedin/i.test(question))return false;
+ const labels={name:/^(?:full |your )?name\b/i,first_name:/first name/i,last_name:/last name|surname/i,email:/email/i,phone:/phone|mobile/i,city:/\bcity\b|\blocation\b/i,state:/\b(?:state|province)\b/i,country:/country/i,zip:/zip|postal/i,street:/street|address/i,linkedin:/linkedin/i,github:/github/i,website:/website|portfolio/i};
  return Boolean(labels[fact]?.test(question));
 }
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));

@@ -57,6 +57,7 @@ test('a confirmed additive application answer preserves existing fit scores whil
   const input={name:'Fixture Applicant',email:'fixture@example.com',phone:'555-0100',zip:'60612',work_authorization:'yes',sponsorship:'no',desired_hourly_rate:'100',verified_experience:'Twenty years of engineering experience.',confirmed:true};
   const first=await saveFacts(input);const second=await saveFacts({...first,verified_experience:first.verified_experience+'\nUser-confirmed application answer: 10 years of hands-on work experience with Conversational AI.',confirmed:true});
   assert.equal(second.fit_version,first.fit_version);assert.notEqual(second.version,first.version);
+  const linked=await saveFacts({...second,github:'https://github.com/MagnetonIO',linkedin:'https://www.linkedin.com/in/mlabs1913',website:'https://magneton.io',confirmed:true});assert.equal(linked.github,'https://github.com/MagnetonIO');assert.equal(linked.fit_version,second.fit_version);assert.notEqual(linked.version,second.version);
   const changed=await saveFacts({...second,verified_experience:'Different professional history.',confirmed:true});assert.notEqual(changed.fit_version,second.fit_version);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });

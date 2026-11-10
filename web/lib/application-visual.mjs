@@ -8,12 +8,12 @@ import {humanCheckText} from './visual-policy.mjs';
 import {setTimeout as delay} from 'node:timers/promises';
 
 const point={x:z.number().int().min(0),y:z.number().int().min(0)};
-const fact=z.enum(['name','first_name','last_name','email','phone','linkedin','website','street','city','state','zip','country','work_authorization','sponsorship','us_citizen','availability','desired_hourly_rate','hourly_rate_low','hourly_rate_high']);
+const fact=z.enum(['name','first_name','last_name','email','phone','linkedin','github','website','street','city','state','zip','country','work_authorization','sponsorship','us_citizen','availability','desired_hourly_rate','hourly_rate_low','hourly_rate_high']);
 export const visualDecisionSchema=z.object({action:z.union([
  z.object({type:z.literal('click'),...point,fact:z.string().nullable()}),
  z.object({type:z.literal('scroll'),...point,delta_y:z.number().int().min(-900).max(900)}),
  z.object({type:z.literal('fill_known'),index:z.number().int().min(0),label:z.string(),fact}),
- z.object({type:z.literal('type_known'),...point,fact:z.enum(['name','first_name','last_name','email','phone','street','city','state','zip','country','linkedin','website'])}),
+ z.object({type:z.literal('type_known'),...point,fact:z.enum(['name','first_name','last_name','email','phone','street','city','state','zip','country','linkedin','github','website'])}),
  z.object({type:z.literal('fill_known_fields'),fields:z.array(z.object({index:z.number().int().min(0),label:z.string(),fact})).min(1).max(8)}),
  z.object({type:z.literal('fill_answer'),index:z.number().int().min(0),label:z.string(),answer:z.string().max(4000),evidence:z.array(z.string()).min(1)}),
  z.object({type:z.literal('choose'),index:z.number().int().min(0),label:z.string(),value:z.string(),fact:z.string()}),

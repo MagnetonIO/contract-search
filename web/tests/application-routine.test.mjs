@@ -33,3 +33,9 @@ test('phone country and factual Yes/No text fields fill without a model or repea
  const q={index:1,label:'Are you currently located in the United States?',type:'text',visible:true,filled:false};assert.equal(routineAction({...form,fields:[q]},facts).answer,'yes');
 });
 test('a resume destination identified by the upload adapter is handled even when its visible label is only Attach',async()=>{const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',resume_upload_allowed:true,approved_resume_attached:false,fields:[{index:0,label:'Attach',type:'file',visible:false,document_kind:'resume'},{index:1,label:'Attach',type:'file',visible:false,document_kind:'other'}]};assert.deepEqual(routineAction(form,{}),{type:'upload_resume',x:0,y:0});});
+
+test('GitHub and LinkedIn fields use their own saved links and preserve the separate website',async()=>{
+ const {routineAction}=await import('../lib/application-routine.mjs');const facts={github:'https://github.com/MagnetonIO',linkedin:'https://www.linkedin.com/in/mlabs1913',website:'https://magneton.io'};
+ const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',fields:['GitHub profile URL','LinkedIn profile URL','Website / portfolio'].map((label,index)=>({index,label,type:'url',visible:true,current_value:''}))};
+ assert.deepEqual(routineAction(form,facts).fields.map(f=>f.fact),['github','linkedin','website']);
+});

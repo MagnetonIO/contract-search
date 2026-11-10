@@ -68,7 +68,7 @@ export async function reopenVerification(id,deps={}){
   if(!verificationTarget(page.url(),a.application_url))throw Error('Employer redirected away from the recorded application.');
   await page.getByRole('textbox',{name:/first name/i}).first().waitFor({timeout:15000});
   const facts=(await readJson('applicant-facts.json',{})).value;
-  const candidates=[[/^first name\b/i,'first_name'],[/^last name\b/i,'last_name'],[/^email\b/i,'email'],[/^phone\b/i,'phone'],[/^country\b/i,'country'],[/^location.*city|^city\b/i,'city'],[/^linkedin/i,'linkedin'],[/^website/i,'website']];
+  const candidates=[[/^first name\b/i,'first_name'],[/^last name\b/i,'last_name'],[/^email\b/i,'email'],[/^phone\b/i,'phone'],[/^country\b/i,'country'],[/^location.*city|^city\b/i,'city'],[/^linkedin/i,'linkedin'],[/github/i,'github'],[/^website/i,'website']];
   const fields=()=>page.locator('input:not([type=hidden]):not([type=password]),textarea,select');
   for(const [pattern,key] of candidates){
    const all=await fields().evaluateAll(applicationFields);const matches=all.filter(f=>f.visible&&pattern.test(f.label)&&f.type!=='file');if(matches.length!==1||!facts[key])continue;
