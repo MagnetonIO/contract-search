@@ -70,12 +70,13 @@ export function visualClickKind(control){
  if(!control||control.disabled)return 'blocked';
  const text=normalizedLabel(control.text||control.label);
  if(control.cookieConsent)return /^(?:decline|reject)(?: all| optional cookies)?$|^(?:use|allow|accept) (?:only )?(?:necessary|essential) cookies$|^cookies? settings$/i.test(text)?'click':'blocked';
- if(applicationAuxiliaryUrl(control.href)||/tailor (?:my |your )?resum[eé]|create (?:a )?cover letter|help me stand out|upgrade|\bpremium\b/i.test(text))return 'blocked';
+ if(applicationAuxiliaryUrl(control.href)||/tailor (?:my |your )?resum[eé]|create (?:a )?cover letter|help me stand out|upgrade|\bpremium\b|resum[eé].{0,20}template/i.test(text))return 'blocked';
  if(control.applicationDialog&&/^(?:close|dismiss|cancel)$/i.test(text))return 'blocked';
  if(control.type==='password'||/sign.?in|log.?in|captcha|verify.*human|security check|agree|accept.*terms|purchase|pay|delete|withdraw|unsubscribe/i.test(text))return 'blocked';
  if(['checkbox','radio'].includes(control.type)||['checkbox','radio','option'].includes(control.role))return 'answer';
  if(control.tag==='SELECT'||control.role==='combobox')return 'focus';
  if(['INPUT','TEXTAREA'].includes(control.tag)||control.editable)return 'focus';
+ if(control.tag==='BUTTON'&&/^Resume options$/i.test(text))return 'click';
  const kind=applicationControlKind(control);
  if(kind==='submission'||control.type==='submit'&&control.inForm&&kind!=='step')return 'submission';
  if(kind==='entry'||kind==='step'||/^(back|previous|edit|change|add|remove|upload|attach|choose|select|show|close|dismiss)\b/i.test(text))return 'click';

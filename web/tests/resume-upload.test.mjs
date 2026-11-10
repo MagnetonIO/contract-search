@@ -23,3 +23,9 @@ test('an anonymous cover-letter uploader is never used for the resume; replaceme
   assert.equal((await uploadApprovedResume({page,scope:body,file})).attached,true);assert.equal(await page.locator('#resume-name').innerText(),file.name);assert.equal(await page.locator('input[aria-describedby="cover letter-description"]').evaluate(e=>e.files.length),0);
  }finally{await browser.close();}
 });
+
+test('Indeed resume options select a replacement file instead of its template chooser',async()=>{
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage(),file={name:'Approved.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-test')};await page.setContent(`<main><h1>Review your resume</h1><article><span>Matthew Long Resume</span><button aria-label="Resume options" onclick="document.querySelector('#menu').hidden=false">...</button><button aria-label="Select resume template" onclick="window.templateOpened=true">Select</button></article><div id="menu" hidden><button role="menuitem" onclick="const input=document.createElement('input');input.type='file';input.name='resume';input.hidden=true;input.onchange=()=>window.uploaded=input.files[0].name;document.body.append(input);input.click()">Upload a different resume</button><button role="menuitem">Delete</button></div></main>`);const result=await uploadApprovedResume({page,scope:page.locator('body'),file});assert.equal(result.attached,true);assert.equal(await page.evaluate(()=>window.templateOpened||false),false);assert.equal(await page.evaluate(()=>window.uploaded),file.name);
+ }finally{await browser.close();}
+});
