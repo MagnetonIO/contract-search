@@ -21,7 +21,7 @@ export async function prepareTargetedPilot(leadIds){
  const authorized=new Date().toISOString(),expires=new Date(Date.now()+2*3600000).toISOString(),ids=[];
  for(const {lead,identity} of selected){
   const id=randomUUID();await reserve(id,2.5,true);
-  await mutate('application-attempts.json',old=>({...old,[id]:{id,lead_id:lead.id,title:lead.title,source:lead.source,application_url:lead.application_url||lead.source_url,target_identity:identity,status:'queued',profile_version:state.facts.version,resume_hash:state.resume_hash,cost_reservation_id:id,created_at:authorized,updated_at:authorized,manual_authorized_at:authorized,manual_expires_at:expires,repair_pilot:true}}));ids.push(id);
+  await mutate('application-attempts.json',old=>({...old,[id]:{id,lead_id:lead.id,title:lead.title,source:lead.source,application_url:lead.application_url||lead.source_url,target_identity:identity,status:'queued',profile_version:state.facts.version,resume_hash:state.resume_hash,cost_reservation_id:id,created_at:authorized,updated_at:authorized,manual_authorized_at:authorized,manual_expires_at:expires,repair_pilot:true,...(/(^|\.)indeed\.com$/.test(new URL(lead.application_url||lead.source_url).hostname)?{browser_proxy_country:'US'}:{})}}));ids.push(id);
  }
  return {attempt_ids:ids,deferred};
 }
