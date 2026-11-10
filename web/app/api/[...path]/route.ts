@@ -131,6 +131,7 @@ async function handle(request: Request, context: Context) {
     if(request.method==='GET')return json(await verification.getVerificationView(input.id));
     if(input.action==='open')return json(await verification.reopenVerification(input.id));
     if(input.action==='check')return json(await verification.checkVerification(input.id));
+    if(input.action==='recover')return json(await verification.recoverVerification(input.id));
     if(input.action==='resume'){
       const result=await verification.resumeVerification(input.id);if(!result.resume)return json(result);
       const run=await start(applicationContinuation,[input.id]);

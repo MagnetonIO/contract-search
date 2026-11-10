@@ -18,7 +18,7 @@ export {VERIFICATION_SECONDS,greenhouseUrl,verificationTarget,emailVerification,
 export async function holdVerification(id,session,{target,startedAt,usage,costId,notice,updateRun=true,kind='email_verification',checkpoint=null,company='',recipient='',length=null}={}){
  const prior=await attempt(id);const now=Date.now(),expiry=Math.min(Date.parse(session.expiresAt||'')||now+HANDOFF_MS,now+HANDOFF_MS);
  const reason=kind==='email_verification'?'Employer requested an email verification code. Automatic retrieval will be attempted before notifying you.':notice||'Automatic recovery could not complete verification. Open the private browser to continue.';
- await patchAttempt(id,{status:kind==='submission_pending'?'submitting':'needs_input',reason,required_action:kind==='submission_pending'?{owner:'automation',kind:'submission_pending',title:'Waiting for employer confirmation',instruction:'Automatically checking the same submitted form. No new submission or applicant action is needed.'}:kind==='email_verification'?verificationAction():{owner:'user',kind:'security_verification',title:'Verification needs attention',instruction:'Open the private application browser, complete the indicated step, then select Resume after verification.',detail:reason},...(checkpoint?{checkpoint}:{}),verification:{state:'active',kind,session_id:session.id,context_id:session.context_id||checkpoint?.context_id||null,target,expires_at:new Date(expiry).toISOString(),started_at:new Date(now).toISOString(),requested_at:prior.submission_intent_at||new Date(now).toISOString(),session_started_at:startedAt||new Date(now).toISOString(),usage:usage||{input:0,output:0},cost_id:costId,company,recipient,length,automatic_until:new Date(now+120000).toISOString()},evidence:{basis:'application_browser',observed_url:target,site_notice:kind==='email_verification'?'Employer requested email verification; application remains unconfirmed.':notice,evidence_gap:'Verification input and code are not recorded.'}},{updateRun});
+ await patchAttempt(id,{status:kind==='submission_pending'?'submitting':'needs_input',reason,required_action:kind==='submission_pending'?{owner:'automation',kind:'submission_pending',title:'Waiting for employer confirmation',instruction:'Automatically checking the same submitted form. No new submission or applicant action is needed.'}:kind==='email_verification'?verificationAction():{owner:'user',kind:'security_verification',title:'Verification needs attention',instruction:'Open the private application browser, complete the indicated step, then select Resume after verification.',detail:reason},...(checkpoint?{checkpoint}:{}),verification:{state:'active',kind,session_id:session.id,context_id:session.context_id||checkpoint?.context_id||null,target,expires_at:new Date(expiry).toISOString(),started_at:new Date(now).toISOString(),requested_at:prior.submission_intent_at||new Date(now).toISOString(),session_started_at:startedAt||new Date(now).toISOString(),usage:usage||{input:0,output:0},cost_id:costId,company,recipient,length,automatic_until:new Date(now+120000).toISOString()},evidence:{basis:'application_browser',observed_url:target,site_notice:kind==='email_verification'?notice||'Employer requested email verification; application remains unconfirmed.':notice,evidence_gap:'Verification input and code are not recorded.'}},{updateRun});
 }
 export function verificationPage(raw,target){if(verificationTarget(raw,target))return true;try{const a=new URL(raw),b=new URL(target);return supportedApplication(raw)&&a.origin===b.origin&&a.pathname.replace(/\/$/,'')===b.pathname.replace(/\/$/,'');}catch{return false;}}
 async function attempt(id){const a=(await readJson('application-attempts.json',{})).value[id];if(!a)throw new AutomationInputError('Application attempt not found.');return a;}
@@ -74,6 +74,14 @@ export async function reopenVerification(id,deps={}){
    const all=await fields().evaluateAll(applicationFields);const matches=all.filter(f=>f.visible&&pattern.test(f.label)&&f.type!=='file');if(matches.length!==1||!facts[key])continue;
    const field=matches[0],item=fields().nth(field.index);if(key==='country'){if(field.role==='combobox')await selectComboboxOption(page,item,facts.country,o=>choiceMatches({fact:'country',value:o.value,label:o.label,question:field.question,facts}));else if(field.type==='select-one')continue;else await item.fill(facts[key]);}else await item.fill(facts[key]);
   }
+  // Replay only answers already grounded by the current approved profile.
+  // A reopened verification form is the same job, not a new application.
+  if(facts.confirmed&&facts.version===a.profile_version){
+   for(const answer of a.checkpoint?.answered||[]){
+    const all=await fields().evaluateAll(applicationFields),matches=all.filter(f=>f.visible&&['text','email','tel','url','textarea','number'].includes(f.type)&&f.role!=='combobox'&&f.label.replace(/[*\s]+$/,'').toLowerCase()===String(answer.label).replace(/[*\s]+$/,'').toLowerCase());
+    if(matches.length===1&&!/security code|password/i.test(answer.label))await fields().nth(matches[0].index).fill(String(answer.answer));
+   }
+  }
   const document=(await readBytes(a.resume_key))?.value;
   const hash=a.resume_document_hash||a.resume_variant?.hash||a.resume_hash;
   if(!document||createHash('sha256').update(document).digest('hex')!==hash)throw Error('The recorded résumé is missing or changed.');
@@ -122,10 +130,14 @@ export async function recoverVerification(id,{client=bb(),connect=url=>chromium.
     const page=browser.contexts()[0].pages().find(p=>verificationTarget(p.url(),v.target));
     if(page){const notice=emailVerification(await page.locator('body').innerText(),page.url());
      const input=page.getByLabel(/^Security code$/i),button=page.getByRole('button',{name:/^submit(?: application)?$/i}).filter({visible:true});
-     if(notice&&notice.email.toLowerCase()===v.recipient.toLowerCase()&&notice.length===v.length&&await input.count()===1&&await button.count()===1&&await button.isEnabled()){
+     if(notice&&notice.email.toLowerCase()===v.recipient.toLowerCase()&&notice.length===v.length&&await input.count()===1&&await button.count()===1){
+      // Greenhouse can disable Submit until the code has been entered.
+      // Filling is reversible; reserve the one post only after validation.
+      await input.fill(code.code);
+      if(!await button.isEnabled()){await input.fill('',{timeout:1000}).catch(()=>{});return {waiting:true};}
       // Reserve this one continuation BEFORE posting; a crash cannot replay it.
       let reserved=false;await mutate('application-attempts.json',old=>{reserved=false;const prior=old[id];if(prior.verification?.code_attempted_at)return old;reserved=true;return {...old,[id]:{...prior,verification:{...prior.verification,code_attempted_at:new Date().toISOString(),consumed_message_ids:[...(prior.verification.consumed_message_ids||[]),code.message_id]}}};});
-      if(reserved){await input.fill(code.code);await button.click({timeout:10000});await page.getByText(CONFIRMATION_PATTERN).first().waitFor({timeout:10000}).catch(()=>{});if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});}
+      if(reserved){await button.click({timeout:10000});await page.getByText(CONFIRMATION_PATTERN).first().waitFor({timeout:10000}).catch(()=>{});}if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});
      }
     }
    }finally{code=null;await browser.close().catch(()=>{});}
