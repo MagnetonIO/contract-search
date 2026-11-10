@@ -18,14 +18,14 @@ export function routineAction(form,facts){
  const duration=(form.fields||[]).find(field=>field.visible&&!field.filled&&['text','number','textarea'].includes(field.type)&&/^(?:how many|number of|total)\s+years\b/i.test(field.label)&&/experience|worked|working/i.test(field.label));
  if(duration&&facts.verified_experience)return {type:'fill_answer',index:duration.index,label:duration.label,answer:'',evidence:[facts.verified_experience]};
  const entry=(form.controls||[]).filter(control=>!control.disabled&&applicationControlKind(control)==='entry');
- const formOpen=(form.fields||[]).some(field=>field.required||field.type==='file'&&/resume|résumé|\bcv\b/i.test(field.label));
+ const formOpen=(form.fields||[]).some(field=>field.required||field.type==='file'&&(field.document_kind==='resume'||/resume|résumé|\bcv\b/i.test(field.label)));
  if(!formOpen&&entry.length===1)return {type:'next',label:entry[0].label||entry[0].text};
  for(const f of form.fields||[]){
   if(!f.visible)continue;const known=knownChoiceAnswer(f.question||f.label,facts);if(!known)continue;
   if(f.type==='select-one'){const option=f.options?.find(o=>o.label.trim().toLowerCase()===known.answer);if(option&&f.current_value!==option.value)return {type:'choose',index:f.index,label:f.label,value:option.value,fact:known.fact};}
   if(f.type==='radio'&&String(f.option_label||f.current_value).toLowerCase()===known.answer&&!f.filled)return {type:'choose',index:f.index,label:f.label,value:f.current_value,fact:known.fact};
  }
- if(!form.approved_resume_attached&&form.resume_upload_allowed&&(form.fields||[]).some(f=>f.type==='file'&&/resum[eé]|cv/i.test(f.label)))return {type:'upload_resume',x:0,y:0};
+ if(!form.approved_resume_attached&&form.resume_upload_allowed&&(form.fields||[]).some(f=>f.type==='file'&&(f.document_kind==='resume'||/resum[eé]|cv/i.test(f.label))))return {type:'upload_resume',x:0,y:0};
  if((form.fields||[]).some(f=>f.visible&&f.required&&!f.filled&&!/cover\s*letter/i.test(f.label)))return null;
  if(!form.approved_resume_attached){const resumeStep=(form.buttons||[]).filter(label=>/^continue to (?:resume|résumé)$/i.test(label.trim()));return resumeStep.length===1?{type:'next',label:resumeStep[0]}:null;}
  const next=(form.buttons||[]).filter(label=>/^(next|continue|review(?: application)?)$/i.test(label.trim()));

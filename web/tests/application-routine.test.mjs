@@ -32,3 +32,4 @@ test('phone country and factual Yes/No text fields fill without a model or repea
  assert.equal(routineAction({...form,fields:[{...field,filled:true,current_value:'US',selected_label:'United States +1'}]},facts),null);
  const q={index:1,label:'Are you currently located in the United States?',type:'text',visible:true,filled:false};assert.equal(routineAction({...form,fields:[q]},facts).answer,'yes');
 });
+test('a resume destination identified by the upload adapter is handled even when its visible label is only Attach',async()=>{const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',resume_upload_allowed:true,approved_resume_attached:false,fields:[{index:0,label:'Attach',type:'file',visible:false,document_kind:'resume'},{index:1,label:'Attach',type:'file',visible:false,document_kind:'other'}]};assert.deepEqual(routineAction(form,{}),{type:'upload_resume',x:0,y:0});});

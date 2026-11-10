@@ -22,10 +22,33 @@ export function knownChoiceAnswer(question,facts){
 }
 export function experienceAnswer(question,facts){
  if(!/\byears?\b/i.test(question)||! /experience|worked|working/i.test(question))return null;
- const answers=[...String(facts?.verified_experience||'').matchAll(/User-confirmed application answer:\s*(\d+(?:\.\d+)?) years of hands-on work experience with ([^.\n]+)\./g)].filter(match=>match[2].split('/').some(skill=>{const escaped=skill.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('\\b'+escaped+'\\b','i').test(question);}));
- if(!answers.length){const generic=String(question).toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();const years=Number(facts?.overall_experience_years);if(/^(?:how many |number of |total |overall )?years?(?: of)? (?:(?:total|overall|professional|commercial|hands on|work|working) )*(?:experience (?:in|as a|as an) )?(?:software(?: engineering| development)?|software engineer|programming)(?: experience)?(?: do you have)?$/.test(generic)&&Number.isFinite(years)&&years>0&&years<=60)return {answer:String(years),evidence:'User-confirmed overall software engineering experience: '+years+' years.'};return null;}
+ const answers=[...String(facts?.verified_experience||'').matchAll(/User-confirmed application answer:\s*(\d+(?:\.\d+)?) years of hands-on work experience with ([^.\n]+)\./g)].filter(match=>match[2].split('/').some(skill=>{const escaped=skill.trim().replace(/[-–]/g,' ').replace(/\s+/g,' ').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('\\b'+escaped+'\\b','i').test(String(question).replace(/\bfullstack\b/gi,'full stack').replace(/[-–]/g,' ').replace(/\s+/g,' '));}));
+ if(!answers.length){const words='zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ');const career=String(question).toLowerCase().replace(/[-–]/g,' ').replace(new RegExp('\\b('+words.join('|')+')\\b','g'),word=>String(words.indexOf(word))).replace(/\b\d+(?:\.\d+)?\s*(?:\+|or more)?\s*years?\b/g,'years').replace(/\b(?:how many|number of|do you have|have you had|have you|at least|no more than|more than|up to)\b/g,' ').replace(/\b(?:years?|of|work|worked|working|professional|commercial|total|overall|hands on|relevant|experience|in|with|as|a|an|exactly|over)\b/g,' ').replace(/[^a-z0-9]+/g,' ').trim();const years=Number(facts?.overall_experience_years);if(['','software','software engineering','software development','software engineer','programming','engineering'].includes(career)&&Number.isFinite(years)&&years>0&&years<=60)return {answer:String(years),evidence:'User-confirmed overall software engineering experience: '+years+' years.'};}
+ if(!answers.length&&facts?.general_experience_years&&facts?.general_experience_skills){const normalize=value=>String(value||'').replace(/[-–]/g,' ').replace(/\s+/g,' ').trim();const q=normalize(question),source=normalize(facts.verified_experience),withoutDuration=q.replace(/\b\d+(?:\.\d+)?\s*(?:\+|or more)?\s*years?\b/gi,'years');if(!/\d/.test(withoutDuration)){const skills=String(facts.general_experience_skills).split(/[;,\n]/).map(value=>value.split('/').map(normalize).filter(Boolean));for(const aliases of skills){const patterns=aliases.map(skill=>new RegExp('(^|[^a-z0-9])'+skill.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?=$|[^a-z0-9])','i'));if(patterns.some(pattern=>pattern.test(q))&&patterns.some(pattern=>pattern.test(source))){const years=Number(facts.general_experience_years);if(years>=0&&years<=60)return {answer:String(years),source:'User-provided general baseline for listed documented core skills',evidence:'Saved core experience baseline for '+aliases.join('/')+': '+years+' years.'};}}}}
+
+ if(!answers.length)return null;
  if(new Set(answers.map(a=>Number(a[1]))).size!==1)return null;
  const years=Number(answers[0][1]);return years>=0&&years<=60?{answer:String(years),evidence:answers[0][0]}:null;
+}
+export function experienceRequirementAnswer(question,years){
+ if(!/^(?:do|have|did|are|can)\s+you\b/i.test(question)||!/\byears?\b/i.test(question))return null;
+ const words='zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split(' ');
+ const text=String(question).toLowerCase().replace(new RegExp('\\b('+words.join('|')+')\\b','g'),word=>String(words.indexOf(word)));
+ const match=text.match(/\b(\d+(?:\.\d+)?)\s*(?:\+|or more)?\s*years?\b/);if(!match)return {answer:null};
+ const prefix=text.slice(0,match.index).trim(),required=Number(match[1]);let yes;
+ if(/(?:at most|no more than|up to)$/.test(prefix))yes=years<=required;
+ else if(/(?:more than|over)$/.test(prefix))yes=years>required;
+ else if(/(?:less than|fewer than|under)$/.test(prefix))yes=years<required;
+ else if(/exactly$/.test(prefix))yes=years===required;
+ else if(/\bnot\b|\black\b/.test(prefix))return {answer:null};
+ else yes=years>=required;
+ return {answer:yes?'yes':'no'};
+}
+export function experienceChoiceMatches(question,answer,years){
+ const required=experienceRequirementAnswer(question,years);if(required)return required.answer!==null&&String(answer).trim().toLowerCase()===required.answer;
+ const label=String(answer).trim();const less=label.match(/^(?:less than|under|<)\s*(\d+(?:\.\d+)?)\s*(?:years?)?$/i);if(less)return years<Number(less[1]);const more=label.match(/^(?:more than|over|>)\s*(\d+(?:\.\d+)?)\s*(?:years?)?$/i);if(more)return years>Number(more[1]);const option=label.match(/^(\d+(?:\.\d+)?)\s*(\+|or more)?\s*(?:years?)?(?:\s*(or more))?$/i),range=label.match(/^(\d+(?:\.\d+)?)\s*(?:[-–]|to)\s*(\d+(?:\.\d+)?)\s*(?:years?)?$/i);
+ if(range)return Number(range[1])<=years&&years<=Number(range[2]);
+ return Boolean(option&&(option[2]||option[3]?years>=Number(option[1]):years===Number(option[1])));
 }
 // Only direct technical-experience questions can use documented resume skills.
 // Credentials, legal declarations and numeric durations have separate checks.
@@ -69,11 +92,7 @@ export function choiceMatches({fact,value,label,question,facts}){
  if(!expected)return false;
  if(fact==='verified_experience'){
   const technical=technicalExperienceAnswer(question,facts);if(technical)return answer===technical.answer;
-  const confirmed=experienceAnswer(question,facts),option=answer.match(/^(\d+(?:\.\d+)?)\s*(\+)?\s*(?:years?)?$/),range=answer.match(/^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*(?:years?)?$/);
-  if(!confirmed)return false;
-  const years=Number(confirmed.answer);
-  if(range)return Number(range[1])<=years&&years<=Number(range[2]);
-  return Boolean(option&&(option[2]?years>=Number(option[1]):years===Number(option[1])));
+  const confirmed=experienceAnswer(question,facts);return confirmed?experienceChoiceMatches(question,answer,Number(confirmed.answer)):false;
  }
  if(['work_authorization','sponsorship','us_citizen'].includes(fact)){
   // Some employer forms ask authorization through visa-category options.
