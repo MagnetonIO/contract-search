@@ -23,7 +23,12 @@ export function applicationControlKind({text='',label='',type='',inForm=false}={
  return 'unsupported';
 }
 export async function applicationScope(page){
- const dialogs=page.locator('dialog:not([aria-hidden=true]),[role=dialog]:not([aria-hidden=true]),[role=alertdialog]:not([aria-hidden=true])').filter({visible:true});if(await dialogs.count())return dialogs.last();
+ const dialogs=page.locator('dialog:not([aria-hidden=true]),[role=dialog]:not([aria-hidden=true]),[role=alertdialog]:not([aria-hidden=true])').filter({visible:true});
+ // LinkedIn can mount its Messaging dialog after Easy Apply. DOM order does
+ // not identify the application; keep every field and action in its own form.
+ const application=dialogs.filter({hasText:/^\s*Apply to\b/i});
+ if(await application.count()===1)return application;
+ if(await dialogs.count())return dialogs.last();
  const main=page.getByRole('main').filter({visible:true});return await main.count()===1?main:page.locator('body');
 }
 export async function applicationButtons(scope){

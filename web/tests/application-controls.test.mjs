@@ -75,3 +75,10 @@ test('a selected React-style country combobox retains its selected label and hid
  const {chromium}=await import('playwright-core'),{applicationFields}=await import('../lib/application-controls.mjs');const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
  try{const page=await browser.newPage();await page.setContent('<label for="country">Country</label><div class="select-container"><div class="select__single-value">United States +1</div><input id="country" role="combobox" value=""><input type="hidden" name="country" value="US"></div>');const [field]=await page.locator('input:not([type=hidden])').evaluateAll(applicationFields);assert.equal(field.filled,true);assert.equal(field.current_value,'US');assert.equal(field.selected_label,'United States +1');}finally{await browser.close();}
 });
+
+test('LinkedIn application stays scoped to Easy Apply when Messaging opens after it',async()=>{
+ const{chromium}=await import('playwright-core');const{applicationScope,clickApplicationStep}=await import('../lib/application-controls.mjs');const b=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const p=await b.newPage();await p.setContent('<dialog open><h2>Apply to Example</h2><button onclick="window.nextClicked=true">Next</button></dialog><div role="dialog" aria-label="Messaging"><button onclick="window.sent=true">Send</button></div>');const scope=await applicationScope(p);assert.match(await scope.innerText(),/^Apply to Example/);assert.equal((await clickApplicationStep(p,'Next')).clicked,true);assert.equal(await p.evaluate(()=>window.nextClicked),true);assert.equal(await p.evaluate(()=>window.sent),undefined);
+ await p.setContent('<div role="dialog" aria-label="Messaging"><button>Send</button></div><dialog open><h2>Apply to Example</h2><button>Submit application</button></dialog>');assert.equal((await clickApplicationStep(p,'Next')).blocked,true,'a missing Next never clicks Submit');
+ }finally{await b.close();}
+});

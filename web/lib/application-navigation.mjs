@@ -1,7 +1,7 @@
 import {recoverableResumeBlock} from './resume-library.mjs';
 import {applicationButtons} from './application-controls.mjs';
 import {knownChoiceAnswer,normalizedLabel,needsResumeUpload} from './visual-policy.mjs';
-export const NAVIGATION_REPAIR_VERSION=7;
+export const NAVIGATION_REPAIR_VERSION=8;
 // Register before clicking: external boards open asynchronously, often after
 // the click promise has resolved. A synchronous pages() snapshot misses them.
 export async function clickApplicationTarget(page,click,{timeout=2000}={}){
