@@ -142,3 +142,6 @@ test('overall seniority uses confirmed overall years without assigning that dura
  assert.equal(experienceAnswer('How many years of AI Agent development experience do you have?',facts).answer,'4');
  assert.equal(experienceAnswer('How many years of Rust experience do you have?',facts),null);
 });
+test('current US residence is derived from the saved country, without declaring willingness or a work schedule',()=>{
+ const facts={country:'United States'};const question='Are you currently located in the United States?';assert.deepEqual(knownChoiceAnswer(question,facts),{fact:'country',answer:'yes'});assert.equal(choiceMatches({fact:'country',question,label:'Yes',value:'yes',facts}),true);assert.equal(choiceMatches({fact:'country',question,label:'No',value:'no',facts}),false);assert.equal(knownChoiceAnswer('Are you willing to relocate to the United States?',facts),null);
+});

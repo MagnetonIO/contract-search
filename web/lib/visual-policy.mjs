@@ -9,6 +9,7 @@ export function visualTextFactAllowed(question,fact,facts){
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
 export const optionalTopChoice=control=>['checkbox','radio'].includes(control?.type)&&/\b(?:mark (?:this )?job as a )?top choice\b/i.test(normalizedLabel(control?.question||control?.label));
 export function knownChoiceAnswer(question,facts){
+ if(/^(?:are you (?:currently )?(?:located|based|living)|do you (?:currently )?(?:live|reside)) in (?:the )?(?:united states|u\.?s\.?(?:a\.?)?)[?*\s]*$/i.test(String(question).trim())&&facts?.country)return {fact:'country',answer:/^(?:united states|us|usa)$/i.test(facts.country.trim())?'yes':'no'};
  if(/(?:u\.?s\.?|united states)\s+(?:citizen|citizenship)|citizen(?:ship)?\s+(?:of\s+)?(?:the\s+)?(?:u\.?s\.?|united states)\b/i.test(question)&&! /clearance|criminal|signature|penalty|background/i.test(question))return ['yes','no'].includes(facts?.us_citizen)?{fact:'us_citizen',answer:facts.us_citizen}:null;
  const authorization=/authoriz|eligible.*work|legal.*work/i.test(question);
  if(authorization&&/without.*sponsor/i.test(question)){
@@ -81,6 +82,7 @@ export function choiceMatches({fact,value,label,question,facts}){
  }
  if(fact==='routine_privacy_consent')return expected==='yes'&&/privacy|personal data|accurac|accurate/i.test(question)&&! /terms|conditions|arbitration|background|signature/i.test(question);
  if(fact==='country'){
+  const known=knownChoiceAnswer(question,facts);if(known?.fact==='country')return answer===known.answer;
   if(!/country/i.test(question))return false;
   if(/^(us|usa|united states)$/.test(expected))return /^(us|usa|united states)(?:\s*(?:\(\+?1\)|\+1))?$/.test(answer)||/^(us|usa|united states)$/.test(raw);
  }
