@@ -20,6 +20,15 @@ export async function uploadApprovedResume({page,scope,file,index,label,byIndex,
  if(destinations.length===1){await destinations[0].setInputFiles(file);return {attached:true};}
  if(destinations.length>1)return {not_uploaded:true,action:'Multiple resume upload fields are present; identify the active resume control before uploading.'};
  if(index!==undefined&&label&&byIndex){const input=await byIndex(index,label);if(await input.evaluate(documentInputKind)!=='resume')return {not_uploaded:true,action:'This file input is not identified as the resume field. Use the Resume upload or replacement control; never the cover letter input.'};await input.setInputFiles(file);return {attached:true};}
+ // Indeed's existing-resume preview opens a separate replacement selector.
+ // This is an ordinary button, not a menuitem or the template selector.
+ const different=scope.getByRole('button',{name:/^Use (?:a )?different resum[eé]$/i}).filter({visible:true});
+ if(await different.count()===1){
+  const picker=page.waitForEvent('filechooser',{timeout:1000}).catch(()=>null);
+  await different.click({timeout:10000});const chooser=await picker;
+  if(chooser){await chooser.setFiles(file);return {attached:true};}
+  return {not_uploaded:true,selector_opened:true,action:'The resume replacement selector is open. Inspect its current upload control and attach the approved PDF there.'};
+ }
  const button=scope.getByRole('button',{name:/^(?!.*(?:template|builder|tailor|generate|premium))(?:upload|attach|replace|choose|select)\b.*\b(?:resume|résumé|cv)\b/i}).filter({visible:true});
  let click;
  if(await button.count()===1)click=()=>button.click({timeout:10000});
