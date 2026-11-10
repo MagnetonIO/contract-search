@@ -100,6 +100,19 @@ export async function expireVerifications(deps={}){
  return expired;
 }
 
+export async function verificationCodeFields(page,length){
+ const first=page.getByLabel(/^Security code$/i);if(await first.count()!==1)return null;
+ const limit=Number(await first.getAttribute('maxlength')||0);
+ if(limit!==1)return limit>0&&limit<length?null:[first];
+ let group=first;
+ for(let depth=0;depth<5;depth++){
+  const slots=group.locator('input[maxlength="1"]').filter({visible:true});
+  if(await slots.count()===length)return Array.from({length},(_,i)=>slots.nth(i));
+  group=group.locator('..');
+ }
+ return null;
+}
+
 // Runs in a short workflow step. Codes never cross the step boundary.
 export async function recoverVerification(id,{client=bb(),connect=url=>chromium.connectOverCDP(url),fetchCode=fetchApplicationCode,notify=notifyApplicationException}={}){
  let a=await attempt(id);if(a.verification?.state!=='active')return {waiting:false};
@@ -129,15 +142,16 @@ export async function recoverVerification(id,{client=bb(),connect=url=>chromium.
    try{
     const page=browser.contexts()[0].pages().find(p=>verificationTarget(p.url(),v.target));
     if(page){const notice=emailVerification(await page.locator('body').innerText(),page.url());
-     const input=page.getByLabel(/^Security code$/i),button=page.getByRole('button',{name:/^submit(?: application)?$/i}).filter({visible:true});
-     if(notice&&notice.email.toLowerCase()===v.recipient.toLowerCase()&&notice.length===v.length&&await input.count()===1&&await button.count()===1){
+     const inputs=await verificationCodeFields(page,v.length),button=page.getByRole('button',{name:/^submit(?: application)?$/i}).filter({visible:true});
+     if(notice&&notice.email.toLowerCase()===v.recipient.toLowerCase()&&notice.length===v.length&&inputs&&await button.count()===1){
       // Greenhouse can disable Submit until the code has been entered.
       // Filling is reversible; reserve the one post only after validation.
-      await input.fill(code.code);
-      if(!await button.isEnabled()){await input.fill('',{timeout:1000}).catch(()=>{});return {waiting:true};}
+      for(let i=0;i<inputs.length;i++)await inputs[i].fill(inputs.length===1?code.code:code.code[i]);
+      for(let tick=0;tick<10&&!await button.isEnabled();tick++)await new Promise(resolve=>setTimeout(resolve,100));
+      if(!await button.isEnabled()){for(const input of inputs)await input.fill('',{timeout:1000}).catch(()=>{});return {waiting:true};}
       // Reserve this one continuation BEFORE posting; a crash cannot replay it.
       let reserved=false;await mutate('application-attempts.json',old=>{reserved=false;const prior=old[id];if(prior.verification?.code_attempted_at)return old;reserved=true;return {...old,[id]:{...prior,verification:{...prior.verification,code_attempted_at:new Date().toISOString(),consumed_message_ids:[...(prior.verification.consumed_message_ids||[]),code.message_id]}}};});
-      if(reserved){await button.click({timeout:10000});await page.getByText(CONFIRMATION_PATTERN).first().waitFor({timeout:10000}).catch(()=>{});}if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});
+      if(reserved){await button.click({timeout:10000});await page.getByText(CONFIRMATION_PATTERN).first().waitFor({timeout:10000}).catch(()=>{});}for(const input of inputs)if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});
      }
     }
    }finally{code=null;await browser.close().catch(()=>{});}

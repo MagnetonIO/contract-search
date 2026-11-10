@@ -44,12 +44,12 @@ test('expired verification windows release their reservation without clearing su
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(dir,{recursive:true,force:true});}
 });
 
-test('automatic employer-code continuation posts once and stores no code',async()=>{
+for(const segmented of [false,true])test('automatic employer-code continuation posts once and stores no code ('+(segmented?'split':'single')+' input)',async()=>{
  const {holdVerification,recoverVerification}=await import('../lib/application-verification.mjs');
  const dir=await mkdtemp(path.join(os.tmpdir(),'contract-code-')),prior=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=dir;
  const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
  try{
-  const page=await browser.newPage();await page.route(url,r=>r.fulfill({contentType:'text/html',body:`<p>${notice}</p><form><label>Security code<input name="code" oninput="document.querySelector('button').disabled=this.value.length!==8"></label><button disabled>Submit application</button></form><script>window.posted=0;document.querySelector('form').onsubmit=e=>{e.preventDefault();window.posted++;document.body.innerHTML='<h1>Your application has been received</h1>'}</script>`}));await page.goto(url);
+  const inputs=segmented?'<label for="slot0">Security code</label><div>'+Array.from({length:8},(_,i)=>'<input id="slot'+i+'" maxlength="1">').join('')+'</div>':'<label>Security code<input name="code"></label>';const page=await browser.newPage();await page.route(url,r=>r.fulfill({contentType:'text/html',body:`<p>${notice}</p><form>${inputs}<button disabled>Submit application</button></form><script>window.posted=0;document.querySelector('form').oninput=()=>document.querySelector('button').disabled=[...document.querySelectorAll('input')].map(e=>e.value).join('').length!==8;document.querySelector('form').onsubmit=e=>{e.preventDefault();window.posted++;document.body.innerHTML='<h1>Your application has been received</h1>'}</script>`}));await page.goto(url);
   const sentAt=new Date(Date.now()-1000).toISOString();await writeJson('automation-settings.json',{enabled:true});await writeJson('profile.json',{resume_hash:'approved'});await writeJson('applicant-facts.json',{confirmed:true,version:'v1'});await writeJson('application-attempts.json',{a:{id:'a',lead_id:'lead',status:'submitting',title:'Engineer',application_url:url,submission_intent_at:sentAt,profile_version:'v1',resume_hash:'approved'}});
   await holdVerification('a',{id:'session',expiresAt:new Date(Date.now()+900000).toISOString()},{target:url,company:'Acme',recipient:'person@example.com',length:8});
   let releases=0,alerts=0;
@@ -59,6 +59,10 @@ test('automatic employer-code continuation posts once and stores no code',async(
  }finally{await browser.close();if(prior===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=prior;await rm(dir,{recursive:true,force:true});}
 });
 
+test('employer codes support a labelled group of single-character inputs',async()=>{
+ const {verificationCodeFields}=await import('../lib/application-verification.mjs');const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<label for="digit0">Security code</label><div>'+Array.from({length:8},(_,i)=>'<input id="digit'+i+'" maxlength="1">').join('')+'</div>');const fields=await verificationCodeFields(page,8);assert.equal(fields.length,8);for(let i=0;i<fields.length;i++)await fields[i].fill(String(i));assert.deepEqual(await page.locator('input').evaluateAll(es=>es.map(e=>e.value)),['0','1','2','3','4','5','6','7']);assert.equal(await verificationCodeFields(page,6),null);}finally{await browser.close();}
+});
 test('no-handoff mode closes an unrecovered challenge, records the outcome and sends no action email',async()=>{
  const {holdVerification,recoverVerification}=await import('../lib/application-verification.mjs');const dir=await mkdtemp(path.join(os.tmpdir(),'contract-no-handoff-')),prior=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=dir;
  const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
