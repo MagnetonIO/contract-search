@@ -19,7 +19,7 @@ export function applicationControlKind({text='',label='',type='',inForm=false}={
  if(/sign|agree|accept|terms|purchase|pay|delete/.test(name))return 'unsupported';
  if(['apply','apply now'].includes(name))return inForm?'submission':'entry';
  if(['easy apply','start application','apply for this job',"i'm interested"].includes(name))return inForm&&type==='submit'?'submission':'entry';
- if(/^(next|continue|review)(?: (?:to )?(?:the )?(?:next step|application|your application))?$/.test(name))return 'step';
+ if(/^(next|continue|review)(?: (?:to )?(?:the )?(?:next step|application|your application|resume|résumé|questions|employer questions|qualifications|review|contact information))?$/.test(name))return 'step';
  return 'unsupported';
 }
 export async function applicationScope(page){

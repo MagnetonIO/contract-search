@@ -21,7 +21,8 @@ export function knownChoiceAnswer(question,facts){
 export function experienceAnswer(question,facts){
  if(!/\byears?\b/i.test(question)||! /experience|worked|working/i.test(question))return null;
  const answers=[...String(facts?.verified_experience||'').matchAll(/User-confirmed application answer:\s*(\d+(?:\.\d+)?) years of hands-on work experience with ([^.\n]+)\./g)].filter(match=>match[2].split('/').some(skill=>{const escaped=skill.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return new RegExp('\\b'+escaped+'\\b','i').test(question);}));
- if(!answers.length||new Set(answers.map(a=>Number(a[1]))).size!==1)return null;
+ if(!answers.length){const generic=String(question).toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();const years=Number(facts?.overall_experience_years);if(/^(?:how many |number of |total |overall )?years?(?: of)? (?:(?:total|overall|professional|commercial|hands on|work|working) )*(?:experience (?:in|as a|as an) )?(?:software(?: engineering| development)?|software engineer|programming)(?: experience)?(?: do you have)?$/.test(generic)&&Number.isFinite(years)&&years>0&&years<=60)return {answer:String(years),evidence:'User-confirmed overall software engineering experience: '+years+' years.'};return null;}
+ if(new Set(answers.map(a=>Number(a[1]))).size!==1)return null;
  const years=Number(answers[0][1]);return years>=0&&years<=60?{answer:String(years),evidence:answers[0][0]}:null;
 }
 // Only direct technical-experience questions can use documented resume skills.

@@ -30,3 +30,15 @@ test('LinkedIn not-currently-accepting text closes only the current listing',()=
  assert.equal(result.status,'closed');assert.equal(result.site_notice,'Not currently accepting applications');
  assert.equal(parsePostingStatus(lead,{status:200,html:page('<h2>Similar Jobs</h2><section>Not currently accepting applications</section>')}).status,'open');
 });
+test('Indeed expired-job banners close the selected posting without a handoff',()=>{
+ const indeed={title:'CTO / Senior Developer (part-time, remote)',source_url:'https://www.indeed.com/job/cto-example'};
+ const html='<main><div role="alert">This job has expired on Indeed. Reasons could include: the employer is not accepting applications.</div><h1>'+indeed.title+'</h1></main>';
+ const result=parsePostingStatus(indeed,{status:200,html});assert.equal(result.status,'closed');assert.match(result.site_notice,/This job has expired on Indeed/);
+});
+test('a closed page without a heading requires its observed URL to identify this exact posting',()=>{
+ const html='<div class="jobsearch-JobInfoHeader-expired">This job has expired on Indeed</div>';
+ const job={title:'Engineer',application_url:'https://www.indeed.com/job/engineer-abc'};
+ assert.equal(parsePostingStatus(job,{status:200,html,url:job.application_url}).status,'closed');
+ assert.equal(parsePostingStatus(job,{status:200,html,url:'https://www.indeed.com/job/other-def'}).status,'unknown');
+ assert.equal(parsePostingStatus(job,{status:200,html:'Access denied',url:job.application_url}).status,'unknown');
+});

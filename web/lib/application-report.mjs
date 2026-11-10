@@ -20,13 +20,14 @@ function category(a){
  const c=outcomeCategory(a.status,a.reason,a.outcome_history?.at(-1)?.category);
  if(c==='closed')return c;
  const blocker=attemptBlocker(a);
- if(blocker?.kind==='technical')return 'technical_failure';
- if(['sign_in','email_verification'].includes(blocker?.kind))return 'security_or_sign_in';
+ if(blocker?.kind==='unsupported_destination')return 'unsupported_destination';
+ if(['technical','answer_unresolved','automatic_verification_failed'].includes(blocker?.kind))return 'technical_failure';
+ if(['sign_in','email_verification','security_verification'].includes(blocker?.kind))return 'security_or_sign_in';
  if(blocker?.kind==='answer')return 'needs_answer';
  if(blocker?.kind==='review')return 'needs_review';
  return c;
 }
-const labels={confirmed:'Confirmed',technical_failure:'Technical failure',security_or_sign_in:'Security or sign-in',needs_answer:'Needs answer',needs_review:'Needs review',unconfirmed:'Unconfirmed',closed:'Closed',skipped:'Skipped',cancelled:'Cancelled',in_progress:'In progress',failed:'Failed',needs_input:'Needs input'};
+const labels={unsupported_destination:'Unsupported destination',confirmed:'Confirmed',technical_failure:'Technical failure',security_or_sign_in:'Security or sign-in',needs_answer:'Needs answer',needs_review:'Needs review',unconfirmed:'Unconfirmed',closed:'Closed',skipped:'Skipped',cancelled:'Cancelled',in_progress:'In progress',failed:'Failed',needs_input:'Needs input'};
 const csvCell=value=>{let text=String(value??'');if(/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';};
 export function applicationReportPayload({leads=[],attempts={},now=new Date(),mode='daily'}){
  const day=chicagoDay(now),byId=new Map(leads.map(l=>[l.id,l])),seen=new Set(),rows=[];
@@ -51,7 +52,7 @@ export function applicationReportPayload({leads=[],attempts={},now=new Date(),mo
  const link=(url,label)=>`<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
  const jobs=confirmed.map(r=>`<tr><td><strong>${escapeHtml(r.title)}</strong><br>${escapeHtml(r.company)}<br>${escapeHtml(r.source)} → ${escapeHtml(r.destination)} · ${escapeHtml(localTime(r.at))}<br>Receipt: ${escapeHtml(r.receipt)}<br>${link(r.url||r.details,'Job posting')} · ${link(r.details,'Application details')}${r.evidence?' · '+link(r.evidence,'Private evidence'):'<br>No screenshot retained; saved target-site receipt shown above.'}</td></tr>`).join('');
  // Keep the email readable; the attachment preserves every non-success outcome.
- const blockers=other.slice(-12).map(r=>`<li><strong>${escapeHtml(r.title)}</strong> — ${escapeHtml(r.source)} · ${escapeHtml(labels[r.status]||r.status)}<br>${escapeHtml(r.reason.slice(0,600))}<br>${link(r.details,'Details and required action')}</li>`).join('');
+ const blockers=other.slice(-12).map(r=>`<li><strong>${escapeHtml(r.title)}</strong> — ${escapeHtml(r.source)} · ${escapeHtml(labels[r.status]||r.status)}<br>${escapeHtml(r.reason.slice(0,600))}<br>${link(r.details,'Outcome details')}</li>`).join('');
  const html=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:Arial,sans-serif;line-height:1.5;color:#172b40"><main style="max-width:700px;margin:auto;padding:16px"><p>CONTRACT DESK</p><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(intro)}</p><h2>By source</h2><ul>${sourceLines.map(line=>`<li>${escapeHtml(line)}</li>`).join('')||'<li>No application activity recorded today.</li>'}</ul><h2>Confirmed applications (${confirmed.length})</h2><table cellpadding="10" width="100%">${jobs||'<tr><td>No confirmed submissions recorded today.</td></tr>'}</table><h2>Other outcomes (${other.length})</h2><p>${Object.entries(counts).filter(([key])=>key!=='confirmed').map(([key,n])=>escapeHtml(`${labels[key]||key}: ${n}`)).join(' · ')}</p><ul>${blockers}</ul>${other.length>12?'<p>Showing the latest 12 here; every outcome and reason is included in the attached CSV.</p>':''}<p>The full outcome register is attached as CSV. Evidence links require your Contract Desk sign-in.</p><p>${link(DASHBOARD_URL+'/?view=automation','Open application results')}</p></main></body></html>`;
  const csv=[['Job','Company','Source','Application destination','Outcome','Recorded at UTC','Chicago time','Target receipt','Reason','Required action','Job URL','Application details','Private evidence'],...rows.map(r=>[r.title,r.company,r.source,r.destination,labels[r.status]||r.status,r.at,localTime(r.at),r.receipt,r.reason,r.action,r.url,r.details,r.evidence])].map(row=>row.map(csvCell).join(',')).join('\r\n');
  return {payload:{from:MAIL_FROM,to:[DIGEST_TO],reply_to:MAIL_REPLY_TO,subject:'[Contract Desk] '+heading,text,html,attachments:[{filename:`contract-desk-applications-${day}${mode==='so-far'?'-so-far':''}.csv`,content:Buffer.from(csv).toString('base64')}]},meta:{day,confirmed:confirmed.length,counts,sources,cutoff:now.toISOString(),mode}};

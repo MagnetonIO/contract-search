@@ -1,7 +1,8 @@
+import {cookies} from 'next/headers';
 import {TRACKED_ROLES,roleResumeEntry} from '../../../lib/roles.mjs';
 import {screenshotKey} from '../../../lib/outcome-evidence.mjs';
 import { start } from 'workflow/api';
-import { applicationCycle } from '../../../workflows/applications';
+import { applicationCycle, applicationContinuation, targetedApplicationPilot } from '../../../workflows/applications';
 import { automationSettings, automationDashboard, saveFacts, setEnabled, patchAttempt, reviseAttempt, activity } from '../../../lib/automation-state.mjs';
 import { ensureCollection } from '../../../lib/collector-scheduler.mjs';
 import { NextResponse } from 'next/server';
@@ -59,7 +60,23 @@ async function handle(request: Request, context: Context) {
     const session = await sessionFor(config); session.username = config.username; await session.save();
     return json({ success: true });
   }
+  // The dashboard session remains SameSite=Strict. Only this OAuth return
+  // uses a short-lived browser-bound nonce plus the one-time server state.
+  if(action==='gmail-callback'&&request.method==='GET'){
+    const params=new URL(request.url).searchParams,connection=await import('../../../lib/gmail-verification.mjs');
+    if(config.resetAllowedUntil||!connection.validGmailCallback(params.get('state'),(await cookies()).get('contract_gmail_oauth')?.value))return json({error:'Gmail connection request expired or did not match this browser.'},401);
+    if(params.has('error'))return json({error:'Google did not authorize the Gmail connection.'},400);
+    await connection.completeGmailConnect(params.get('code'),params.get('state'));
+    const response=NextResponse.redirect(new URL('/gmail-connect?connected=1',request.url));
+    response.cookies.set('contract_gmail_oauth','',{httpOnly:true,secure:true,sameSite:'lax',path:'/api/gmail-callback',maxAge:0});return response;
+  }
   if (!await isLoggedIn(config)) return json({ error: 'Sign in to continue.' }, 401);
+  if(action==='gmail-connection'&&request.method==='GET')return json(await(await import('../../../lib/gmail-verification.mjs')).gmailStatus());
+  if(action==='gmail-connect'&&request.method==='POST'){
+    const result=await(await import('../../../lib/gmail-verification.mjs')).beginGmailConnect(),response=json(result);
+    response.cookies.set('contract_gmail_oauth',new URL(result.url).searchParams.get('state')!,{httpOnly:true,secure:true,sameSite:'lax',path:'/api/gmail-callback',maxAge:600});
+    return response;
+  }
   if (action === 'email-import-script' && request.method === 'POST') {
     let stored = await readJson<{token:string}|null>('email-import-config.json',null);
     if (!stored.value) {
@@ -88,6 +105,11 @@ async function handle(request: Request, context: Context) {
   if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
   if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
   if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}
+  if(action==='automation-pilot'&&request.method==='POST'){
+    const input=await request.json(),pilot=await(await import('../../../lib/application-pilot-run.mjs')).prepareTargetedPilot(input.lead_ids);
+    if(!pilot.attempt_ids.length)return json({...pilot,status:'deferred'});
+    const run=await start(targetedApplicationPilot,[pilot.attempt_ids]);return json({...pilot,run_id:run.runId,status:'started'});
+  }
   if (['automation-run','automation-start'].includes(action) && request.method === 'POST') {
     const state=await automationSettings();
     if((state.run as {active?:boolean}|null)?.active)return json({already_running:true});
@@ -109,6 +131,11 @@ async function handle(request: Request, context: Context) {
     if(request.method==='GET')return json(await verification.getVerificationView(input.id));
     if(input.action==='open')return json(await verification.reopenVerification(input.id));
     if(input.action==='check')return json(await verification.checkVerification(input.id));
+    if(input.action==='resume'){
+      const result=await verification.resumeVerification(input.id);if(!result.resume)return json(result);
+      const run=await start(applicationContinuation,[input.id]);
+      return json({run_id:run.runId});
+    }
     if(input.action==='close')return json(await verification.closeVerification(input.id));
     return json({error:'Unknown verification action'},400);
   }
@@ -116,7 +143,12 @@ async function handle(request: Request, context: Context) {
     const input=await request.json();if(!/^[a-f0-9-]{36}$/.test(input.id))return json({error:'Invalid attempt'},400);
     const state=await automationSettings();const attempt=(state.attempts as Record<string, any>)[input.id];
     if(!attempt)return json({error:'Attempt missing'},404);
-    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){await setEnabled(true);await reviseAttempt(input.id,'resume');const run=await start(applicationCycle,[{manual:true}]);return json({run_id:run.runId});}
+    if(input.action==='resume'&&['needs_input','failed'].includes(attempt.status)&&!attempt.submission_intent_at){
+      if(attempt.verification?.state==='active')return json({error:'Use the private application browser to resume the preserved form.'},409);
+      await reviseAttempt(input.id,'resume');
+      await patchAttempt(input.id,{manual_authorized_at:new Date().toISOString(),manual_expires_at:new Date(Date.now()+1800000).toISOString()},{updateRun:false});
+      const run=await start(applicationContinuation,[input.id]);return json({run_id:run.runId});
+    }
     if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
     return json({error:'An uncertain submission must be reconciled before another attempt.'},409);
   }

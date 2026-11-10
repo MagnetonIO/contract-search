@@ -5,6 +5,10 @@ export const bb=()=>new Browserbase({apiKey:process.env.BROWSERBASE_API_KEY,maxR
 export async function browserSession(timeout=300,{isolated=false}={}){
  const client=bb();let context=isolated?null:(await readJson('browser-context.json',null)).value;
  if(!isolated&&!context){const created=await client.contexts.create({projectId:process.env.BROWSERBASE_PROJECT_ID});context={id:created.id};await mutate('browser-context.json',old=>old||context,null);context=(await readJson('browser-context.json',null)).value;}
- const session=await client.sessions.create({projectId:process.env.BROWSERBASE_PROJECT_ID,api_timeout:timeout,keepAlive:true,proxies:false,browserSettings:{...(!isolated?{context:{id:context.id,persist:true}}:{}),recordSession:false,solveCaptchas:false,viewport:{width:1440,height:900}}});
- return session;
+ const holds=(await readJson('application-attempts.json',{})).value;
+ // Concurrent sessions can read an authentication snapshot, but only one may
+ // persist changes while a human owns another live form using that snapshot.
+ const held=Object.values(holds).some(a=>a.verification?.state==='active'&&Date.parse(a.verification.expires_at)>Date.now()&&a.verification.context_id===context?.id);
+ const session=await client.sessions.create({projectId:process.env.BROWSERBASE_PROJECT_ID,api_timeout:timeout,keepAlive:true,proxies:false,browserSettings:{...(!isolated?{context:{id:context.id,persist:!held}}:{}),recordSession:false,logSession:false,solveCaptchas:true,viewport:{width:1440,height:900}}});
+ return {...session,context_id:context?.id||null};
 }

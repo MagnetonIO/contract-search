@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';
+import {readJson,writeJson} from '../lib/store.ts';
+test('saved context retains rate tiers, overall experience and preferences and updates the screening minimum',async()=>{
+ const {saveFacts}=await import('../lib/automation-state.mjs');const dir=await mkdtemp(path.join(os.tmpdir(),'applicant-context-')),old=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=dir;
+ try{await writeJson('automation-settings.json',{enabled:false,minimum_hourly_usd:100});const saved=await saveFacts({name:'Test Applicant',email:'test@example.com',phone:'5555555555',zip:'60612',work_authorization:'yes',sponsorship:'no',confirmed:true,verified_experience:'Documented software engineering work.',desired_hourly_rate:'112',hourly_rate_low:'97',hourly_rate_high:'132',overall_experience_years:'20',general_experience_years:'10',application_context:'Available 20–40 hours per week. CTO, lead developer, software team manager, data engineer, full-stack, forward deployed engineer.'});
+ assert.equal(saved.hourly_rate_low,'97');assert.equal(saved.hourly_rate_high,'132');assert.equal(saved.overall_experience_years,'20');assert.match(saved.application_context,/20–40/);assert.equal((await readJson('automation-settings.json',{})).value.minimum_hourly_usd,97);assert.equal((await readJson('automation-settings.json',{})).value.enabled,false);
+ }finally{if(old===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=old;await rm(dir,{recursive:true,force:true});}
+});

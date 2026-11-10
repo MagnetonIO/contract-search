@@ -5,12 +5,13 @@ export function publicPostingUrl(lead){
  for(const raw of [lead.application_url,lead.source_url])try{const u=new URL(raw);if(u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&publicHosts.some(h=>u.hostname===h||u.hostname.endsWith('.'+h)))return u.href;}catch{}
  return null;
 }
-export function parsePostingStatus(lead,{status,html=''}){
+export function parsePostingStatus(lead,{status,html='',url=null}){
  const $=load(html);const jobs=[];
  function visit(value){if(Array.isArray(value))return value.forEach(visit);if(!value||typeof value!=='object')return;if([value['@type']].flat().includes('JobPosting'))jobs.push(value);if(value['@graph'])visit(value['@graph']);}
  $('script[type="application/ld+json"]').each((_,e)=>{try{visit(JSON.parse($(e).text()));}catch{}});
  const job=jobs.find(j=>normalize(j.title)===normalize(lead.title));
- const matching=Boolean(job)||$('h1').toArray().some(e=>normalize($(e).text())===normalize(lead.title));
+ const matching=Boolean(job)||$('h1,[role="heading"]').toArray().some(e=>normalize($(e).text())===normalize(lead.title));
+ let samePosting=false;try{const actual=new URL(url);samePosting=[lead.application_url,lead.source_url].filter(Boolean).some(raw=>{const expected=new URL(raw);return actual.protocol==='https:'&&actual.origin===expected.origin&&actual.pathname===expected.pathname&&/\/(?:job|jobs|job-detail|view)\//.test(actual.pathname);});}catch{}
  $('script,style,noscript').remove();
  $('h1,h2,h3,p,div,li,span,br').append(' ');
  const visible=$('main').length?$('main').text():$('body').text();
@@ -26,11 +27,11 @@ export function parsePostingStatus(lead,{status,html=''}){
  const base={http_status:status,...(pay?{pay}:{}),...(job?.description?{description:load(String(job.description)).text().replace(/\s+/g,' ').trim().slice(0,25000)}:{})};
  if([404,410].includes(status))return {...base,status:'closed',reason:'The posting returned HTTP '+status+'.'};
  if(status!==200)return {...base,status:'unknown',reason:[403,429].includes(status)?'Public access is restricted; availability will be checked in the application browser.':'Public availability could not be confirmed.'};
- if(!matching)return {...base,status:'unknown',reason:'The response did not identify the selected posting.'};
- const closed=/no longer accepting applications|not currently accepting applications|(?:this )?job is no longer available|(?:this )?position has been filled|posting has expired/i;
- const alerts=$('[role="alert"],.alert-type-page,.artdeco-inline-feedback,[data-testid*="expired"]').toArray().map(e=>$(e).text());
+ const closed=/no longer accepting applications|not currently accepting applications|(?:this )?job is no longer available|(?:this )?position has been filled|posting has expired|(?:this )?job has expired(?: on indeed)?/i;
+ const alerts=$('[role="alert"],.alert-type-page,.artdeco-inline-feedback,[data-testid*="expired"],[class*="expired"],[data-testid*="Expired"]').toArray().map(e=>$(e).text());
  const siteNotice=alerts.find(t=>closed.test(t));
- if(siteNotice)return {...base,status:'closed',site_notice:siteNotice.replace(/\s+/g,' ').trim().slice(0,1000),reason:'The selected posting explicitly reports that applications are closed.'};
+ if(siteNotice&&(matching||samePosting))return {...base,status:'closed',site_notice:siteNotice.replace(/\s+/g,' ').trim().slice(0,1000),reason:'The selected posting explicitly reports that applications are closed.'};
+ if(!matching)return {...base,status:'unknown',reason:'The response did not identify the selected posting.'};
  return {...base,status:'open',reason:'The current public posting was identified.'};
 }
 export async function checkPublicPosting(lead,{fetcher=fetch,now=new Date()}={}){
@@ -40,7 +41,7 @@ export async function checkPublicPosting(lead,{fetcher=fetch,now=new Date()}={})
   const response=await fetcher(url,{redirect:'manual',signal:AbortSignal.timeout(10000),headers:{'User-Agent':'Mozilla/5.0','Accept':'text/html'}});
   const reader=response.body?.getReader();let bytes=0;const parts=[];
   if(reader){while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.length;if(bytes>2_000_000){await reader.cancel();return {...base,status:'unknown',reason:'Public page exceeded the bounded availability check.'};}parts.push(Buffer.from(value));}}
-  return {...base,...parsePostingStatus(lead,{status:response.status,html:Buffer.concat(parts).toString('utf8')})};
+  return {...base,...parsePostingStatus(lead,{status:response.status,html:Buffer.concat(parts).toString('utf8'),url})};
  }catch{return {...base,status:'unknown',reason:'Public availability check was unavailable; the application browser will check again.'};}
 }
 export function overlayPostingEvidence(snapshot,validation){

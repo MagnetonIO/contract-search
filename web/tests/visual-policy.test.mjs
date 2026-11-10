@@ -135,3 +135,10 @@ test('visual typing uses only matching routine facts and location options respec
  assert.equal(visualTextFactAllowed('Location *','city',facts),true);assert.equal(visualTextFactAllowed('Years of experience?','city',facts),false);assert.equal(visualTextFactAllowed('Password','city',facts),false);assert.equal(visualTextFactAllowed('Location','work_authorization',facts),false);
  assert.equal(choiceMatches({fact:'city',label:'Chicago, Illinois, United States',question:'Location',facts}),true);assert.equal(choiceMatches({fact:'city',label:'Chicago, Ontario, Canada',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, Wisconsin, United States',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, WI',question:'Location',facts}),false);assert.equal(choiceMatches({fact:'city',label:'Chicago, IL',question:'Location',facts}),true);
 });
+
+test('overall seniority uses confirmed overall years without assigning that duration to a new technology',()=>{
+ const facts={overall_experience_years:'20',general_experience_years:'10',verified_experience:'User-confirmed application answer: 4 years of hands-on work experience with AI Agent development.'};
+ assert.equal(experienceAnswer('How many years of professional software engineering experience do you have?',facts).answer,'20');
+ assert.equal(experienceAnswer('How many years of AI Agent development experience do you have?',facts).answer,'4');
+ assert.equal(experienceAnswer('How many years of Rust experience do you have?',facts),null);
+});

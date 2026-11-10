@@ -1,0 +1,8 @@
+'use client';
+import {useEffect,useState} from 'react';
+export default function GmailConnection(){
+ const [state,setState]=useState<{configured:boolean;connected:boolean;account:string}|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{fetch('/api/gmail-connection',{cache:'no-store'}).then(async r=>{const data=await r.json();if(!r.ok)throw Error(data.error||'Sign in to Contract Desk first.');setState(data);}).catch(e=>setError(e.message));},[]);
+ async function connect(){setBusy(true);setError('');try{const r=await fetch('/api/gmail-connect',{method:'POST'}),data=await r.json();if(!r.ok)throw Error(data.error||'Gmail connection could not start.');window.location.assign(data.url);}catch(e){setError((e as Error).message);setBusy(false);}}
+ return <main className="login-viewer"><header><h1>Application email verification</h1><a href="/?view=automation" className="button secondary">Back to automation</a></header><p>Connect mlong@magneton.io so Contract Desk can retrieve employer application-verification codes while running on Vercel.</p><p>Google grants read-only mailbox access. Contract Desk searches only for expected verification messages tied to an active application. It does not send, delete or mark Gmail messages read.</p>{error&&<p role="alert">{error}</p>}{state?.connected?<p role="status">Gmail connected: {state.account}. Scheduled auto-apply has not been enabled.</p>:state?.configured?<button className="button primary" onClick={()=>void connect()} disabled={busy}>{busy?'Opening Google…':'Connect read-only Gmail'}</button>:state&&<p>Google OAuth credentials must be configured before connecting Gmail.</p>}</main>;
+}

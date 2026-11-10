@@ -39,3 +39,27 @@ test('expired verification windows release their reservation without clearing su
  assert.equal(await expireVerifications({client:{sessions:{update:async()=>{releases++;}}}}),1);const a=(await readJson('application-attempts.json',{})).value.a;assert.equal(a.verification.state,'expired');assert.equal(a.submission_intent_at,'recorded');assert.equal(a.status,'needs_input');const charge=(await readJson('automation-budget.json',{})).value.charges[0];assert.equal(charge.status,'settled');assert.ok(charge.usd<.1);assert.equal(releases,1);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(dir,{recursive:true,force:true});}
 });
+
+test('automatic employer-code continuation posts once and stores no code',async()=>{
+ const {holdVerification,recoverVerification}=await import('../lib/application-verification.mjs');
+ const dir=await mkdtemp(path.join(os.tmpdir(),'contract-code-')),prior=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=dir;
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{
+  const page=await browser.newPage();await page.route(url,r=>r.fulfill({contentType:'text/html',body:`<p>${notice}</p><form><label>Security code<input name="code"></label><button>Submit application</button></form><script>window.posted=0;document.querySelector('form').onsubmit=e=>{e.preventDefault();window.posted++;document.body.innerHTML='<h1>Your application has been received</h1>'}</script>`}));await page.goto(url);
+  const sentAt=new Date(Date.now()-1000).toISOString();await writeJson('automation-settings.json',{enabled:true});await writeJson('profile.json',{resume_hash:'approved'});await writeJson('applicant-facts.json',{confirmed:true,version:'v1'});await writeJson('application-attempts.json',{a:{id:'a',lead_id:'lead',status:'submitting',title:'Engineer',application_url:url,submission_intent_at:sentAt,profile_version:'v1',resume_hash:'approved'}});
+  await holdVerification('a',{id:'session',expiresAt:new Date(Date.now()+900000).toISOString()},{target:url,company:'Acme',recipient:'person@example.com',length:8});
+  let releases=0,alerts=0;
+  const deps={client:{sessions:{retrieve:async()=>({status:'RUNNING',connectUrl:'fixture'}),debug:async()=>({pages:[]}),update:async()=>{releases++;}}},connect:async()=>({contexts:()=>[{pages:()=>[page]}],close:async()=>{}}),fetchCode:async expected=>{assert.equal(expected.requested_at,sentAt);return {message_id:'mail',code:'87654321'};},notify:async()=>{alerts++;}};
+  assert.deepEqual(await recoverVerification('a',deps),{waiting:false});assert.equal(await page.evaluate(()=>window.posted),1);
+  await recoverVerification('a',deps);assert.equal(await page.evaluate(()=>window.posted),1);const stored=(await readJson('application-attempts.json',{})).value.a;assert.equal(stored.status,'submitted');assert.equal(JSON.stringify(stored).includes('87654321'),false);assert.equal(releases,1);assert.equal(alerts,0);
+ }finally{await browser.close();if(prior===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=prior;await rm(dir,{recursive:true,force:true});}
+});
+
+test('no-handoff mode closes an unrecovered challenge, records the outcome and sends no action email',async()=>{
+ const {holdVerification,recoverVerification}=await import('../lib/application-verification.mjs');const dir=await mkdtemp(path.join(os.tmpdir(),'contract-no-handoff-')),prior=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=dir;
+ const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.route(url,r=>r.fulfill({contentType:'text/html',body:'<h1>Verify you are human</h1>'}));await page.goto(url);await writeJson('automation-settings.json',{enabled:false,human_handoff:false});await writeJson('application-attempts.json',{a:{id:'a',lead_id:'lead',title:'Engineer',status:'running'}});await holdVerification('a',{id:'session',expiresAt:new Date(Date.now()+900000).toISOString()},{target:url,kind:'security_verification'});let releases=0;
+ const result=await recoverVerification('a',{client:{sessions:{retrieve:async()=>({status:'RUNNING',connectUrl:'fixture'}),debug:async()=>({pages:[]}),update:async()=>{releases++;}}},connect:async()=>({contexts:()=>[{pages:()=>[page]}],close:async()=>{}}),notify:async()=>assert.fail('human handoff email must not send')});
+ assert.deepEqual(result,{waiting:false});const a=(await readJson('application-attempts.json',{})).value.a;assert.equal(a.status,'failed');assert.equal(a.required_action.owner,'automation');assert.equal(a.verification.state,'closed');assert.equal(releases,1);
+ }finally{await browser.close();if(prior===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=prior;await rm(dir,{recursive:true,force:true});}
+});

@@ -1,6 +1,13 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {chromium} from 'playwright-core';
-import {approvedSiteResume,resumeUploadName,selectExistingResume,recoverableResumeBlock,RESUME_RECOVERY_VERSION} from '../lib/resume-library.mjs';
+import {approvedSiteResume,approvedResumeControl,resumeUploadName,selectExistingResume,recoverableResumeBlock,RESUME_RECOVERY_VERSION} from '../lib/resume-library.mjs';
+test('the exact proven saved resume can be selected before attachment; a similar or unapproved file cannot',()=>{
+ const saved={filename:'Resume_Matthew_Long.pdf'},control={type:'radio',inForm:true,label:'PDF Resume_Matthew_Long.pdf',checked:false};
+ assert.equal(approvedResumeControl(control,saved),true);
+ assert.equal(approvedResumeControl({...control,label:'Resume_Matthew_Long.pdf.backup'},saved),false);
+ assert.equal(approvedResumeControl(control,null),false);
+ assert.equal(approvedResumeControl({...control,inForm:false},saved),false);
+});
 test('saved resume approvals are tied to the unchanged master version and site',()=>{
  const library={dice:{master_hash:'abcdef01',filename:'Resume_Matthew_Long.pdf',approval:'user'}};
  assert.equal(approvedSiteResume(library,'https://www.dice.com/jobs/a','abcdef01').filename,'Resume_Matthew_Long.pdf');
