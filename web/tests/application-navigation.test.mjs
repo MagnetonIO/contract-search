@@ -99,3 +99,7 @@ test('forward navigation resolves a generic step label to one observed non-submi
 });
 
 test('premature resume checks can retry once after repair even before a resume was selected',()=>{const a={status:'failed',reason:'Automation could not complete next: Select or upload the approved file Resume_Matthew_Long.pdf before continuing.',visual_steps:[{action:'next',status:'blocked'}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'reserved'}),false);});
+
+test('the deadline repair retries known storage/model timeouts once without replaying a submission',()=>{
+ for(const a of [{status:'failed',failure_type:'TimeoutError',outcome_history:[{error_message:'Storage request timed out'}]},{status:'failed',failure_type:'GatewayResponseError',outcome_history:[{error_message:'Gateway request failed: The operation was aborted due to timeout'}]}]){assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'preserved'}),false);}assert.equal(recoverableNavigationBlock({status:'failed',failure_type:'TimeoutError',reason:'Unknown applicant answer'}),false);
+});

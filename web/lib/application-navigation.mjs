@@ -1,7 +1,7 @@
 import {recoverableResumeBlock} from './resume-library.mjs';
 import {applicationButtons} from './application-controls.mjs';
 import {knownChoiceAnswer,normalizedLabel,needsResumeUpload} from './visual-policy.mjs';
-export const NAVIGATION_REPAIR_VERSION=8;
+export const NAVIGATION_REPAIR_VERSION=9;
 // Register before clicking: external boards open asynchronously, often after
 // the click promise has resolved. A synchronous pages() snapshot misses them.
 export async function clickApplicationTarget(page,click,{timeout=2000}={}){
@@ -17,6 +17,9 @@ export function resumeUploadClickOutcome(attached){
 export function recoverableNavigationBlock(attempt){
  if(attempt.submission_intent_at||attempt.navigation_recovery_version>=NAVIGATION_REPAIR_VERSION||!['failed','needs_input'].includes(attempt.status))return false;
  const reason=attempt.reason||'';
+ const error=attempt.outcome_history?.at(-1)?.error_message||'';
+ if(attempt.failure_type==='TimeoutError'&&/^Storage\b.{0,180}timed out/i.test(error))return true;
+ if(attempt.failure_type==='GatewayResponseError'&&/operation was aborted due to timeout/i.test(error))return true;
  if((attempt.visual_steps||[]).some(s=>s.action==='choose'&&/locator\.check/.test(s.result_detail?.message||'')&&/radio/.test(s.result_detail?.message||'')&&/not visible/.test(s.result_detail?.message||'')))return true;
  if((attempt.visual_steps||[]).some(s=>s.action==='choose'&&/locator\.selectOption/.test(s.result_detail?.message||'')&&/did not find some options/.test(s.result_detail?.message||'')))return true;
  if(/external application (?:flow )?(?:did not|has not) open/i.test(reason))return true;
