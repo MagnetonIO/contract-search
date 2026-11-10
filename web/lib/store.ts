@@ -50,7 +50,8 @@ export async function writeBytes(key: string, value: Buffer | string, contentTyp
         allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType });
       return result.etag;
     } catch (error) {
-      if (error instanceof BlobPreconditionFailedError || (error as Error).name === 'BlobPathnameConflictError') throw new ConflictError('Another session updated this item. Refresh and try again.');
+      const rejectedConditionalWrite = expected !== undefined && (error as Error).message === 'Vercel Blob: The conditional request cannot succeed due to a conflicting operation against this resource.';
+      if (error instanceof BlobPreconditionFailedError || (error as Error).name === 'BlobPathnameConflictError' || rejectedConditionalWrite) throw new ConflictError('Another session updated this item. Refresh and try again.');
       throw error;
     }
   }

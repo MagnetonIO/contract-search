@@ -39,3 +39,5 @@ test('GitHub and LinkedIn fields use their own saved links and preserve the sepa
  const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',fields:['GitHub profile URL','LinkedIn profile URL','Website / portfolio'].map((label,index)=>({index,label,type:'url',visible:true,current_value:''}))};
  assert.deepEqual(routineAction(form,facts).fields.map(f=>f.fact),['github','linkedin','website']);
 });
+
+test('a known resume-options menu uses the native uploader before visual navigation',async()=>{const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://smartapply.indeed.com/beta/indeedapply/form/resume',fields:[],controls:[{label:'Resume options',disabled:false},{label:'Select resume template',disabled:false}],approved_resume_attached:false,resume_upload_allowed:true};assert.deepEqual(routineAction(form,{}),{type:'upload_resume',x:0,y:0});assert.equal(routineAction({...form,controls:[{label:'Select resume template'}]},{}),null);});

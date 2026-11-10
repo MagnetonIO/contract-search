@@ -20,6 +20,7 @@ const fixture = 'data:text/javascript,' + encodeURIComponent(\`
      blob: { etag: options.headers?.['accept-encoding'] === 'identity' ? version : 'W/' + version } };
  }
  export async function put(key, next, options) {
+   if(key==='conditional-conflict.json')throw Error('Vercel Blob: The conditional request cannot succeed due to a conflicting operation against this resource.');
    if (options.ifMatch && options.ifMatch !== version) throw new BlobPreconditionFailedError();
    value = next; version = '"version-2"'; return { etag: version };
  }
@@ -34,6 +35,8 @@ assert.equal(original.value.length, 2048);
 assert.equal(original.version, '"version-1"', 'compressed weak ETags cannot be used for writes');
 const nextVersion = await writeBytes('workflow.json', 'saved application', 'application/json', original.version);
 assert.equal(nextVersion, '"version-2"');
+await assert.rejects(writeBytes('conditional-conflict.json','data','application/json',nextVersion),ConflictError);
+await assert.rejects(writeBytes('conditional-conflict.json','data','application/json'),e=>!(e instanceof ConflictError));
 await assert.rejects(writeBytes('workflow.json', 'stale edit', 'application/json', original.version), ConflictError);
 assert.equal((await readBytes('workflow.json')).value.toString(), 'saved application');
 const {calls} = await import('@vercel/blob');

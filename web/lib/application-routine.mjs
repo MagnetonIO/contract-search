@@ -25,7 +25,8 @@ export function routineAction(form,facts){
   if(f.type==='select-one'){const option=f.options?.find(o=>o.label.trim().toLowerCase()===known.answer);if(option&&f.current_value!==option.value)return {type:'choose',index:f.index,label:f.label,value:option.value,fact:known.fact};}
   if(f.type==='radio'&&String(f.option_label||f.current_value).toLowerCase()===known.answer&&!f.filled)return {type:'choose',index:f.index,label:f.label,value:f.current_value,fact:known.fact};
  }
- if(!form.approved_resume_attached&&form.resume_upload_allowed&&(form.fields||[]).some(f=>f.type==='file'&&(f.document_kind==='resume'||/resum[eé]|cv/i.test(f.label))))return {type:'upload_resume',x:0,y:0};
+ const documentMenu=(form.controls||[]).some(c=>!c.disabled&&/^Resume options$/i.test(String(c.label||c.text||'').trim()));
+ if(!form.approved_resume_attached&&form.resume_upload_allowed&&(documentMenu||(form.fields||[]).some(f=>f.type==='file'&&(f.document_kind==='resume'||/resum[eé]|cv/i.test(f.label)))))return {type:'upload_resume',x:0,y:0};
  if((form.fields||[]).some(f=>f.visible&&f.required&&!f.filled&&!/cover\s*letter/i.test(f.label)))return null;
  if(!form.approved_resume_attached){const resumeStep=(form.buttons||[]).filter(label=>/^continue to (?:resume|résumé)$/i.test(label.trim()));return resumeStep.length===1?{type:'next',label:resumeStep[0]}:null;}
  const next=(form.buttons||[]).filter(label=>/^(next|continue|review(?: application)?)$/i.test(label.trim()));
