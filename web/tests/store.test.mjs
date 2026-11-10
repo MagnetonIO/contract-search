@@ -12,6 +12,7 @@ const fixture = 'data:text/javascript,' + encodeURIComponent(\`
  export const calls = {};
  export class BlobPreconditionFailedError extends Error {}
  export async function get(key, options) {
+   if(!options.abortSignal)throw Error('Missing storage request deadline');
    calls[key] = (calls[key] || 0) + 1;
    if (key === 'transient.json' && calls[key] < 3) throw Error('Vercel Blob: Failed to fetch blob: 500 Internal Server Error');
    if (key === 'unauthorized.json') throw Error('Vercel Blob: 401 Unauthorized');
@@ -20,6 +21,10 @@ const fixture = 'data:text/javascript,' + encodeURIComponent(\`
      blob: { etag: options.headers?.['accept-encoding'] === 'identity' ? version : 'W/' + version } };
  }
  export async function put(key, next, options) {
+   if(!options.abortSignal)throw Error('Missing storage request deadline');
+   calls['put:'+key]=(calls['put:'+key]||0)+1;
+   if(key==='applied-timeout.json'){value=next;version='\"version-timeout\"';const e=Error('Request aborted due to timeout');e.name='AbortError';throw e;}
+   if(key==='unapplied-timeout.json'){const e=Error('Request aborted due to timeout');e.name='AbortError';throw e;}
    if(key==='conditional-conflict.json')throw Error('Vercel Blob: The conditional request cannot succeed due to a conflicting operation against this resource.');
    if (options.ifMatch && options.ifMatch !== version) throw new BlobPreconditionFailedError();
    value = next; version = '"version-2"'; return { etag: version };
@@ -44,6 +49,8 @@ assert.equal((await readBytes('transient.json')).value.toString(), 'saved applic
 assert.equal(calls['transient.json'], 3, 'a transient storage error retries only the read');
 await assert.rejects(readBytes('unauthorized.json'), /401/);assert.equal(calls['unauthorized.json'], 1);
 await assert.rejects(readBytes('unavailable.json'), /503/);assert.equal(calls['unavailable.json'], 3, 'persistent outages remain bounded and fail closed');
+assert.equal(await writeBytes('applied-timeout.json','durably saved','application/json'), '\"version-timeout\"');assert.equal(calls['put:applied-timeout.json'],1,'a timed-out write is reconciled, never replayed');
+await assert.rejects(writeBytes('unapplied-timeout.json','not saved','application/json'),/timeout/);assert.equal(calls['put:unapplied-timeout.json'],1);
 `
   });
 });

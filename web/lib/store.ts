@@ -19,7 +19,7 @@ export async function readBytes(key: string): Promise<{ value: Buffer; version: 
     // for ifMatch writes. Read the identity representation to retain its version.
     for (let attempt = 0; ; attempt++) {
       try {
-        const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' } });
+        const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' }, abortSignal: AbortSignal.timeout(15000) });
         if (!result) return null;
         if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable: HTTP ' + result.statusCode);
         return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
@@ -47,9 +47,15 @@ export async function writeBytes(key: string, value: Buffer | string, contentTyp
   if (blobMode()) {
     try {
       const result = await put(key, value, { access: 'private', addRandomSuffix: false,
-        allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType });
+        allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType, abortSignal: AbortSignal.timeout(15000) });
       return result.etag;
     } catch (error) {
+      if (/abort|timeout/i.test(String((error as Error).name) + ' ' + String((error as Error).message))) {
+        // The server may have committed a timed-out write. Confirm the exact
+        // bytes without replaying the mutation or any browser action.
+        const saved = await readBytes(key).catch(() => null);
+        if (saved?.value.equals(Buffer.isBuffer(value) ? value : Buffer.from(value))) return saved.version;
+      }
       const rejectedConditionalWrite = expected !== undefined && (error as Error).message === 'Vercel Blob: The conditional request cannot succeed due to a conflicting operation against this resource.';
       if (error instanceof BlobPreconditionFailedError || (error as Error).name === 'BlobPathnameConflictError' || rejectedConditionalWrite) throw new ConflictError('Another session updated this item. Refresh and try again.');
       throw error;
