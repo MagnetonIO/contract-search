@@ -87,3 +87,9 @@ test('observed nonexistent native options can recover before a resume step once 
 test('observed hidden answer radios recover once after the visible-label repair',()=>{
  const a={status:'failed',reason:'Automation could not complete choose: locator.check: Timeout',visual_steps:[{action:'choose',status:'blocked',result_detail:{message:'locator.check: input type=radio; element is not visible'}}]};assert.equal(recoverableNavigationBlock(a),true);assert.equal(recoverableNavigationBlock({...a,navigation_recovery_version:NAVIGATION_REPAIR_VERSION}),false);assert.equal(recoverableNavigationBlock({...a,submission_intent_at:'recorded'}),false);
 });
+
+test('a hidden later resume step cannot block contact navigation, but its visible upload label must block',async()=>{
+ const {applicationFields}=await import('../lib/application-controls.mjs');const browser=await chromium.launch({...(process.platform==='darwin'?{executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'}:{}),headless:true});
+ try{const page=await browser.newPage();await page.setContent('<form><h2>Contact info</h2><label>Email<input type="email" value="person@example.com"></label><div id="later" hidden><label for="cv">Upload resume</label><input type="file" id="cv" name="resume" hidden></div><button type="button">Next</button></form>');const scope=page.locator('form'),inspect=async()=>({approved_resume_attached:false,fields:await scope.locator('input').evaluateAll(applicationFields)});assert.equal(await navigationPreflight({scope,facts:{},attached:false,label:'Next',inspect}),null);await page.locator('#later').evaluate(e=>e.hidden=false);assert.equal((await navigationPreflight({scope,facts:{},attached:false,label:'Next',inspect})).requires_upload_resume,true);
+ }finally{await browser.close();}
+});

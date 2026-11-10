@@ -26,9 +26,9 @@ export function routineAction(form,facts){
   if(f.type==='radio'&&String(f.option_label||f.current_value).toLowerCase()===known.answer&&!f.filled)return {type:'choose',index:f.index,label:f.label,value:f.current_value,fact:known.fact};
  }
  const documentMenu=(form.controls||[]).some(c=>!c.disabled&&/^Resume options$/i.test(String(c.label||c.text||'').trim()));
- if(!form.approved_resume_attached&&form.resume_upload_allowed&&(documentMenu||(form.fields||[]).some(f=>f.type==='file'&&(f.document_kind==='resume'||/resum[eé]|cv/i.test(f.label)))))return {type:'upload_resume',x:0,y:0};
+ if(!form.approved_resume_attached&&form.resume_step_available!==false&&form.resume_upload_allowed&&(documentMenu||(form.fields||[]).some(f=>f.type==='file'&&(f.document_kind==='resume'||/resum[eé]|cv/i.test(f.label)))))return {type:'upload_resume',x:0,y:0};
  if((form.fields||[]).some(f=>f.visible&&f.required&&!f.filled&&!/cover\s*letter/i.test(f.label)))return null;
- if(!form.approved_resume_attached){const resumeStep=(form.buttons||[]).filter(label=>/^continue to (?:resume|résumé)$/i.test(label.trim()));return resumeStep.length===1?{type:'next',label:resumeStep[0]}:null;}
+ if(!form.approved_resume_attached){const resumeStep=(form.buttons||[]).filter(label=>/^continue to (?:resume|résumé)$/i.test(label.trim()));if(resumeStep.length===1)return {type:'next',label:resumeStep[0]};if(form.resume_step_available===false){const steps=(form.controls||[]).filter(c=>!c.disabled&&applicationControlKind(c)==='step');if(steps.length===1)return {type:'next',label:steps[0].label||steps[0].text};}return null;}
  const next=(form.buttons||[]).filter(label=>/^(next|continue|review(?: application)?)$/i.test(label.trim()));
  return next.length===1?{type:'next',label:next[0]}:null;
 }
