@@ -62,6 +62,8 @@ export async function runVisualApplication({getPage,inspect,invoke,guard,stopped
    outcome??={filled_fields:filled};
   }else{const {type,...input}=action;outcome=await invoke(names[type],{...input,...(technicalPause?{technical:true}:{})});}}
   catch(error){outcome={retry:evidenceText(error.message)||'The form or control was unavailable.',error_type:error.name||'ControlError',action:'Inspect the fresh screenshot and native form, then correct this specific issue before repeating the action.'};}
+  const sameText=(a,b)=>String(a||'').replace(/\s+/g,' ').trim()===String(b||'').replace(/\s+/g,' ').trim();
+  if(action.type==='next'&&outcome?.url===observation.url&&outcome?.text&&sameText(outcome.text,observation.text))outcome={blocked:true,reason:'The site did not advance after the navigation click.',action:'Inspect the visible validation messages and remaining fields before trying Next again.',form:outcome};
   const blocked=result=>Boolean(result?.blocked||result?.retry||result?.requires_submit||result?.requires_upload_resume||result?.not_uploaded||result?.not_submitted||result?.not_filled||result?.incomplete_fields?.length);
   const result_detail=toolOutcomeDetail(outcome);await record({step:step+stepOffset,result_detail,outcome:blocked(outcome)?'blocked':outcome?.paused?'needs_input':'completed'});
   history.push({action:action.type,summary,routine_failed:Boolean(routine&&blocked(outcome)),result:outcome&&(outcome.form||outcome.fields)?{screen_refreshed:true,...Object.fromEntries(Object.entries(outcome).filter(([k])=>!['url','text','fields','buttons','controls','links','form'].includes(k)))}:outcome});
