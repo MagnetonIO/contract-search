@@ -83,3 +83,5 @@ test('LinkedIn application stays scoped to Easy Apply when Messaging opens after
  await p.setContent('<div role="dialog" aria-label="Messaging"><button>Send</button></div><dialog open><h2>Apply to Example</h2><button>Submit application</button></dialog>');assert.equal((await clickApplicationStep(p,'Next')).blocked,true,'a missing Next never clicks Submit');
  }finally{await b.close();}
 });
+
+test('final application labels accept ordinary wording while excluding agreements and purchases',async()=>{const{finalApplicationLabel}=await import('../lib/application-controls.mjs');assert.equal(typeof finalApplicationLabel,'function');for(const label of ['Submit','Submit application','Submit your application','Send application','Apply now','Complete your application'])assert.equal(finalApplicationLabel(label),true);for(const label of ['Accept and submit','Submit payment','Next','Apply for premium','Agree and submit application'])assert.equal(finalApplicationLabel(label),false);});
