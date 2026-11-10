@@ -108,14 +108,14 @@ async function handle(request: Request, context: Context) {
   if(action==='automation-pilot'&&request.method==='POST'){
     const input=await request.json(),pilot=await(await import('../../../lib/application-pilot-run.mjs')).prepareTargetedPilot(input.lead_ids);
     if(!pilot.attempt_ids.length)return json({...pilot,status:'deferred'});
-    const run=await start(targetedApplicationPilot,[pilot.attempt_ids]);return json({...pilot,run_id:run.runId,status:'started'});
+    const run=await start(targetedApplicationPilot,[pilot.attempt_ids],{deploymentId:'latest'});return json({...pilot,run_id:run.runId,status:'started'});
   }
   if (['automation-run','automation-start'].includes(action) && request.method === 'POST') {
     const state=await automationSettings();
     if((state.run as {active?:boolean}|null)?.active)return json({already_running:true});
     if(!(state.facts as {confirmed?:boolean}|null)?.confirmed)return json({error:'Save and confirm your reusable applicant answers before starting.'},409);
     await setEnabled(true);const requestedAt=new Date().toISOString();
-    const run=await start(applicationCycle,[{manual:true}]);
+    const run=await start(applicationCycle,[{manual:true}],{deploymentId:'latest'});
     await writeJson('automation-request.json',{status:'pending',manual:true,run_id:run.runId,requested_at:requestedAt});
     await activity('run_requested',{message:'Manual start accepted. Waiting for the worker to begin; scheduled-hour restrictions do not apply to this run.',workflow_run_id:run.runId});
     return json({status:'pending',run_id:run.runId});
@@ -134,7 +134,7 @@ async function handle(request: Request, context: Context) {
     if(input.action==='recover')return json(await verification.recoverVerification(input.id));
     if(input.action==='resume'){
       const result=await verification.resumeVerification(input.id);if(!result.resume)return json(result);
-      const run=await start(applicationContinuation,[input.id]);
+      const run=await start(applicationContinuation,[input.id],{deploymentId:'latest'});
       return json({run_id:run.runId});
     }
     if(input.action==='close')return json(await verification.closeVerification(input.id));
@@ -148,7 +148,7 @@ async function handle(request: Request, context: Context) {
       if(attempt.verification?.state==='active')return json({error:'Use the private application browser to resume the preserved form.'},409);
       await reviseAttempt(input.id,'resume');
       await patchAttempt(input.id,{manual_authorized_at:new Date().toISOString(),manual_expires_at:new Date(Date.now()+1800000).toISOString()},{updateRun:false});
-      const run=await start(applicationContinuation,[input.id]);return json({run_id:run.runId});
+      const run=await start(applicationContinuation,[input.id],{deploymentId:'latest'});return json({run_id:run.runId});
     }
     if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
     return json({error:'An uncertain submission must be reconciled before another attempt.'},409);

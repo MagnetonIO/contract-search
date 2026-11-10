@@ -18,7 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ task: s
   if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) return new Response('Unauthorized', { status: 401 });
   try {
     if(task.startsWith('application-report'))return Response.json(await sendDailyApplicationReport(),{headers:{'Cache-Control':'private, no-store'}});
-    if(task==='applications'){const state=await automationSettings();if(!state.policy.enabled||!applicationWindow())return Response.json({status:'paused_or_outside_window'});const run=await start(applicationCycle,[]);return Response.json({status:'started',run_id:run.runId});}
+    if(task==='applications'){const state=await automationSettings();if(!state.policy.enabled||!applicationWindow())return Response.json({status:'paused_or_outside_window'});const run=await start(applicationCycle,[],{deploymentId:'latest'});return Response.json({status:'started',run_id:run.runId});}
     const result = task.startsWith('collect') ? await ensureCollection() : await sendDailyDigest();
     if (task.startsWith('collect')) await writeJson('scheduler-state.json',{...result,checked_at:new Date().toISOString()});
     return Response.json(result, { status: result.status === 'configuration_required' ? 503 : 200, headers: { 'Cache-Control': 'private, no-store' } });
