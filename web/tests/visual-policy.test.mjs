@@ -145,3 +145,9 @@ test('overall seniority uses confirmed overall years without assigning that dura
 test('current US residence is derived from the saved country, without declaring willingness or a work schedule',()=>{
  const facts={country:'United States'};const question='Are you currently located in the United States?';assert.deepEqual(knownChoiceAnswer(question,facts),{fact:'country',answer:'yes'});assert.equal(choiceMatches({fact:'country',question,label:'Yes',value:'yes',facts}),true);assert.equal(choiceMatches({fact:'country',question,label:'No',value:'no',facts}),false);assert.equal(knownChoiceAnswer('Are you willing to relocate to the United States?',facts),null);
 });
+test('routine contact matching cannot put a state abbreviation into a US residence question or a city into a country field',()=>{
+ const facts={state:'IL',city:'Chicago',country:'United States',street:'Example St',email:'test@example.com'};
+ assert.equal(visualTextFactAllowed('Are you currently located in the United States?','state',facts),false);
+ assert.equal(visualTextFactAllowed('Country: Current Location','city',facts),false);assert.equal(visualTextFactAllowed('Country: Current Location','country',facts),true);
+ assert.equal(visualTextFactAllowed('Email address','street',facts),false);assert.equal(visualTextFactAllowed('State / Province','state',facts),true);
+});

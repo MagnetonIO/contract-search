@@ -26,3 +26,9 @@ test('empty numeric experience questions go directly to grounded duration infere
  const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',fields:[{index:0,label:'How many years of professional experience do you have building ML models?',type:'text',visible:true,filled:false,required:true,current_value:''}]};const facts={verified_experience:'ML Engineer 2020 - Present. Built production models.'};
  assert.deepEqual(routineAction(form,facts),{type:'fill_answer',index:0,label:form.fields[0].label,answer:'',evidence:[facts.verified_experience]});
 });
+test('phone country and factual Yes/No text fields fill without a model or repeating an already-selected country',async()=>{
+ const {routineAction}=await import('../lib/application-routine.mjs');const facts={country:'United States',work_authorization:'yes',sponsorship:'no'};
+ const field={index:0,label:'Country',question:'Country',type:'text',role:'combobox',visible:true,filled:false,current_value:''};const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',fields:[field]};assert.deepEqual(routineAction(form,facts),{type:'choose',index:0,label:'Country',value:'United States',fact:'country'});
+ assert.equal(routineAction({...form,fields:[{...field,filled:true,current_value:'US',selected_label:'United States +1'}]},facts),null);
+ const q={index:1,label:'Are you currently located in the United States?',type:'text',visible:true,filled:false};assert.equal(routineAction({...form,fields:[q]},facts).answer,'yes');
+});

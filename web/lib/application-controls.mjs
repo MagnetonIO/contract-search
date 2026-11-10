@@ -83,9 +83,15 @@ export function applicationFields(items){
    option_label=option_label||(/^(yes|no)$/i.test(e.value)?e.value:labels[0]||e.getAttribute('value')||'');
   }
 
+  let currentValue=e.value,selectedLabel;
+  if(e.getAttribute('role')==='combobox')for(let row=e.parentElement,depth=0;row&&depth<5;row=row.parentElement,depth++){
+   if(row.querySelectorAll('[role=combobox]').length!==1)break;
+   const selected=row.querySelector('[class*=singleValue],[class*=single-value]');
+   if(selected&&clean(selected.textContent)){selectedLabel=clean(selected.textContent);currentValue=row.querySelector('input[type=hidden]')?.value||currentValue||selectedLabel;break;}
+  }
   const question=['checkbox','radio'].includes(e.type)?legend||label:label||legend;
   const toggles=e.tagName==='SELECT'&&e.getAttribute('aria-hidden')==='true'?[...e.parentElement.querySelectorAll('button[aria-haspopup]')].filter(b=>b.getClientRects().length):[];const proxy=toggles.length===1?toggles[0]:null;
-  return {index,label,question,option_label,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(proxy)||Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:e.value,selected_label:e.tagName==='SELECT'?(proxy?clean(proxy.innerText):e.selectedOptions?.[0]?.text):undefined,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(e.value),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
+  return {index,label,question,option_label,type:e.type||e.tagName.toLowerCase(),role:e.getAttribute('role'),required:e.required||e.getAttribute('aria-required')==='true',visible:Boolean(proxy)||Boolean(e.getClientRects().length)&&e.getAttribute('aria-hidden')!=='true',current_value:e.type==='file'?undefined:currentValue,selected_label:e.tagName==='SELECT'?(proxy?clean(proxy.innerText):e.selectedOptions?.[0]?.text):selectedLabel,filled:e.type==='file'?Boolean(e.files?.length):['checkbox','radio'].includes(e.type)?e.checked:Boolean(currentValue),options:e.tagName==='SELECT'?[...e.options].map(o=>({value:o.value,label:o.text})):undefined};
  });
 }
 

@@ -10,6 +10,11 @@ export function routineAction(form,facts){
   if(fact&&String(field.current_value||'').trim()!==String(facts[fact]).trim())contact.push({index:field.index,label:field.label,fact});
  }
  if(contact.length)return {type:'fill_known_fields',fields:contact.slice(0,8)};
+ for(const field of form.fields||[]){
+  if(!field.visible)continue;
+  if(field.role==='combobox'&&/^country(?:\s*[:*]|$)/i.test(field.label)&&!field.filled&&facts.country)return {type:'choose',index:field.index,label:field.label,value:facts.country,fact:'country'};
+  if(['text','textarea'].includes(field.type)&&field.role!=='combobox'){const known=knownChoiceAnswer(field.question||field.label,facts);if(known&&String(field.current_value||'').trim().toLowerCase()!==known.answer)return {type:'fill_answer',index:field.index,label:field.label,answer:known.answer,evidence:[JSON.stringify({[known.fact]:facts[known.fact],sponsorship:facts.sponsorship})]};}
+ }
  const duration=(form.fields||[]).find(field=>field.visible&&!field.filled&&['text','number','textarea'].includes(field.type)&&/^(?:how many|number of|total)\s+years\b/i.test(field.label)&&/experience|worked|working/i.test(field.label));
  if(duration&&facts.verified_experience)return {type:'fill_answer',index:duration.index,label:duration.label,answer:'',evidence:[facts.verified_experience]};
  const entry=(form.controls||[]).filter(control=>!control.disabled&&applicationControlKind(control)==='entry');
