@@ -3,6 +3,10 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { get, put, BlobPreconditionFailedError } from '@vercel/blob';
 
+// Blob's default ten retries can replay uncertain conditional writes and hold
+// a worker through minutes of backoff. This module owns safe read/CAS retries.
+process.env.VERCEL_BLOB_RETRIES = '0';
+
 export class ConflictError extends Error {}
 export const localDir = () => process.env.DASHBOARD_LOCAL_DIR || path.join(process.cwd(), '.local');
 const locks = new Map<string, Promise<unknown>>();
@@ -14,7 +18,7 @@ async function blobRequest<T>(operation: string, request: (signal: AbortSignal) 
     return await Promise.race([request(controller.signal), new Promise<T>((_, reject) => {
       timer = setTimeout(() => {
         const error = new Error('Storage '+operation+' timed out'); error.name = 'TimeoutError';
-        controller.abort(error); reject(error);
+        controller.abort(); reject(error);
       }, 15000);
     })]);
   } finally { clearTimeout(timer); }

@@ -59,3 +59,12 @@ await assert.rejects(writeBytes('never-write.json','pending','application/json')
 `
   });
 });
+
+test('the real Blob SDK cannot replay an uncertain state write during its internal backoff',()=>{
+ execFileSync(process.execPath,['--input-type=module'],{cwd:process.cwd(),encoding:'utf8',timeout:2500,input:`
+import assert from 'node:assert/strict';
+process.env.DASHBOARD_STORAGE='blob';process.env.BLOB_READ_WRITE_TOKEN='vercel_blob_rw_fixture_secret';process.env.VERCEL_BLOB_RETRIES='10';delete process.env.VERCEL_OIDC_TOKEN;delete process.env.BLOB_STORE_ID;
+const{MockAgent,setGlobalDispatcher}=await import('undici');const agent=new MockAgent();agent.disableNetConnect();setGlobalDispatcher(agent);let writes=0;agent.get('https://vercel.com').intercept({path:/.*/,method:'PUT'}).reply(()=>{writes++;return{statusCode:500,data:JSON.stringify({error:{code:'internal_server_error',message:'fixture write outcome uncertain'}}),responseOptions:{headers:{'content-type':'application/json'}}};}).persist();
+const{writeBytes}=await import('./lib/store.ts');await assert.rejects(writeBytes('fixture.json','state','application/json','"prior"'));assert.equal(writes,1,'provider retries must not resend an uncertain conditional write');await agent.close();
+`});
+});
