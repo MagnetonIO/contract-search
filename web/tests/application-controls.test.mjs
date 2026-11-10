@@ -10,6 +10,7 @@ test('LinkedIn accessible labels preserve Easy Apply entry and Next step semanti
  assert.equal(applicationControlKind({text:'Easy Apply',label:'Easy Apply to this job'}),'entry');
  assert.equal(applicationControlKind({text:'Next',label:'Continue to next step',inForm:true}),'step');
  assert.equal(applicationControlKind({text:'Review',label:'Review your application',inForm:true}),'step');
+ assert.equal(applicationControlKind({text:'Review details',type:'button',inForm:true}),'step');
 });
 test('final Apply controls and agreements cannot use ordinary navigation',()=>{
  assert.equal(applicationControlKind({text:'Apply',type:'submit',inForm:true}),'submission');
