@@ -11,6 +11,7 @@ export function visualTextFactAllowed(question,fact,facts){
 export const humanCheckText=text=>/\b(?:verify (?:that )?you are human|humans only|please complete (?:the )?captcha|complete (?:the )?security check|security verification required)\b/i.test(String(text));
 export const optionalTopChoice=control=>['checkbox','radio'].includes(control?.type)&&/\b(?:mark (?:this )?job as a )?top choice\b/i.test(normalizedLabel(control?.question||control?.label));
 export function knownChoiceAnswer(question,facts){
+ if(/^(?:asap|immediate(?:ly)?|available (?:now|immediately))\.?$/i.test(String(facts?.availability||'').trim())&&/\b(?:begin|start)\b.{0,35}\b(?:immediate(?:ly)?|asap|this week|next week)\b/i.test(question)&&!/\bnot\b|cannot|unable|can't|certif|clearance|sponsor|authoriz|citizen|visa|relocat|travel|on.?site|hybrid|weekend|hours|time.?zone|\byears?\b/i.test(question))return {fact:'availability',answer:'yes'};
  if(/^(?:are you (?:currently )?(?:located|based|living)|do you (?:currently )?(?:live|reside)) in (?:the )?(?:united states|u\.?s\.?(?:a\.?)?)[?*\s]*$/i.test(String(question).trim())&&facts?.country)return {fact:'country',answer:/^(?:united states|us|usa)$/i.test(facts.country.trim())?'yes':'no'};
  if(/(?:u\.?s\.?|united states)\s+(?:citizen|citizenship)|citizen(?:ship)?\s+(?:of\s+)?(?:the\s+)?(?:u\.?s\.?|united states)\b/i.test(question)&&! /clearance|criminal|signature|penalty|background/i.test(question))return ['yes','no'].includes(facts?.us_citizen)?{fact:'us_citizen',answer:facts.us_citizen}:null;
  const authorization=/authoriz|eligible.*work|legal.*work/i.test(question);
@@ -108,6 +109,7 @@ export function choiceMatches({fact,value,label,question,facts}){
   if(!/country/i.test(question))return false;
   if(/^(us|usa|united states)$/.test(expected))return /^(us|usa|united states)(?:\s*(?:\(\+?1\)|\+1))?$/.test(answer)||/^(us|usa|united states)$/.test(raw);
  }
+ if(fact==='availability'){const known=knownChoiceAnswer(question,facts);if(known?.fact==='availability')return answer===known.answer;}
  if(fact==='state'){const state=value=>(stateNames[normalizedLabel(value).toUpperCase()]||normalizedLabel(value)).toLowerCase();return /state|province/i.test(question)&&(state(answer)===state(expected)||state(raw)===state(expected));}
  if(fact==='city'){
   if(!/city|location/i.test(question))return false;

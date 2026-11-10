@@ -1,4 +1,4 @@
-import {experienceAnswer,technicalExperienceAnswer} from './visual-policy.mjs';
+import {experienceAnswer,technicalExperienceAnswer,knownChoiceAnswer} from './visual-policy.mjs';
 import {verificationEvidence,verificationAction} from './application-verification-policy.mjs';
 export const OPTIONAL_COVER_LETTER_POLICY='Skip optional cover letters. Do not create or upload a cover letter. If the employer requires one, skip this application and record that requirement.';
 export function coverLetterField(field){return /cover[\s_-]*letter/i.test([field.label,field.question,field.name].filter(Boolean).join(' '));}
@@ -36,8 +36,9 @@ export function queuedAttemptId(state){
 // to the current profile version makes this a single retry for that answer.
 export function experienceRetry(attempt,facts){
  if(!facts?.version||!['needs_input','failed'].includes(attempt.status)||attempt.submission_intent_at)return false;
- const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question):\s*(.+?)(?:\. Option:.*)?$/)?.[1]||String(attempt.reason||'').match(/^Automation could not complete choose: The requested option does not match the approved answer for (.+?)(?:\. Next step:|$)/i)?.[1];
+ const question=String(attempt.reason||'').match(/^(?:Answer needs verified experience|Numeric experience claim needs verification|No approved answer is saved for question|Visual selection needs an approved answer):\s*(.+?)(?:\. Option:.*)?$/)?.[1]||String(attempt.reason||'').match(/^Automation could not complete choose: The requested option does not match the approved answer for (.+?)(?:\. Next step:|$)/i)?.[1];
  if(!question)return false;
+ if(knownChoiceAnswer(question,facts)?.fact==='availability')return !attempt.answer_control_recovery_version;
  const technical=technicalExperienceAnswer(question,facts);
  if(attempt.status==='failed')return Boolean((experienceAnswer(question,facts)||technical)&&!attempt.answer_control_recovery_version);
  if(attempt.profile_version===facts.version)return Boolean(technical&&!attempt.answer_control_recovery_version);

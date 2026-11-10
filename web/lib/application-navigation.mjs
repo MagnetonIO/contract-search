@@ -1,7 +1,7 @@
 import {recoverableResumeBlock} from './resume-library.mjs';
 import {applicationButtons} from './application-controls.mjs';
 import {knownChoiceAnswer,normalizedLabel,needsResumeUpload} from './visual-policy.mjs';
-export const NAVIGATION_REPAIR_VERSION=6;
+export const NAVIGATION_REPAIR_VERSION=7;
 // Register before clicking: external boards open asynchronously, often after
 // the click promise has resolved. A synchronous pages() snapshot misses them.
 export async function clickApplicationTarget(page,click,{timeout=2000}={}){
@@ -24,6 +24,7 @@ export function recoverableNavigationBlock(attempt){
  if(/Use submit for this final action/.test(reason)&&(attempt.visual_steps||[]).some(s=>s.action==='click'&&/cookie/i.test(s.summary||'')))return true;
  if(/control.{0,70}unsupported/i.test(reason)&&/Target: (?:Apply for This Job|I'm interested)(?:$| Next step)/i.test(reason))return true;
  if(/saved answer for question: Phone\. Option: United States\./.test(reason))return true;
+ if(/^Automation could not complete next: Select or upload the approved file/.test(reason)&&(attempt.visual_steps||[]).some(s=>s.action==='next'&&s.status==='blocked'))return true;
  if(!attempt.selected_resume_filename)return false;
  if(/Application navigation control is missing, disabled or ambiguous/i.test(attempt.reason||'')&&(attempt.visual_steps||[]).some(s=>s.action==='next'&&['blocked','needs_input'].includes(s.status)))return true;
  return /control.{0,70}(?:unsupported|unavailable)|Use upload_resume/i.test(attempt.reason||'')&&(attempt.visual_steps||[]).filter(s=>s.action==='click'&&s.status==='blocked').length>=2;

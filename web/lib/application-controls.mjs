@@ -31,7 +31,12 @@ export async function applicationButtons(scope){
 }
 export async function clickApplicationStep(page,label){
  const scope=await applicationScope(page),buttons=await applicationButtons(scope),requested=normalized(label);
- const matches=buttons.map((b,index)=>({...b,index})).filter(b=>b.label===requested||b.text===requested);
+ let matches=buttons.map((b,index)=>({...b,index})).filter(b=>b.label===requested||b.text===requested);
+ if(!matches.length&&/^(?:next|continue(?: to (?:the )?next step)?|review(?: application)?)$/i.test(requested)){
+  // Models sometimes name the step rather than its current accessible label.
+  // Resolve only a unique observed forward step, never the final Submit.
+  matches=buttons.map((b,index)=>({...b,index})).filter(b=>!b.disabled&&applicationControlKind(b)==='step'&&/^(?:next|continue|review)\b/i.test(b.label||b.text));
+ }
  if(matches.length!==1||matches[0].disabled)return {unsupported:true,blocked:true,reason:'Application navigation control is missing, disabled or ambiguous.',action:'Inspect the current controls and scroll if needed. Request only an observed navigation label; use the guarded submit action for the final Submit button.'};
  const button=matches[0],kind=applicationControlKind(button);
  if(kind==='submission')return {requires_submit:true,action:'Use the submit tool for this final application action.'};

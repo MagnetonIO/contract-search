@@ -53,7 +53,7 @@ export function automationAudit(leads, workflow, screens) {
  const open=leads.filter(lead=>leadInView(lead,workflow[lead.id],'opportunities'));
  const rows=open.map(lead=>{const s=screens[lead.id];return {id:lead.id,title:lead.title,company:lead.company_agency,source:lead.source,status:s?.status||'pending',score:s?.score??null,reason:s?.reason||'Waiting for evaluation.',evaluated_at:s?.screened_at||null,requirements:s?.eligibility_questions||[],match_notes:s?.match_notes||[]};});
  const count=status=>rows.filter(r=>r.status===status).length;
- const groups={};for(const row of rows){const key=row.status==='held'?(row.reason.startsWith('Location')||/location|region|time.zone/i.test(row.reason)?'Location needs confirmation':'Qualifications / facts need confirmation'):row.status==='skipped'?(row.score===0?row.reason:'Below fit threshold or unmet requirements'):row.status==='eligible'?'Ready to apply':'Waiting for evaluation';groups[key]=(groups[key]||0)+1;}
+ const groups={};for(const row of rows){const key=row.status==='held'?(/^Unsupported application platform/.test(row.reason)?'Application platform not supported':row.reason.startsWith('Location')||/location|region|time.zone/i.test(row.reason)?'Location needs confirmation':'Qualifications / facts need confirmation'):row.status==='skipped'?(row.score===0?row.reason:'Below fit threshold or unmet requirements'):row.status==='eligible'?'Ready to apply':'Waiting for evaluation';groups[key]=(groups[key]||0)+1;}
  return {total:open.length,evaluated:rows.filter(r=>r.status!=='pending').length,ready:count('eligible'),held:count('held'),skipped:count('skipped'),pending:count('pending'),outside_opportunities:leads.length-open.length,groups,rows};
 }
 
