@@ -61,3 +61,9 @@ test('a confirmed additive application answer preserves existing fit scores whil
   const changed=await saveFacts({...second,verified_experience:'Different professional history.',confirmed:true});assert.notEqual(changed.fit_version,second.fit_version);
  }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
 });
+
+test('a fresh retry discards the old browser checkpoint and rejects stale worker writes',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'contract-execution-fence-')),previous=process.env.DASHBOARD_LOCAL_DIR;process.env.DASHBOARD_LOCAL_DIR=folder;
+ try{const{patchAttempt}=await import('../lib/automation-state.mjs');await writeJson('application-attempts.json',{a:{id:'a',status:'failed',execution_token:'old',resume_session:true,checkpoint:{session_id:'closed',automatic_ms:900000}}});await reviseAttempt('a','resume');let a=(await readJson('application-attempts.json',{})).value.a;assert.equal(a.resume_session,false);assert.equal(a.checkpoint,null);assert.equal(await claimAttempt('a','new'),true);await assert.rejects(patchAttempt('a',{status:'queued',resume_session:true,checkpoint:{session_id:'closed'}},{executionToken:'old'}),/superseded/i);a=(await readJson('application-attempts.json',{})).value.a;assert.equal(a.status,'running');assert.equal(a.checkpoint,null);await patchAttempt('a',{reason:'owned write'},{executionToken:'new'});assert.equal((await readJson('application-attempts.json',{})).value.a.reason,'owned write');
+ }finally{if(previous===undefined)delete process.env.DASHBOARD_LOCAL_DIR;else process.env.DASHBOARD_LOCAL_DIR=previous;await rm(folder,{recursive:true,force:true});}
+});

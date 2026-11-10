@@ -26,6 +26,8 @@ test('a passive invisible reCAPTCHA badge does not interrupt an ordinary applica
  try{const page=await browser.newPage();await page.route('https://www.google.com/recaptcha/**',r=>r.fulfill({contentType:'text/html',body:'Protected by reCAPTCHA'}));
  await page.setContent('<h1>Engineer</h1><button>Apply</button><div class="grecaptcha-badge"><iframe src="https://www.google.com/recaptcha/api2/anchor?size=invisible" width="256" height="60"></iframe></div>');assert.equal(await securityBlocked(page),false);
  await page.setContent('<p>Verify you are human</p>');assert.equal(await securityBlocked(page),true);
+ await page.setContent('<h1>Additional Verification Required</h1><p>Your Ray ID for this request is abc</p><a>Troubleshooting Cloudflare Errors</a>');assert.equal(await securityBlocked(page),true);
+ await page.setContent('<h1>Additional verification required</h1><p>Please supply your professional license.</p>');assert.equal(await securityBlocked(page),false);
  }finally{await browser.close();}
 });
 test('no-handoff mode records an unresolved form as automation-owned without requiring applicant input',async()=>{

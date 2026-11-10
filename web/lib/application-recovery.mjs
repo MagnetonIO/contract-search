@@ -21,6 +21,7 @@ export function watchChallenges(page,{now=Date.now}={}){
 export async function securityBlocked(page){
  const text=await page.locator('body').innerText({timeout:5000}).catch(()=>'');
  if(/verify (?:that )?you are human|checking your browser|just a moment|complete (?:the )?(?:captcha|security check)|security verification|access denied|attention required.*cloudflare/i.test(text))return true;
+ if(/additional verification required/i.test(text)&&/cloudflare|your ray id/i.test(text))return true;
  if(await page.locator('iframe[src*="hcaptcha.com"][title*="challenge"],iframe[src*="challenges.cloudflare.com"]').filter({visible:true}).count()>0)return true;
  const challenges=page.locator('iframe[src*="recaptcha"][src*="bframe"]').filter({visible:true});
  if(await challenges.count())return true;
