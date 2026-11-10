@@ -7,6 +7,7 @@ test('private Blob reads retain the strong version required for conditional save
     cwd: process.cwd(), encoding: 'utf8', input: `
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
+const realSetTimeout=globalThis.setTimeout;globalThis.setTimeout=(callback,ms,...args)=>realSetTimeout(callback,ms===15000?10:ms,...args);
 const fixture = 'data:text/javascript,' + encodeURIComponent(\`
  let value = 'x'.repeat(2048), version = '"version-1"';
  export const calls = {};
@@ -14,6 +15,7 @@ const fixture = 'data:text/javascript,' + encodeURIComponent(\`
  export async function get(key, options) {
    if(!options.abortSignal)throw Error('Missing storage request deadline');
    calls[key] = (calls[key] || 0) + 1;
+   if(key==='never-read.json')return new Promise(()=>{});
    if (key === 'transient.json' && calls[key] < 3) throw Error('Vercel Blob: Failed to fetch blob: 500 Internal Server Error');
    if (key === 'unauthorized.json') throw Error('Vercel Blob: 401 Unauthorized');
    if (key === 'unavailable.json') throw Error('Vercel Blob: 503 Service Unavailable');
@@ -23,6 +25,7 @@ const fixture = 'data:text/javascript,' + encodeURIComponent(\`
  export async function put(key, next, options) {
    if(!options.abortSignal)throw Error('Missing storage request deadline');
    calls['put:'+key]=(calls['put:'+key]||0)+1;
+   if(key==='never-write.json')return new Promise(()=>{});
    if(key==='applied-timeout.json'){value=next;version='\"version-timeout\"';const e=Error('Request aborted due to timeout');e.name='AbortError';throw e;}
    if(key==='unapplied-timeout.json'){const e=Error('Request aborted due to timeout');e.name='AbortError';throw e;}
    if(key==='conditional-conflict.json')throw Error('Vercel Blob: The conditional request cannot succeed due to a conflicting operation against this resource.');
@@ -51,6 +54,8 @@ await assert.rejects(readBytes('unauthorized.json'), /401/);assert.equal(calls['
 await assert.rejects(readBytes('unavailable.json'), /503/);assert.equal(calls['unavailable.json'], 3, 'persistent outages remain bounded and fail closed');
 assert.equal(await writeBytes('applied-timeout.json','durably saved','application/json'), '\"version-timeout\"');assert.equal(calls['put:applied-timeout.json'],1,'a timed-out write is reconciled, never replayed');
 await assert.rejects(writeBytes('unapplied-timeout.json','not saved','application/json'),/timeout/);assert.equal(calls['put:unapplied-timeout.json'],1);
+await assert.rejects(readBytes('never-read.json'),/timed out/);
+await assert.rejects(writeBytes('never-write.json','pending','application/json'),/timed out/);assert.equal(calls['put:never-write.json'],1,'even a provider that ignores cancellation cannot hold the worker forever');
 `
   });
 });

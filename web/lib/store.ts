@@ -7,6 +7,18 @@ export class ConflictError extends Error {}
 export const localDir = () => process.env.DASHBOARD_LOCAL_DIR || path.join(process.cwd(), '.local');
 const locks = new Map<string, Promise<unknown>>();
 const blobMode = () => Boolean(process.env.VERCEL) || process.env.DASHBOARD_STORAGE === 'blob';
+async function blobRequest<T>(request: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([request(controller.signal), new Promise<T>((_, reject) => {
+      timer = setTimeout(() => {
+        const error = new Error('Storage request timed out'); error.name = 'TimeoutError';
+        controller.abort(error); reject(error);
+      }, 15000);
+    })]);
+  } finally { clearTimeout(timer); }
+}
 const safeKey = (key: string) => {
   if (!/^[a-zA-Z0-9/_-]+\.[a-z0-9]+$/.test(key) || key.includes('..')) throw new Error('Invalid storage key');
   return key;
@@ -19,10 +31,12 @@ export async function readBytes(key: string): Promise<{ value: Buffer; version: 
     // for ifMatch writes. Read the identity representation to retain its version.
     for (let attempt = 0; ; attempt++) {
       try {
-        const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' }, abortSignal: AbortSignal.timeout(15000) });
-        if (!result) return null;
-        if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable: HTTP ' + result.statusCode);
-        return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
+        return await blobRequest(async abortSignal => {
+          const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' }, abortSignal });
+          if (!result) return null;
+          if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable: HTTP ' + result.statusCode);
+          return { value: Buffer.from(await new Response(result.stream).arrayBuffer()), version: result.blob.etag };
+        });
       } catch (error) {
         // Retrying a read is safe. Never replay a browser action or an uncertain
         // conditional write when the provider has a transient outage.
@@ -46,8 +60,8 @@ export async function writeBytes(key: string, value: Buffer | string, contentTyp
   safeKey(key);
   if (blobMode()) {
     try {
-      const result = await put(key, value, { access: 'private', addRandomSuffix: false,
-        allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType, abortSignal: AbortSignal.timeout(15000) });
+      const result = await blobRequest(abortSignal => put(key, value, { access: 'private', addRandomSuffix: false,
+        allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType, abortSignal }));
       return result.etag;
     } catch (error) {
       if (/abort|timeout/i.test(String((error as Error).name) + ' ' + String((error as Error).message))) {
