@@ -7,13 +7,13 @@ export class ConflictError extends Error {}
 export const localDir = () => process.env.DASHBOARD_LOCAL_DIR || path.join(process.cwd(), '.local');
 const locks = new Map<string, Promise<unknown>>();
 const blobMode = () => Boolean(process.env.VERCEL) || process.env.DASHBOARD_STORAGE === 'blob';
-async function blobRequest<T>(request: (signal: AbortSignal) => Promise<T>): Promise<T> {
+async function blobRequest<T>(operation: string, request: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([request(controller.signal), new Promise<T>((_, reject) => {
       timer = setTimeout(() => {
-        const error = new Error('Storage request timed out'); error.name = 'TimeoutError';
+        const error = new Error('Storage '+operation+' timed out'); error.name = 'TimeoutError';
         controller.abort(error); reject(error);
       }, 15000);
     })]);
@@ -31,7 +31,7 @@ export async function readBytes(key: string): Promise<{ value: Buffer; version: 
     // for ifMatch writes. Read the identity representation to retain its version.
     for (let attempt = 0; ; attempt++) {
       try {
-        return await blobRequest(async abortSignal => {
+        return await blobRequest('read '+key, async abortSignal => {
           const result = await get(key, { access: 'private', useCache: false, headers: { 'accept-encoding': 'identity' }, abortSignal });
           if (!result) return null;
           if (result.statusCode !== 200 || !result.stream) throw new Error('Storage read unavailable: HTTP ' + result.statusCode);
@@ -60,7 +60,7 @@ export async function writeBytes(key: string, value: Buffer | string, contentTyp
   safeKey(key);
   if (blobMode()) {
     try {
-      const result = await blobRequest(abortSignal => put(key, value, { access: 'private', addRandomSuffix: false,
+      const result = await blobRequest('write '+key, abortSignal => put(key, value, { access: 'private', addRandomSuffix: false,
         allowOverwrite: expected !== null, ifMatch: expected || undefined, cacheControlMaxAge: 60, contentType, abortSignal }));
       return result.etag;
     } catch (error) {
