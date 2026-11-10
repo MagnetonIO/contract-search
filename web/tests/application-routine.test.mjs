@@ -22,3 +22,7 @@ test('a persistent Greenhouse Apply shortcut never interrupts an already-open fo
  const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',approved_resume_attached:false,resume_upload_allowed:true,controls:[{label:'Apply',inForm:false}],buttons:['Apply','Submit application'],fields:[{index:0,label:'First Name',type:'text',visible:true,required:true,filled:true,current_value:'Matthew'},{index:1,label:'Resume/CV',type:'file',visible:false}]};
  assert.deepEqual(routineAction(form,{first_name:'Matthew'}),{type:'upload_resume',x:0,y:0});
 });
+test('empty numeric experience questions go directly to grounded duration inference without a screenshot guess',async()=>{
+ const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',fields:[{index:0,label:'How many years of professional experience do you have building ML models?',type:'text',visible:true,filled:false,required:true,current_value:''}]};const facts={verified_experience:'ML Engineer 2020 - Present. Built production models.'};
+ assert.deepEqual(routineAction(form,facts),{type:'fill_answer',index:0,label:form.fields[0].label,answer:'',evidence:[facts.verified_experience]});
+});

@@ -10,6 +10,8 @@ export function routineAction(form,facts){
   if(fact&&String(field.current_value||'').trim()!==String(facts[fact]).trim())contact.push({index:field.index,label:field.label,fact});
  }
  if(contact.length)return {type:'fill_known_fields',fields:contact.slice(0,8)};
+ const duration=(form.fields||[]).find(field=>field.visible&&!field.filled&&['text','number','textarea'].includes(field.type)&&/^(?:how many|number of|total)\s+years\b/i.test(field.label)&&/experience|worked|working/i.test(field.label));
+ if(duration&&facts.verified_experience)return {type:'fill_answer',index:duration.index,label:duration.label,answer:'',evidence:[facts.verified_experience]};
  const entry=(form.controls||[]).filter(control=>!control.disabled&&applicationControlKind(control)==='entry');
  const formOpen=(form.fields||[]).some(field=>field.required||field.type==='file'&&/resume|résumé|\bcv\b/i.test(field.label));
  if(!formOpen&&entry.length===1)return {type:'next',label:entry[0].label||entry[0].text};
