@@ -9,3 +9,4 @@ test('visible client validation permits correction only when no write or navigat
 test('navigation or an unobservable request never permits resetting a submission',()=>{
  for(const request of [{method:()=> 'GET',isNavigationRequest:()=>true},{}]){const context=new EventEmitter(),watch=watchSubmission(context);context.emit('request',request);assert.equal(watch.rejected(['Country']),false);watch.dispose();}
 });
+test('an old validation message is not proof that a new submission was rejected',()=>{const context=new EventEmitter(),watch=watchSubmission(context,{previousErrors:['Country']});assert.equal(watch.rejected(['Country']),false);assert.equal(watch.rejected(['Country','Preferred first name']),true);watch.dispose();});
