@@ -18,3 +18,7 @@ test('an observed non-final Apply entry opens before a resume exists, while an i
  assert.deepEqual(routineAction(base,{}),{type:'next',label:'Apply now'});
  assert.equal(routineAction({...base,controls:[{label:'Apply now',text:'Apply now',inForm:true,type:'submit'}]},{}),null);
 });
+test('a persistent Greenhouse Apply shortcut never interrupts an already-open form or repeats entry clicks',async()=>{
+ const {routineAction}=await import('../lib/application-routine.mjs');const form={url:'https://job-boards.greenhouse.io/acme/jobs/123',approved_resume_attached:false,resume_upload_allowed:true,controls:[{label:'Apply',inForm:false}],buttons:['Apply','Submit application'],fields:[{index:0,label:'First Name',type:'text',visible:true,required:true,filled:true,current_value:'Matthew'},{index:1,label:'Resume/CV',type:'file',visible:false}]};
+ assert.deepEqual(routineAction(form,{first_name:'Matthew'}),{type:'upload_resume',x:0,y:0});
+});
