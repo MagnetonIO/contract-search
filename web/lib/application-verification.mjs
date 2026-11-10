@@ -3,7 +3,7 @@ import {randomUUID,createHash} from 'node:crypto';
 import {bb,browserSession} from './browser-session.mjs';
 import {readJson,readBytes} from './store.ts';
 import {mutate,patchAttempt,reserve,settle,activity,automationSettings,AutomationInputError} from './automation-state.mjs';
-import {applicationReceipt,applicationFields,selectComboboxOption} from './application-controls.mjs';
+import {applicationReceipt,applicationFields,selectComboboxOption,CONFIRMATION_PATTERN} from './application-controls.mjs';
 import {choiceMatches} from './visual-policy.mjs';
 import {uploadApprovedResume} from './resume-upload.mjs';
 import {captureOutcome} from './capture-outcome.mjs';
@@ -18,7 +18,7 @@ export {VERIFICATION_SECONDS,greenhouseUrl,verificationTarget,emailVerification,
 export async function holdVerification(id,session,{target,startedAt,usage,costId,notice,updateRun=true,kind='email_verification',checkpoint=null,company='',recipient='',length=null}={}){
  const prior=await attempt(id);const now=Date.now(),expiry=Math.min(Date.parse(session.expiresAt||'')||now+HANDOFF_MS,now+HANDOFF_MS);
  const reason=kind==='email_verification'?'Employer requested an email verification code. Automatic retrieval will be attempted before notifying you.':notice||'Automatic recovery could not complete verification. Open the private browser to continue.';
- await patchAttempt(id,{status:'needs_input',reason,required_action:kind==='email_verification'?verificationAction():{owner:'user',kind:'security_verification',title:'Verification needs attention',instruction:'Open the private application browser, complete the indicated step, then select Resume after verification.',detail:reason},...(checkpoint?{checkpoint}:{}),verification:{state:'active',kind,session_id:session.id,context_id:session.context_id||checkpoint?.context_id||null,target,expires_at:new Date(expiry).toISOString(),started_at:new Date(now).toISOString(),requested_at:prior.submission_intent_at||new Date(now).toISOString(),session_started_at:startedAt||new Date(now).toISOString(),usage:usage||{input:0,output:0},cost_id:costId,company,recipient,length,automatic_until:new Date(now+120000).toISOString()},evidence:{basis:'application_browser',observed_url:target,site_notice:kind==='email_verification'?'Employer requested email verification; application remains unconfirmed.':notice,evidence_gap:'Verification input and code are not recorded.'}},{updateRun});
+ await patchAttempt(id,{status:kind==='submission_pending'?'submitting':'needs_input',reason,required_action:kind==='submission_pending'?{owner:'automation',kind:'submission_pending',title:'Waiting for employer confirmation',instruction:'Automatically checking the same submitted form. No new submission or applicant action is needed.'}:kind==='email_verification'?verificationAction():{owner:'user',kind:'security_verification',title:'Verification needs attention',instruction:'Open the private application browser, complete the indicated step, then select Resume after verification.',detail:reason},...(checkpoint?{checkpoint}:{}),verification:{state:'active',kind,session_id:session.id,context_id:session.context_id||checkpoint?.context_id||null,target,expires_at:new Date(expiry).toISOString(),started_at:new Date(now).toISOString(),requested_at:prior.submission_intent_at||new Date(now).toISOString(),session_started_at:startedAt||new Date(now).toISOString(),usage:usage||{input:0,output:0},cost_id:costId,company,recipient,length,automatic_until:new Date(now+120000).toISOString()},evidence:{basis:'application_browser',observed_url:target,site_notice:kind==='email_verification'?'Employer requested email verification; application remains unconfirmed.':notice,evidence_gap:'Verification input and code are not recorded.'}},{updateRun});
 }
 export function verificationPage(raw,target){if(verificationTarget(raw,target))return true;try{const a=new URL(raw),b=new URL(target);return supportedApplication(raw)&&a.origin===b.origin&&a.pathname.replace(/\/$/,'')===b.pathname.replace(/\/$/,'');}catch{return false;}}
 async function attempt(id){const a=(await readJson('application-attempts.json',{})).value[id];if(!a)throw new AutomationInputError('Application attempt not found.');return a;}
@@ -26,7 +26,7 @@ async function release(a,state,deps={}){
  const v=a.verification;if(!v)return;
  await (deps.client||bb()).sessions.update(v.session_id,{status:'REQUEST_RELEASE'}).catch(()=>{});
  if(v.cost_id){const end=Math.min(Date.now(),Date.parse(v.expires_at));const cost=await reservationCost(v.cost_id,v.usage?.estimated_usd||0,.01+Math.max(0,end-Date.parse(v.session_started_at||v.started_at))/3600000*.12);await settle(v.cost_id,cost.usd,cost.details);}
- await mutate('application-attempts.json',old=>old[a.id]?.verification?.session_id===v.session_id?{...old,[a.id]:{...old[a.id],verification:{...old[a.id].verification,state,closed_at:new Date().toISOString()}}}:old);
+ await mutate('application-attempts.json',old=>old[a.id]?.verification?.session_id===v.session_id?{...old,[a.id]:{...old[a.id],...(state!=='completed'&&old[a.id].status==='submitting'&&old[a.id].submission_intent_at?{status:'submission_unknown',reason:'The browser closed before a target-site receipt was recorded. Submission protection is preserved.',required_action:{owner:'automation',kind:'automatic_verification_failed',title:'Confirmation remains unverified',instruction:'Preserve this submission and continue with other jobs. No applicant action is requested.'}}:{}),verification:{...old[a.id].verification,state,closed_at:new Date().toISOString()}}}:old);
 }
 export async function getVerificationView(id,deps={}){
  const a=await attempt(id);if(a.status==='submitted')return {state:'submitted',title:a.title,receipt:a.receipt};
@@ -34,7 +34,7 @@ export async function getVerificationView(id,deps={}){
  const client=deps.client||bb();const session=await client.sessions.retrieve(v.session_id);
  if(Date.parse(v.expires_at)<=Date.now()||session.status!=='RUNNING'){await release(a,'expired',deps);return {state:'expired',title:a.title,can_reopen:Boolean(a.submission_intent_at&&verificationEvidence(a))};}
  const tabs=loginTabs(await client.sessions.debug(v.session_id)).filter(t=>{try{return new URL(t.origin).origin===new URL(v.target).origin;}catch{return false;}});
- return {state:'active',session_id:v.session_id,title:a.title,tabs:v.kind==='provider_solving'?[]:tabs,expires_at:v.expires_at,kind:v.kind||'email_verification',can_resume:Boolean(a.checkpoint&&!a.submission_intent_at&&v.kind!=='provider_solving'),automatic_pending:v.kind==='provider_solving'||v.kind==='email_verification'&&Date.parse(v.automatic_until)>Date.now(),prepared:Boolean(v.prepared),message:v.prepared?'The earlier browser closed. Your saved contact details and résumé are prepared. Review the form, request a fresh code using the employer’s Submit button, then enter that code and resubmit.':a.reason};
+ return {state:'active',session_id:v.session_id,title:a.title,tabs:v.kind==='provider_solving'?[]:tabs,expires_at:v.expires_at,kind:v.kind||'email_verification',can_resume:Boolean(a.checkpoint&&!a.submission_intent_at&&v.kind!=='provider_solving'),automatic_pending:v.kind==='provider_solving'||['submission_pending','email_verification'].includes(v.kind)&&Date.parse(v.automatic_until)>Date.now(),prepared:Boolean(v.prepared),message:v.prepared?'The earlier browser closed. Your saved contact details and résumé are prepared. Review the form, request a fresh code using the employer’s Submit button, then enter that code and resubmit.':a.reason};
 }
 export async function checkVerification(id,deps={}){
  let a=await attempt(id);if(a.status==='submitted')return {state:'submitted',title:a.title,receipt:a.receipt};
@@ -45,7 +45,7 @@ export async function checkVerification(id,deps={}){
   const pages=browser.contexts()[0].pages(),page=pages.find(p=>verificationPage(p.url(),a.verification.target));
   if(!page)return {...view,message:'The browser is not on this application’s page. No submission has been confirmed.'};
   const text=await page.locator('body').innerText();const receipt=applicationReceipt(text,{url:page.url(),target:a.verification.target});
-  if(!receipt)return {...view,message:emailVerification(text,page.url())?'The employer is still waiting for its email code. Enter it and resubmit in the private browser.':'No employer confirmation is visible yet. Complete the form in the private browser, then check again.'};
+  if(!receipt)return {...view,email_challenge:emailVerification(text,page.url()),message:emailVerification(text,page.url())?'The employer is still waiting for its email code. Enter it and resubmit in the private browser.':'No employer confirmation is visible yet. Complete the form in the private browser, then check again.'};
   const proof=await captureOutcome(page,id,{allowed:url=>verificationPage(url,a.verification.target),site_notice:receipt});
   await patchAttempt(id,{status:'submitted',reason:null,required_action:null,receipt,confirmed_at:new Date().toISOString(),confirmation_url:page.url(),evidence:proof},{updateRun:false});
   await mutate('workflow.json',old=>{const prior=old[a.lead_id]||{stage:'new',notes:'',events:[]};if(prior.events?.some(e=>e.id===id&&e.kind==='submitted'))return old;return {...old,[a.lead_id]:{...prior,stage:'applied',updated_at:new Date().toISOString(),application:{...prior.application,submission_recorded_at:new Date().toISOString()},events:[...(prior.events||[]),{id,kind:'submitted',recorded_at:new Date().toISOString(),url:page.url(),evidence:'browser_confirmed'}]}};});
@@ -100,6 +100,11 @@ export async function recoverVerification(id,{client=bb(),connect=url=>chromium.
  const v=a.verification;
  const current=await automationSettings(),manualAuthorized=Date.parse(a.manual_expires_at)>Date.now()&&Date.parse(a.manual_authorized_at)>Date.parse(current.policy.paused_at||'1970-01-01');
  const canAutomaticallyContinue=(current.policy.enabled||manualAuthorized)&&current.facts?.confirmed&&current.facts.version===a.profile_version&&current.resume_hash===a.resume_hash&&current.quota.remaining>0;
+ if(v.kind==='submission_pending'||v.kind==='provider_solving'&&a.submission_intent_at){
+  if(existing.email_challenge){const challenge=existing.email_challenge;await patchAttempt(id,{status:'needs_input',reason:'Employer requested email verification; automatic Gmail retrieval is in progress.',verification:{...v,kind:'email_verification',recipient:challenge.email,length:challenge.length,automatic_until:new Date(Date.now()+120000).toISOString()}},{updateRun:false});return {waiting:true};}
+  if(Date.parse(v.automatic_until)>Date.now())return {waiting:true};
+  await patchAttempt(id,{status:'submission_unknown',reason:'No employer receipt was observed within the automatic confirmation window. No duplicate submission was made.',required_action:{owner:'automation',kind:'automatic_verification_failed',title:'Confirmation remains unverified',instruction:'Preserve this submission and continue with other jobs. No applicant action is requested.'}},{updateRun:false});await release(a,'closed',{client});return {waiting:false};
+ }
  if(v.kind==='provider_solving'){
   const session=await client.sessions.retrieve(v.session_id),browser=await connect(session.connectUrl);let ready=false;
   try{const page=browser.contexts()[0].pages().find(p=>verificationPage(p.url(),v.target));if(page){const tracker=watchChallenges(page);try{ready=(await tracker.wait({ready:async()=>!await securityBlocked(page),timeout:8000})).state==='ready';}finally{tracker.dispose();}}}finally{await browser.close().catch(()=>{});}
@@ -120,7 +125,7 @@ export async function recoverVerification(id,{client=bb(),connect=url=>chromium.
      if(notice&&notice.email.toLowerCase()===v.recipient.toLowerCase()&&notice.length===v.length&&await input.count()===1&&await button.count()===1&&await button.isEnabled()){
       // Reserve this one continuation BEFORE posting; a crash cannot replay it.
       let reserved=false;await mutate('application-attempts.json',old=>{reserved=false;const prior=old[id];if(prior.verification?.code_attempted_at)return old;reserved=true;return {...old,[id]:{...prior,verification:{...prior.verification,code_attempted_at:new Date().toISOString(),consumed_message_ids:[...(prior.verification.consumed_message_ids||[]),code.message_id]}}};});
-      if(reserved){await input.fill(code.code);await button.click({timeout:10000});await page.getByText(/application (?:submitted|received)|thank you for applying/i).first().waitFor({timeout:10000}).catch(()=>{});if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});}
+      if(reserved){await input.fill(code.code);await button.click({timeout:10000});await page.getByText(CONFIRMATION_PATTERN).first().waitFor({timeout:10000}).catch(()=>{});if(await input.isVisible().catch(()=>false))await input.fill('',{timeout:1000}).catch(()=>{});}
      }
     }
    }finally{code=null;await browser.close().catch(()=>{});}
