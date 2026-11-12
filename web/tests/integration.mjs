@@ -40,6 +40,8 @@ try {
  cookie=response.headers.get('set-cookie').split(';')[0];assert.match(response.headers.get('set-cookie'),/HttpOnly/i);assert.match(response.headers.get('set-cookie'),/SameSite=Strict/i);
  const authBytes=await readFile(path.join(directory,'auth.json'),'utf8');assert.equal(authBytes.includes('disposable-http-test-password'),false);
  assert.equal((await request('data',{authenticated:false})).status,401);
+ assert.equal((await request('collect-now',{body:{},authenticated:false})).status,401);
+ assert.equal((await request('collect-now',{body:{},origin:'https://attacker.example'})).status,403);
  assert.equal((await request('resume',{authenticated:false})).status,401);
  assert.equal((await request('role-resumes',{authenticated:false})).status,401);
  assert.equal((await request('role-resume?role=cto',{authenticated:false})).status,401);

@@ -1,4 +1,8 @@
 export function sourceExpired(lead,now=Date.now()){const expiry=Date.parse(lead?.source_expires_at||'');return Number.isFinite(expiry)&&expiry<=Number(now);}
+export function sortOpportunities(leads,sort){
+ const stamp=value=>Date.parse(value)||0;
+ return [...leads].sort((a,b)=>sort==='posted'?(stamp(b.source_posted_at)-stamp(a.source_posted_at)||stamp(b.first_seen)-stamp(a.first_seen)):sort==='newest'?(stamp(b.first_seen)-stamp(a.first_seen)||stamp(b.source_posted_at)-stamp(a.source_posted_at)):sort==='pay'?Number(b.hourly_min_usd||0)-Number(a.hourly_min_usd||0):Number(b.review_score||0)-Number(a.review_score||0));
+}
 export function safeWebUrl(value) {
   try {
     const parsed = new URL(value);

@@ -21,3 +21,23 @@ test('active runner suppresses dispatch; dispatch lease suppresses duplicates',a
 test('API failure is retryable without leaking token or falsely recording success',async()=>{
  await assert.rejects(ensureCollection({now,store:store(),token:'synthetic-private',fetchImpl:async()=>new Response('',{status:403})}),e=>e.message==='Collector dispatch API returned HTTP 403');
 });
+test('manual pull dispatches a fresh daily collection after the morning scan outside the scheduled window',async()=>{
+ const calls=[];const state=store({collected_at:'2026-11-12T14:10:00Z'});
+ const options={now:new Date('2026-11-12T17:54:00Z'),manual:true,store:state,token:'synthetic',fetchImpl:async(url,options)=>{calls.push({url,...options});return options.method==='POST'?new Response(null,{status:204}):Response.json({workflow_runs:[]});}};
+ assert.equal((await ensureCollection(options)).status,'dispatched');
+ assert.deepEqual(JSON.parse(calls.find(c=>c.method==='POST').body),{ref:'main',inputs:{mode:'daily',force:'true'}});
+ assert.equal((await ensureCollection(options)).status,'dispatch_pending');
+ assert.equal(calls.filter(c=>c.method==='POST').length,1);
+});
+test('manual pull still reuses an active runner and requires the existing dispatcher credentials',async()=>{
+ const now=new Date('2026-11-12T17:54:00Z');
+ assert.equal((await ensureCollection({now,manual:true,store:store(),token:''})).status,'configuration_required');
+ const result=await ensureCollection({now,manual:true,store:store(),token:'synthetic',fetchImpl:async()=>Response.json({workflow_runs:[{status:'in_progress',created_at:now.toISOString(),html_url:'https://github.com/example/run'}]})});
+ assert.equal(result.status,'runner_active');assert.equal(result.run_url,'https://github.com/example/run');
+});
+test('a rejected dispatch is not left looking queued and can be retried immediately',async()=>{
+ const state=store();const options={now:new Date('2026-11-12T17:54:00Z'),manual:true,store:state,token:'synthetic'};
+ await assert.rejects(ensureCollection({...options,fetchImpl:async(url,options)=>options.method==='POST'?new Response(null,{status:422}):Response.json({workflow_runs:[]})}),/HTTP 422/);
+ assert.equal((await state.read('collection-dispatch.json')).value.status,'failed');
+ assert.equal((await ensureCollection({...options,fetchImpl:async(url,options)=>options.method==='POST'?new Response(null,{status:204}):Response.json({workflow_runs:[]})})).status,'dispatched');
+});

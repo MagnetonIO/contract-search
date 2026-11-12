@@ -6,6 +6,10 @@ on:
       timezone: America/Chicago
   workflow_dispatch:
     inputs:
+      force:
+        description: 'Pull again after a completed scan; existing source and spending limits still apply'
+        type: boolean
+        default: false
       source:
         description: "Optional configured source name for smoke validation"
         type: string
@@ -29,6 +33,7 @@ jobs:
     timeout-minutes: 50
     env:
       SOURCE: ${{ inputs.source }}
+      FORCE_COLLECTION: ${{ inputs.force == true && 'true' || 'false' }}
       CONTRACT_BUDGET_GIT_SYNC: '1'
       MODE: ${{ github.event_name == 'schedule' && 'daily' || inputs.mode }}
     steps:
@@ -78,7 +83,9 @@ jobs:
             if [ -n "$SOURCE" ]; then args+=(--source "$SOURCE"); fi
             python runner.py --mode smoke "${args[@]}" --state ../durable-state/smoke.sqlite3 --output output/latest
           else
-            python runner.py --mode "$MODE" --state ../durable-state/seen.sqlite3 --output output/latest
+            args=()
+            if [ "$FORCE_COLLECTION" = true ]; then args+=(--force); fi
+            python runner.py --mode "$MODE" "${args[@]}" --state ../durable-state/seen.sqlite3 --output output/latest
           fi
       - name: Publish run summary
         if: always()

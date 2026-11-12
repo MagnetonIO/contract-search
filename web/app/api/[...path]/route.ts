@@ -153,7 +153,7 @@ async function handle(request: Request, context: Context) {
     if(input.action==='cancel'&&!attempt.submission_intent_at){await reviseAttempt(input.id,'cancel');return json({cancelled:true});}
     return json({error:'An uncertain submission must be reconciled before another attempt.'},409);
   }
-  if (action === 'collect-now' && request.method === 'POST') return json(await ensureCollection());
+  if (action === 'collect-now' && request.method === 'POST') return json(await ensureCollection({manual:true}));
   if (action === 'logout' && request.method === 'POST') { (await sessionFor(config)).destroy(); return json({ success: true }); }
   if (action === 'data' && request.method === 'GET') {
     const [snapshot, workflow, profile] = await Promise.all([
@@ -162,8 +162,9 @@ async function handle(request: Request, context: Context) {
     if (!snapshot.value) return json({ error: 'No collected leads have been loaded yet.' }, 503);
     const schedulerState=await readJson('scheduler-state.json',null);
     const collection=await readJson('collection-state.json',null);
+    const collectionDispatch=await readJson('collection-dispatch.json',null);
     const digest = await readJson<{status:string;accepted_at?:string;meta?:{count:number}}|null>('digest-state.json',null);
-    return json({ collection:collection.value, snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version, scheduler:{configured:Boolean(process.env.COLLECTOR_GITHUB_TOKEN),state:schedulerState.value}, email:{configured:Boolean(await mailKey()),from:MAIL_FROM,recipient:DIGEST_TO,last_digest:digest.value?.status==='accepted'?digest.value.accepted_at:undefined,digest_count:digest.value?.meta?.count} });
+    return json({ collection:collection.value, collectionDispatch:collectionDispatch.value, snapshot: snapshot.value, workflow: workflow.value, version: workflow.version, profile: profile.value, profileVersion: profile.version, scheduler:{configured:Boolean(process.env.COLLECTOR_GITHUB_TOKEN),state:schedulerState.value}, email:{configured:Boolean(await mailKey()),from:MAIL_FROM,recipient:DIGEST_TO,last_digest:digest.value?.status==='accepted'?digest.value.accepted_at:undefined,digest_count:digest.value?.meta?.count} });
   }
   if (action === 'outreach' && request.method === 'GET') {
     const id = new URL(request.url).searchParams.get('lead');
