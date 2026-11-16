@@ -1,47 +1,45 @@
-# Contract search — 2026-11-13
+# Contract search — 2026-11-16
 
-Mode: **daily**. New remote contracts: **40 / 50**. Secondary roles: **125**. Published project needs: **5**.
-Raw rows: 1248; normalized relevant rows: 1124; unique new relevant leads: 170; duplicates: 780; stale: 174; rejected: 124.
+Mode: **daily**. New remote contracts: **74 / 50**. Secondary roles: **233**. Published project needs: **5**.
+Raw rows: 1184; normalized relevant rows: 1084; unique new relevant leads: 312; duplicates: 604; stale: 168; rejected: 100.
 
 First-seen means new to this collector, not newly published. Unknown original dates stay unknown. The 7-day overlap includes weekend postings on Monday; missed runs longer than 7 days require backfill.
 
 ## Top 10 remote contracts
 
-1. [Backend Security Engineer (Remote)](https://www.linkedin.com/jobs/view/4489565727?pageNum=0&position=20) — Joblet-AI; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-2. [Cloud Architect](https://www.linkedin.com/jobs/view/4490578581?pageNum=0&position=6) — PlanIT Group, LLC; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-3. [Cloud Data Engineer](https://www.indeed.com/viewjob?jk=82ee56f426eb0658) — All IT Solutions LLC; unknown; 2 - remote contract; terms to verify; Indeed. unverified employer.
-4. [DSCA Data Engineer Mid (Software Development Analyst) - 31121 (Arlington, VA, Re](https://himalayas.app/companies/hii/jobs/dsca-data-engineer-mid-software-development-analyst-31121-arlington-va-re) — HII; $120000 - $130000/yr; 2 - remote contract; terms to verify; Himalayas. unverified employer.
-5. [Data Engineer](https://www.linkedin.com/jobs/view/4490559403?pageNum=0&position=33) — BCforward; $100/hr; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-6. [Google Cloud Architect (Active Certification)](https://www.linkedin.com/jobs/view/4490716802?pageNum=0&position=2) — Logistics Integration Solutions; unknown; 2 - remote contract; terms to verify; LinkedIn. agency / client unverified.
-7. [Junior Machine Learning Engineer](https://www.linkedin.com/jobs/view/4489624869?pageNum=0&position=27) — Virtue America; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-8. [Lead AI Developer - Remote](https://www.linkedin.com/jobs/view/4490731375?pageNum=0&position=19) — Steneral Consulting; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-9. [Lead Software Developer](https://www.linkedin.com/jobs/view/4490509559?pageNum=0&position=31) — Acumenz Consulting; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
-10. [MES Engineer /MES Developer](https://www.dice.com/job-detail/ba627e44-8227-40fd-a7c8-aee0584c841e) — McKinsol Consulting Inc; unknown; 2 - remote contract; terms to verify; Dice. unverified employer.
-
-**Shortfall: 10.** Source failures, bounded search limits, stale postings, deduplication and relevance/contract filters constrain the count. Secondary roles and project notices do not fill the contract target. No inferred prospects are counted.
+1. [100% Remote :: Azure Stack Hub-Azure Stack Edge- Migration Architecture](https://www.linkedin.com/jobs/view/4488609235?pageNum=0&position=27) — Prudent Technologies and Consulting, Inc.; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+2. [AI Engineer/Staff Software Engineer](https://www.linkedin.com/jobs/view/4489801505?pageNum=0&position=9) — Yochana; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+3. [AI Trainer (ML Engineering) - Remote](https://himalayas.app/companies/yo-ai-labs/jobs/ai-trainer-ml-engineering-remote) — YO AI Labs; unknown; 2 - remote contract; terms to verify; Himalayas. unverified employer.
+4. [AI Trainer (SWE) - Remote](https://himalayas.app/companies/yo-ai-labs/jobs/ai-trainer-swe-remote) — YO AI Labs; unknown; 2 - remote contract; terms to verify; Himalayas. unverified employer.
+5. [AWS Connect Architect](https://himalayas.app/companies/tech-talent-international/jobs/aws-connect-architect) — Tech Talent International; CAD 80 - CAD 100/hr; 2 - remote contract; terms to verify; Himalayas. agency / client unverified.
+6. [AWS Data Engineer Snowflake](https://himalayas.app/companies/kynite/jobs/aws-data-engineer-snowflake) — Kynite; unknown; 2 - remote contract; terms to verify; Himalayas. unverified employer.
+7. [Azure Databricks Admin](https://himalayas.app/companies/kynite/jobs/azure-databricks-admin) — Kynite; unknown; 2 - remote contract; terms to verify; Himalayas. unverified employer.
+8. [Azure Platform Lead/ Architect](https://himalayas.app/companies/kynite/jobs/azure-platform-lead-architect) — Kynite; unknown; 2 - remote contract; terms to verify; Himalayas. unverified employer.
+9. [Backend Java Lead Developer](https://www.linkedin.com/jobs/view/4490654354?pageNum=0&position=12) — Kainos Innovative Solutions; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
+10. [Cloud Engineer](https://www.linkedin.com/jobs/view/4490779559?pageNum=0&position=12) — KPG99 INC; unknown; 2 - remote contract; terms to verify; LinkedIn. unverified employer.
 
 ## Source coverage
 
 | Source | Status | Raw rows | Detail |
 |---|---|---:|---|
-| LinkedIn | ok | 300 | Capped runs Vm9jWxX9UIjJ7F1ui; configured result ceiling reached; coverage is partial |
-| Indeed | ok | 68 | Capped runs 7YG3YMb0tuhvZGYNm |
-| Dice | ok | 152 | Capped runs f16UEQt8u2DhIpQyc |
-| Employer ATS discovery | ok | 18 | Capped runs pMyplVz981GFio9iC |
-| Glassdoor | ok | 85 | Capped runs T8Es1YzxszV5wBOfL, QNm8Bs5EE9qMBIqd3, OXUjnr3JsdwoV9wA4 |
-| Wellfound | ok | 73 | Capped runs 6kGfJRS2OF98Xso05 |
-| Built In | ok | 80 | Capped runs RtpNhc7Ub25IpGiUC; configured result ceiling reached; coverage is partial |
-| Staffing firm career feeds | ok | 40 | Capped runs pCh4DD18KkzpBYkNm; provider ATS index; end client unverified; configured result ceiling reached; coverage is partial |
-| JobServe US | ok | 51 | Capped runs QNCet5JnhMl1G5vDH; configured result ceiling reached; coverage is partial |
-| Remotive | ok | 14 |  |
+| LinkedIn | ok | 299 | Capped runs s4djCpUBGKFJMrixK |
+| Indeed | ok | 68 | Capped runs 8hljiVeuAaWBKWQYP |
+| Dice | ok | 143 | Capped runs IvUajgOp6F7kfgbgZ |
+| Employer ATS discovery | ok | 18 | Capped runs LrxPzGzH5zeUE0eSG |
+| Glassdoor | ok | 86 | Capped runs wNtoc4bsWxXC0aPJ0, 5SRlqxd3Ma4aDrY5w, qIzqkksI8SvjYgqT9 |
+| Wellfound | ok | 70 | Capped runs IgqYgZiPclasKADAf; configured result ceiling reached; coverage is partial |
+| Built In | ok | 80 | Capped runs ROGvppdDe1aqGP1UK; configured result ceiling reached; coverage is partial |
+| Staffing firm career feeds | ok | 40 | Capped runs hrIKAy8naXvJ1rH2O; provider ATS index; end client unverified; configured result ceiling reached; coverage is partial |
+| JobServe US | ok | 35 | Capped runs dH0UzZbz1ZPmQ0Bb3 |
+| Remotive | ok | 16 |  |
 | We Work Remotely | ok | 25 |  |
-| We Work Remotely DevOps | ok | 29 |  |
-| US SAM.gov solicitations | ok | 12 | Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; 0 cached queries; 10 requests per rolling 24h; federal projects, not individual jobs |
+| We Work Remotely DevOps | ok | 27 |  |
+| US SAM.gov solicitations | ok | 11 | Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; 0 cached queries; 10 requests per rolling 24h; federal projects, not individual jobs |
 | Myticas direct career feed | ok | 30 | Direct agency career feeds: Myticas Consulting; hiring client unverified |
 | TechFetch | disabled | 0 | Public headless canary blocked by TechFetch security (HTTP 403); public-only adapter installed; awaiting permitted access |
 | Direct employer boards (Ashby) | ok | 29 |  |
-| Himalayas | ok | 119 |  |
-| Jobicy | ok | 123 |  |
+| Himalayas | ok | 113 |  |
+| Jobicy | ok | 94 |  |
 
 Daily paid-run allowance $6; configured daily caps $1.83; smoke cap $0.15 per source. Reservations include uncertain charges. Provider charge snapshots are in summary.json and can settle after completion. Actor caps are spending limits, not expected costs. No applications or outreach are sent.
 
