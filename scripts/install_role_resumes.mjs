@@ -9,8 +9,10 @@ import {TRACKED_ROLES} from '../web/lib/roles.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../resumes');
 const manifest=JSON.parse(await readFile(path.join(root,'manifest.json'),'utf8'));
 const profile=(await readJson('profile.json',{})).value;
-if(profile.resume_hash!==manifest.source_hashes['Resume_Matthew_Long.pdf'])throw Error('The stored base résumé differs from the reviewed source PDF. Rebuild against the active base before installing.');
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const masterHash=manifest.master_hash||manifest.source_hashes['Resume_Matthew_Long.pdf'];
+if(profile.resume_hash!==masterHash)throw Error('The stored base résumé differs from the reviewed master PDF. Install the reviewed master before its role versions.');
+if(manifest.default&&hash(await readFile(path.join(root,manifest.default.pdf)))!==masterHash)throw Error('The reviewed master changed since the manifest was generated.');
 const registry={schema_version:1,master_hash:profile.resume_hash,roles:{}};
 for(const role of TRACKED_ROLES){
  const entry=manifest.roles.find(r=>r.id===role.id);
