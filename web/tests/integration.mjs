@@ -41,6 +41,12 @@ try {
  const authBytes=await readFile(path.join(directory,'auth.json'),'utf8');assert.equal(authBytes.includes('disposable-http-test-password'),false);
  assert.equal((await request('data',{authenticated:false})).status,401);
  assert.equal((await request('collect-now',{body:{},authenticated:false})).status,401);
+ assert.equal((await request('automation-source',{body:{source:'Dice',enabled:false},authenticated:false})).status,401);
+ assert.equal((await request('automation-source',{body:{source:'Dice',enabled:false},origin:'https://attacker.example'})).status,403);
+ assert.equal((await request('automation-source',{body:{source:'Dice',enabled:'false'}})).status,400);
+ const sourcePolicy=await(await request('automation-source',{body:{source:'Dice',enabled:false,remove_open_jobs:true}})).json();
+ assert.deepEqual(sourcePolicy.policy.disabled_sources,['Dice']);
+ assert.equal((await(await request('data')).json()).snapshot.leads.length,1,'removing Dice leaves another source untouched');
  assert.equal((await request('collect-now',{body:{},origin:'https://attacker.example'})).status,403);
  assert.equal((await request('resume',{authenticated:false})).status,401);
  assert.equal((await request('role-resumes',{authenticated:false})).status,401);
@@ -53,7 +59,7 @@ try {
  assert.equal((await request('automation',{authenticated:false})).status,401);
  assert.equal((await request('automation-evidence',{authenticated:false})).status,401);const exported=await request('automation-evidence');assert.equal(exported.status,200);assert.match(exported.headers.get('content-disposition'),/attachment/);assert.equal((await exported.json()).schema_version,1);
  assert.equal((await request('automation-screenshot?id=invalid',{authenticated:false})).status,401);assert.equal((await request('automation-screenshot?id=invalid')).status,400);assert.equal((await request('automation-screenshot?id=11111111-1111-4111-8111-111111111111')).status,404);assert.equal((await request('browser-login-view',{authenticated:false})).status,401);assert.equal((await request('browser-login-view?id=invalid')).status,400);assert.equal((await(await request('browser-login-view')).json()).state,'closed');
- const automation=await(await request('automation')).json();assert.equal(automation.audit.total,1);assert.equal(automation.audit.rows[0].title,fixture.title);assert.equal(automation.live_browser,null);assert.deepEqual(automation.activity,[]);
+ const automation=await(await request('automation')).json();assert.equal(automation.audit.total,1);assert.equal(automation.audit.rows[0].title,fixture.title);assert.equal(automation.live_browser,null);assert.equal(automation.activity.filter(event=>event.kind==='source_automation_changed').length,1);
  await writeFile(path.join(directory,'application-attempts.json'),JSON.stringify({success:{id:'success',status:'submitted',receipt:'Application submitted',confirmed_at:new Date().toISOString()},failed:{id:'failed',status:'failed'},closed:{id:'closed',status:'skipped'}}));
  const quota=(await(await request('automation')).json()).quota;assert.equal(quota.limit,100);assert.equal(quota.confirmed,1);assert.equal(quota.remaining,99,'failed and unavailable applications do not consume daily successful-application quota');
  await rm(path.join(directory,'application-attempts.json'));

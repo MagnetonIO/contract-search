@@ -159,7 +159,10 @@
         "maxItems": 3,
         "maxPagesPerSearch": 1,
         "maxProxyRetries": 1
-      }
+      },
+      "enabled": false,
+      "disabled_status": "disabled",
+      "reason": "Disabled by user; Dice collection and applications are turned off."
     },
     {
       "name": "Employer ATS discovery",

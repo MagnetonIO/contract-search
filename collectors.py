@@ -85,7 +85,7 @@ def coverage_for_config(previous, config):
     for spec in specs:
         row=old.get(spec['name'])
         if spec.get('enabled') is False:
-            result.append({'source':spec['name'],'status':'access required','raw':0,'detail':spec.get('reason','Awaiting validation')});continue
+            result.append({'source':spec['name'],'status':spec.get('disabled_status','access required'),'raw':0,'detail':spec.get('reason','Awaiting validation')});continue
         if row is None or row.get('status') in ('not configured','not validated'):
             validation=spec.get('validation',{})
             row={'source':spec['name'], 'status':validation.get('status','not run'),

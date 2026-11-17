@@ -1,4 +1,5 @@
 import {sourceExpired} from './shared.mjs';
+import {withoutRemovedSources} from './source-policy.mjs';
 import {archiveSourceExpirations} from './disposition.mjs';
 import { readJson,writeJson,ConflictError } from './store.ts';
 import { mergeSnapshot } from './email-import.mjs';
@@ -12,5 +13,6 @@ export async function readSnapshot() {
     if(next===old.value)break;
     try{await writeJson('workflow.json',next,old.version);break;}catch(error){if(!(error instanceof ConflictError))throw error;}
   }
-  return {value};
+  const [{value:policy},{value:workflow}]=await Promise.all([readJson('automation-settings.json',{}),readJson('workflow.json',{})]);
+  return {value:withoutRemovedSources(value,workflow,policy)};
 }

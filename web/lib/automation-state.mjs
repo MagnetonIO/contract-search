@@ -1,4 +1,6 @@
 import {pilotReport,sourceLimitReached} from './application-pilot.mjs';
+import {blockedApplicationSource} from './source-policy.mjs';
+import {recordDisposition} from './disposition.mjs';
 import {refreshGatewayUsage} from './gateway-usage.mjs';
 import {randomUUID} from 'node:crypto';
 import {readJson,writeJson,ConflictError} from './store.ts';
@@ -16,6 +18,38 @@ export async function mutate(key,change,fallback={}) {
  throw Error('Automation state is busy. Try again.');
 }
 export async function updateScreenings(change){return mutate('screenings.json',old=>preserveScreeningHistory(old,change(structuredClone(old))));}
+export async function setSourceEnabled(source,enabled,{removeOpen=false}={}){
+ if(typeof source!=='string'||!source.trim()||source.length>120||/[\r\n<>]/.test(source)||typeof enabled!=='boolean'||typeof removeOpen!=='boolean')throw new AutomationInputError('Choose a valid source and boolean enabled setting.');
+ source=source.trim();
+ const snapshot=removeOpen?(await readSnapshot()).value:null;
+ const policy=await mutate('automation-settings.json',old=>{
+  const disabled=(old.disabled_sources||[]).filter(s=>s.toLowerCase()!==source.toLowerCase());
+  if(!enabled)disabled.push(source);
+  const dice=source.toLowerCase()==='dice'?(enabled?{dice_daily_limit:old.dice_daily_limit===0?old.dice_daily_limit_before_disable??20:old.dice_daily_limit??20}:{dice_daily_limit:0,dice_daily_limit_before_disable:old.dice_daily_limit>0?old.dice_daily_limit:old.dice_daily_limit_before_disable??20}):{};
+  return {...old,...dice,disabled_sources:disabled,...(removeOpen?{removed_sources:[...new Set([...(old.removed_sources||[]),source])]}:{}),sources_updated_at:new Date().toISOString()};
+ },DEFAULT_AUTOMATION_POLICY);
+ let removed=0;
+ const removalCandidates=(snapshot?.leads||[]).filter(lead=>blockedApplicationSource(lead,{disabled_sources:[source]}));
+ if(removeOpen&&removalCandidates.length)await mutate('workflow.json',old=>{
+  removed=0;
+  for(const lead of removalCandidates){
+   const prior=old[lead.id];
+   if(!blockedApplicationSource(lead,{disabled_sources:[source]})||prior?.stage==='applied'||prior?.application?.submission_recorded_at)continue;
+   if(prior?.disposition?.status!=='purged'){old[lead.id]=recordDisposition(prior,'purged');removed++;}
+  }
+  return old;
+ });
+ let cancelled=0;
+ if(!enabled)await mutate('application-attempts.json',old=>{
+  cancelled=0;
+  for(const [id,a] of Object.entries(old))if(a.status==='queued'&&!a.submission_intent_at&&blockedApplicationSource(a,policy)){
+   old[id]={...a,status:'cancelled',reason:'Source automation disabled by user',updated_at:new Date().toISOString()};cancelled++;
+  }
+  return old;
+ });
+ await activity('source_automation_changed',{message:source+' automation '+(enabled?'enabled':'disabled')});
+ return {policy,cancelled,removed};
+}
 export async function activity(kind,detail={}) {
  const event={id:randomUUID(),at:new Date().toISOString(),kind,...detail};
  await mutate('automation-activity.json',old=>[...old,event].slice(-200),[]);
@@ -87,9 +121,10 @@ export async function acquireCycle(manual=false,{now=new Date()}={}){
 export async function failCycle(id){await mutate('automation-run.json',old=>old?.id===id?{...old,outcome:'failed'}:old,null);await activity('run_failed',{message:'Run interrupted by an error. Saved decisions and submission safeguards are preserved.'});}
 export async function releaseCycle(id){const result=await mutate('automation-run.json',old=>old?.id===id?{...old,active:false,phase:old.outcome==='failed'?'failed':'finished',current_job:null,finished_at:new Date().toISOString()}:old,null);await activity('run_finished',{message:result?.outcome==='failed'?'Run ended after an error. Check the last activity before starting another run.':'Run finished. See job decisions and application results below.'});}
 export async function claimAttempt(id,executionToken=null){let claimed=false;await mutate('application-attempts.json',old=>{claimed=false;if(old[id]?.status!=='queued')return old;claimed=true;return {...old,[id]:{...old[id],status:'running',execution_token:executionToken,last_started_at:new Date().toISOString(),updated_at:new Date().toISOString()}};});return claimed;}
-export async function submissionIntent(id,url,{now=new Date()}={}){const policy=(await readJson('automation-settings.json',DEFAULT_AUTOMATION_POLICY)).value;await mutate('application-attempts.json',old=>{const attempt=old[id];if(attempt?.status!=='running'||attempt.submission_intent_at)throw Error('Submission already reserved or application stopped');if(sourceLimitReached(attempt.source,old,policy,now))throw Error('Daily source submission limit reached');const quota=dailySubmissionQuota(old,policy,now);if(quota.remaining===0)throw Error('Daily submission limit reached');if(quota.confirmed+quota.in_flight>=quota.limit)throw Error('Another submission is awaiting confirmation before the last daily slot can be used');const resolved=applicationIdentity({application_url:url});if(Object.values(old).some(other=>other.id!==id&&other.submission_intent_at&&other.application_url&&applicationIdentity({application_url:other.application_url})===resolved))throw Error('Another record already attempted this resolved application; reconcile before retrying');return {...old,[id]:{...attempt,status:'submitting',submission_intent_at:now.toISOString(),application_url:url}};});}
+export async function submissionIntent(id,url,{now=new Date()}={}){const policy=(await readJson('automation-settings.json',DEFAULT_AUTOMATION_POLICY)).value;await mutate('application-attempts.json',old=>{const attempt=old[id];if(blockedApplicationSource({...attempt,application_url:url},policy))throw new AutomationInputError('Automation is disabled for this source or destination.');if(attempt?.status!=='running'||attempt.submission_intent_at)throw Error('Submission already reserved or application stopped');if(sourceLimitReached(attempt.source,old,policy,now))throw Error('Daily source submission limit reached');const quota=dailySubmissionQuota(old,policy,now);if(quota.remaining===0)throw Error('Daily submission limit reached');if(quota.confirmed+quota.in_flight>=quota.limit)throw Error('Another submission is awaiting confirmation before the last daily slot can be used');const resolved=applicationIdentity({application_url:url});if(Object.values(old).some(other=>other.id!==id&&other.submission_intent_at&&other.application_url&&applicationIdentity({application_url:other.application_url})===resolved))throw Error('Another record already attempted this resolved application; reconcile before retrying');return {...old,[id]:{...attempt,status:'submitting',submission_intent_at:now.toISOString(),application_url:url}};});}
 export async function reviseAttempt(id,action){
  const state=await automationSettings();
+ if(action==='resume'&&blockedApplicationSource(state.attempts[id],state.policy))throw new AutomationInputError('Automation is disabled for this source.');
  const costId=id+'-resume-'+randomUUID();if(action==='resume')await reserve(costId,2.5,true);
  await mutate('application-attempts.json',old=>{const prior=old[id];if(!prior||prior.submission_intent_at||!['needs_input','failed','queued','running'].includes(prior.status))throw Error('Application cannot be changed without reconciliation');if(action==='resume'&&!['needs_input','failed'].includes(prior.status))throw Error('Only paused applications can resume');return {...old,[id]:{...prior,outcome_history:[...attemptOutcomes(prior),...(action==='cancel'?[outcomeRecord(prior,{status:'cancelled',reason:'Cancelled by user',evidence:{basis:'user_record',evidence_gap:'User cancelled this attempt; no new page was observed.'}})]:[])],status:action==='resume'?'queued':'cancelled',reason:action==='resume'?null:'Cancelled by user',...(action==='resume'?{required_action:null,failure_type:null}:{}),...(action==='resume'?{resume_session:false,checkpoint:null,execution_token:null,prior_visual_runs:[...(prior.prior_visual_runs||[]),...(prior.visual_steps?.length?[{steps:prior.visual_steps,resume_key:prior.resume_key,ended_at:prior.updated_at}]:[])].slice(-5),visual_step_count:0,visual_steps:[],visual_screenshot_key:null,visual_screenshot_at:null,uploaded_resume_filename:null}:{}),profile_version:state.facts?.version,resume_hash:state.resume_hash,cost_reservation_id:action==='resume'?costId:prior.cost_reservation_id,updated_at:new Date().toISOString()}};});
 }

@@ -3,7 +3,7 @@ import {TRACKED_ROLES,roleResumeEntry} from '../../../lib/roles.mjs';
 import {screenshotKey} from '../../../lib/outcome-evidence.mjs';
 import { start } from 'workflow/api';
 import { applicationCycle, applicationContinuation, targetedApplicationPilot } from '../../../workflows/applications';
-import { automationSettings, automationDashboard, saveFacts, setEnabled, patchAttempt, reviseAttempt, activity } from '../../../lib/automation-state.mjs';
+import { automationSettings, automationDashboard, saveFacts, setEnabled, setSourceEnabled, patchAttempt, reviseAttempt, activity } from '../../../lib/automation-state.mjs';
 import { ensureCollection } from '../../../lib/collector-scheduler.mjs';
 import { NextResponse } from 'next/server';
 import { authConfig, isLoggedIn, sessionFor, checkOrigin, localSetupAllowed, createLocalAccount, resetLocalAccount, checkLogin } from '../../../lib/auth';
@@ -104,6 +104,7 @@ async function handle(request: Request, context: Context) {
   if (action === 'automation-evidence' && request.method === 'GET') {const data=await automationDashboard();return new Response(JSON.stringify({schema_version:1,exported_at:new Date().toISOString(),quota:data.quota,records:data.evidence_log},null,2),{headers:{'Content-Type':'application/json','Content-Disposition':'attachment; filename=contract-desk-evidence.json','Cache-Control':'private, no-store'}});}
   if (action === 'automation' && request.method === 'GET') return json(await automationDashboard());
   if (action === 'automation-profile' && request.method === 'POST') return json(await saveFacts(await request.json()));
+  if (action === 'automation-source' && request.method === 'POST') {const input=await request.json();return json(await setSourceEnabled(input.source,input.enabled,{removeOpen:input.remove_open_jobs===true}));}
   if (action === 'automation-settings' && request.method === 'POST') {const input=await request.json();return json(await setEnabled(input.enabled));}
   if(action==='automation-pilot'&&request.method==='POST'){
     const input=await request.json(),pilot=await(await import('../../../lib/application-pilot-run.mjs')).prepareTargetedPilot(input.lead_ids);

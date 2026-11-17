@@ -1,4 +1,5 @@
 import {sourceExpired} from './shared.mjs';
+import {blockedApplicationSource} from './source-policy.mjs';
 import {createHash} from 'node:crypto';
 
 export const DEFAULT_AUTOMATION_POLICY = Object.freeze({enabled:false,daily_limit:100,daily_quota_metric:'confirmed_submissions',monthly_limit_usd:50,browser_subscription_usd:20,minimum_hourly_usd:100,minimum_score:70,allow_unknown_terms:true});
@@ -28,7 +29,8 @@ export function applicationIdentity(lead) {
  const target=lead.application_url||lead.source_url;
  try {const u=new URL(target);const linkedin=u.hostname.endsWith('linkedin.com')&&u.pathname.match(/\/jobs\/view\/(?:[^/]*-)?(\d+)/);if(linkedin)return fingerprint({source:'linkedin',job_id:linkedin[1]});const id=['gh_jid','jobId','jobid','job_id','jk','reqid','jl'].flatMap(k=>u.searchParams.has(k)?[[k,u.searchParams.get(k)]]:[]);return fingerprint({host:u.hostname.toLowerCase().replace(/^www\./,''),path:u.pathname.replace(/\/$/,''),ids:id.sort()});}catch{return fingerprint({source:lead.source,source_job_id:lead.source_job_id||lead.id});}
 }
-export function excluded(lead,progress) {
+export function excluded(lead,progress,policy={}) {
+ const disabled=blockedApplicationSource(lead,policy);if(disabled)return 'Automation disabled for '+disabled;
  if(progress?.disposition||progress?.stage==='not_a_fit')return 'Previously dismissed';
  if(progress?.stage==='applied'||progress?.application?.submission_recorded_at)return 'Already submitted';
  if(sourceExpired(lead))return 'Posting has expired';
@@ -36,7 +38,7 @@ export function excluded(lead,progress) {
  return null;
 }
 export function screenGate(lead,description='',progress,policy=DEFAULT_AUTOMATION_POLICY) {
- const reason=excluded(lead,progress);if(reason)return reason;
+ const reason=excluded(lead,progress,policy);if(reason)return reason;
  // Use normalized posting evidence for location; never derive it from office addresses in prose.
  const location=lead.location_assessment;
  if(location?.status==='not_remote'||['onsite','hybrid'].includes(String(lead.work_arrangement).toLowerCase()))return 'Requires onsite or hybrid work';
