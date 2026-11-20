@@ -1,33 +1,33 @@
 {
   "mode": "daily",
-  "created_at": "2026-11-19T14:09:49.748371+00:00",
-  "raw": 906,
-  "relevant": 806,
-  "new_unique": 199,
-  "duplicates": 519,
-  "stale": 88,
-  "rejected": 100,
-  "new_remote_contracts": 39,
-  "secondary": 158,
-  "published_project_needs": 2,
+  "created_at": "2026-11-20T14:07:49.111267+00:00",
+  "raw": 977,
+  "relevant": 856,
+  "new_unique": 196,
+  "duplicates": 497,
+  "stale": 163,
+  "rejected": 121,
+  "new_remote_contracts": 52,
+  "secondary": 140,
+  "published_project_needs": 4,
   "target": 50,
-  "shortfall": 11,
+  "shortfall": 0,
   "source_coverage": [
     {
       "source": "LinkedIn",
       "status": "ok",
-      "raw": 299,
-      "detail": "Capped runs IkVVXOSSiaTOYdPm4",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 285
+      "raw": 298,
+      "detail": "Capped runs QQkNRxTsqJRo7LID1",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 266
     },
     {
       "source": "Indeed",
       "status": "ok",
-      "raw": 69,
-      "detail": "Capped runs pSpRaV4enWu3D7aw4",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 65
+      "raw": 70,
+      "detail": "Capped runs Bswyel70AcylksLRF",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 50
     },
     {
       "source": "Dice",
@@ -39,57 +39,58 @@
     {
       "source": "Employer ATS discovery",
       "status": "ok",
-      "raw": 32,
-      "detail": "Capped runs 5aKLvdkHMzkoa5xdy",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 30
+      "raw": 35,
+      "detail": "Capped runs 4Mas2WbhmxL3jzRAd",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 33
     },
     {
       "source": "Glassdoor",
       "status": "ok",
       "raw": 0,
-      "detail": "Capped runs 4O9OPcDQLKYQ3XiMJ, EEv0R3Z0435rQUdwy, yFEdn97lPrbJFvxZ1",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "detail": "Capped runs bGTlrvbXStgKP1AHB, gxgQgdHOPpfZrIkgQ, NaT12ctj7E4cGRAZr",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 0
     },
     {
       "source": "Wellfound",
-      "status": "failed",
-      "raw": 0,
-      "detail": "Actor ended TIMED-OUT without usable dataset rows; see run hzxtAa5Fgaj2yyWCL",
-      "retained": 0
+      "status": "ok",
+      "raw": 70,
+      "detail": "Capped runs 3Eltg4uaajDlc0hle",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 10
     },
     {
       "source": "Built In",
-      "status": "partial",
-      "raw": 81,
-      "detail": "Capped runs ZRSiIgTc1uQb1Le4Y; timed-out run retained completed dataset rows; search coverage is incomplete; configured result ceiling reached; coverage is partial",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 75
+      "status": "ok",
+      "raw": 82,
+      "detail": "Capped runs RaCdV3x1CubjD59m3; configured result ceiling reached; coverage is partial",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 76
     },
     {
       "source": "Staffing firm career feeds",
       "status": "ok",
       "raw": 40,
-      "detail": "Capped runs aApREFcND5OokmxFi; provider ATS index; end client unverified; configured result ceiling reached; coverage is partial",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 32
+      "detail": "Capped runs cJVf8mAWLfprNAxVh; provider ATS index; end client unverified; configured result ceiling reached; coverage is partial",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 34
     },
     {
       "source": "JobServe US",
       "status": "ok",
-      "raw": 41,
-      "detail": "Capped runs iwXL2y4jexqhj3gw0",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "raw": 43,
+      "detail": "Capped runs ZWd42GopmIgPOmrpu",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 3
     },
     {
       "source": "Remotive",
       "status": "ok",
-      "raw": 16,
+      "raw": 15,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 2
     },
     {
@@ -98,27 +99,27 @@
       "raw": 25,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 0
     },
     {
       "source": "We Work Remotely DevOps",
       "status": "ok",
-      "raw": 24,
+      "raw": 35,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 10
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 22
     },
     {
       "source": "US SAM.gov solicitations",
       "status": "ok",
-      "raw": 14,
+      "raw": 12,
       "cached_queries": 0,
       "query_count": 3,
       "detail": "Bounded discovery: 3 title searches, up to 1000 results each; only active solicitations retained; 0 cached queries; 10 requests per rolling 24h; federal projects, not individual jobs",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 13
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 11
     },
     {
       "source": "Myticas direct career feed",
@@ -127,7 +128,7 @@
       "cached_queries": 0,
       "query_count": 0,
       "detail": "Direct agency career feeds: Myticas Consulting; hiring client unverified",
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 0
     },
     {
@@ -143,79 +144,80 @@
       "raw": 5,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
       "retained": 5
     },
     {
       "source": "Himalayas",
       "status": "ok",
-      "raw": 118,
+      "raw": 117,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 91
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 88
     },
     {
       "source": "Jobicy",
-      "status": "ok",
-      "raw": 112,
+      "status": "partial",
+      "detail": "Jobicy page incomplete: SourceError",
+      "raw": 100,
       "cached_queries": 0,
       "query_count": 0,
-      "last_success_at": "2026-11-19T14:09:49.748371+00:00",
-      "retained": 107
+      "last_success_at": "2026-11-20T14:07:49.111267+00:00",
+      "retained": 93
     }
   ],
   "actor_runs": [
     {
-      "source": "LinkedIn",
-      "run_id": "IkVVXOSSiaTOYdPm4",
-      "cap_usd": 0.348027,
-      "build": "1.7.21",
+      "source": "Indeed",
+      "run_id": "Bswyel70AcylksLRF",
+      "cap_usd": 0.352805,
+      "build": "0.0.128",
       "status": "SUCCEEDED",
-      "reservation_id": "2244847ab2ce4ffe8a30739233a9eac9",
-      "actual_charge_usd": 0.28205,
-      "charge_snapshot_at": "2026-11-19T14:12:28.524872+00:00",
+      "reservation_id": "0f3dddb820a943f39d9b21098a1bc781",
+      "actual_charge_usd": 0,
+      "charge_snapshot_at": "2026-11-20T14:08:01.135328+00:00",
       "charged_event_counts": {
-        "apify-default-dataset-item": 287,
-        "apify-actor-start": 1
+        "result": 9
       }
     },
     {
       "source": "Employer ATS discovery",
-      "run_id": "5aKLvdkHMzkoa5xdy",
-      "cap_usd": 0.348027,
-      "build": "0.0.72",
+      "run_id": "4Mas2WbhmxL3jzRAd",
+      "cap_usd": 0.352805,
+      "build": "0.0.74",
       "status": "SUCCEEDED",
-      "reservation_id": "d33166700c5043b8b7a0961d62e16e8f",
+      "reservation_id": "f5b0dab0a14f46e4a6d716e615819819",
       "actual_charge_usd": 0.0001,
-      "charge_snapshot_at": "2026-11-19T14:09:58.660349+00:00",
+      "charge_snapshot_at": "2026-11-20T14:07:57.116714+00:00",
       "charged_event_counts": {
         "apify-default-dataset-item": 0,
         "apify-actor-start": 1
       }
     },
     {
-      "source": "Indeed",
-      "run_id": "pSpRaV4enWu3D7aw4",
-      "cap_usd": 0.348027,
-      "build": "0.0.128",
+      "source": "LinkedIn",
+      "run_id": "QQkNRxTsqJRo7LID1",
+      "cap_usd": 0.352805,
+      "build": "1.7.21",
       "status": "SUCCEEDED",
-      "reservation_id": "fa6204cb3eb5470895cd7f2717483e00",
-      "actual_charge_usd": 0.155,
-      "charge_snapshot_at": "2026-11-19T14:10:05.085490+00:00",
+      "reservation_id": "34fbc3a0c2b84cd5baf36d099b1ff4c1",
+      "actual_charge_usd": 0.29705,
+      "charge_snapshot_at": "2026-11-20T14:12:10.402099+00:00",
       "charged_event_counts": {
-        "result": 69
+        "apify-default-dataset-item": 297,
+        "apify-actor-start": 1
       }
     },
     {
       "source": "Glassdoor",
-      "run_id": "4O9OPcDQLKYQ3XiMJ",
-      "cap_usd": 0.014501,
+      "run_id": "bGTlrvbXStgKP1AHB",
+      "cap_usd": 0.0147,
       "build": "0.0.12",
       "status": "SUCCEEDED",
-      "reservation_id": "3f1ecf94ea564e49a913ec958e52c6a4",
+      "reservation_id": "bc68b394e4a64b6dbb1514b27e6a1893",
       "actual_charge_usd": 0.0009,
-      "charge_snapshot_at": "2026-11-19T14:10:37.849516+00:00",
+      "charge_snapshot_at": "2026-11-20T14:08:34.093657+00:00",
       "charged_event_counts": {
         "apify-default-dataset-item": 0,
         "apify-actor-start": 1
@@ -223,27 +225,27 @@
     },
     {
       "source": "Wellfound",
-      "run_id": "hzxtAa5Fgaj2yyWCL",
-      "cap_usd": 0.108758,
+      "run_id": "3Eltg4uaajDlc0hle",
+      "cap_usd": 0.110251,
       "build": "0.1.5",
-      "status": "TIMED-OUT",
-      "reservation_id": "b4963e2ca81043739716af548057c87c",
-      "actual_charge_usd": 0,
-      "charge_snapshot_at": "2026-11-19T14:18:12.629821+00:00",
+      "status": "SUCCEEDED",
+      "reservation_id": "5c5c6533da65410e8973d82ec411f981",
+      "actual_charge_usd": 0.0457061,
+      "charge_snapshot_at": "2026-11-20T14:09:28.930738+00:00",
       "charged_event_counts": {
-        "start": 0,
-        "item": 0
+        "start": 1,
+        "item": 70
       }
     },
     {
       "source": "Glassdoor",
-      "run_id": "EEv0R3Z0435rQUdwy",
-      "cap_usd": 0.014501,
+      "run_id": "gxgQgdHOPpfZrIkgQ",
+      "cap_usd": 0.0147,
       "build": "0.0.12",
       "status": "SUCCEEDED",
-      "reservation_id": "5989e9c430de48e6ae86deb38711b36f",
+      "reservation_id": "19ef3606b2ed434eb7723e2d4378a3f9",
       "actual_charge_usd": 0.0009,
-      "charge_snapshot_at": "2026-11-19T14:11:16.561669+00:00",
+      "charge_snapshot_at": "2026-11-20T14:09:11.233561+00:00",
       "charged_event_counts": {
         "apify-default-dataset-item": 0,
         "apify-actor-start": 1
@@ -251,13 +253,13 @@
     },
     {
       "source": "Glassdoor",
-      "run_id": "yFEdn97lPrbJFvxZ1",
-      "cap_usd": 0.014501,
+      "run_id": "NaT12ctj7E4cGRAZr",
+      "cap_usd": 0.0147,
       "build": "0.0.12",
       "status": "SUCCEEDED",
-      "reservation_id": "b17540fb2f8d413086896197c328b089",
+      "reservation_id": "d2041a9221d14b1d857814e54a2fec0a",
       "actual_charge_usd": 0.0009,
-      "charge_snapshot_at": "2026-11-19T14:11:55.377481+00:00",
+      "charge_snapshot_at": "2026-11-20T14:09:43.023828+00:00",
       "charged_event_counts": {
         "apify-default-dataset-item": 0,
         "apify-actor-start": 1
@@ -265,43 +267,43 @@
     },
     {
       "source": "Built In",
-      "run_id": "ZRSiIgTc1uQb1Le4Y",
-      "cap_usd": 0.087006,
+      "run_id": "RaCdV3x1CubjD59m3",
+      "cap_usd": 0.088201,
       "build": "1.0.9",
-      "status": "TIMED-OUT",
-      "reservation_id": "f2c8b14fb52144c1930f9a1d64c758d5",
-      "actual_charge_usd": 0.08671999999999999,
-      "charge_snapshot_at": "2026-11-19T14:20:01.934265+00:00",
+      "status": "SUCCEEDED",
+      "reservation_id": "471dee4ea2874ce5ac43d50e55bbaff1",
+      "actual_charge_usd": 0.08778999999999999,
+      "charge_snapshot_at": "2026-11-20T14:15:54.211763+00:00",
       "charged_event_counts": {
         "apify-actor-start": 1,
-        "apify-default-dataset-item": 81
+        "apify-default-dataset-item": 82
       }
     },
     {
       "source": "Staffing firm career feeds",
-      "run_id": "aApREFcND5OokmxFi",
-      "cap_usd": 0.261019,
-      "build": "0.0.72",
+      "run_id": "cJVf8mAWLfprNAxVh",
+      "cap_usd": 0.264603,
+      "build": "0.0.74",
       "status": "SUCCEEDED",
-      "reservation_id": "d995af4e48f94fb59400bbb6d2ad9338",
+      "reservation_id": "0aad0dd6e7a24c0494dea4106fe6e34a",
       "actual_charge_usd": 0.0001,
-      "charge_snapshot_at": "2026-11-19T14:12:38.053232+00:00",
+      "charge_snapshot_at": "2026-11-20T14:09:49.512563+00:00",
       "charged_event_counts": {
-        "apify-default-dataset-item": 40,
+        "apify-default-dataset-item": 0,
         "apify-actor-start": 1
       }
     },
     {
       "source": "JobServe US",
-      "run_id": "iwXL2y4jexqhj3gw0",
-      "cap_usd": 0.152262,
+      "run_id": "ZWd42GopmIgPOmrpu",
+      "cap_usd": 0.154352,
       "build": "1.0.5",
       "status": "SUCCEEDED",
-      "reservation_id": "92a4b75825ce4851a0ff34a1d2aa9683",
-      "actual_charge_usd": 0.12185000000000001,
-      "charge_snapshot_at": "2026-11-19T14:19:16.659504+00:00",
+      "reservation_id": "ddb54fc5df174ef68ac16055c720fcbb",
+      "actual_charge_usd": 0.12755,
+      "charge_snapshot_at": "2026-11-20T14:14:09.002158+00:00",
       "charged_event_counts": {
-        "apify-default-dataset-item": 41,
+        "apify-default-dataset-item": 43,
         "apify-actor-start": 1
       }
     }
