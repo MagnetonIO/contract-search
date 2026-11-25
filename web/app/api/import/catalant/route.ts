@@ -1,3 +1,4 @@
+import {schedulePause} from '../../../../lib/schedule-pause.mjs';
 import { NextResponse } from 'next/server';
 import { readJson, writeJson, ConflictError } from '../../../../lib/store';
 import { mergeEmailLeads, validImportToken } from '../../../../lib/email-import.mjs';
@@ -8,6 +9,7 @@ export async function POST(request:Request) {
   try {
     const config = await readJson<{token:string}|null>('email-import-config.json',null);
     if (!validImportToken(request.headers.get('authorization')?.replace(/^Bearer /,''),config.value?.token)) return reply({error:'Unauthorized'},401);
+    const pause=schedulePause();if(pause)return reply(pause);
     // Bound actual bytes, including requests without Content-Length.
     const reader = request.body?.getReader(); if (!reader) return reply({error:'Body required'},400);
     const chunks:Uint8Array[]=[]; let size=0;

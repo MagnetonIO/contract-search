@@ -28,7 +28,30 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  calendar:
+    runs-on: ubuntu-latest
+    outputs:
+      allowed: ${{ steps.calendar.outputs.allowed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - id: calendar
+        name: Respect Chicago holiday pauses
+        run: |
+          python3 - <<'PYTHON'
+          import json, os
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from pathlib import Path
+          calendar = json.loads(Path('web/lib/schedule-pauses.json').read_text())
+          day = str(datetime.now(ZoneInfo(calendar['timezone'])).date())
+          reason = calendar['dates'].get(day)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('allowed='+str(not bool(reason)).lower()+'\n')
+          print('Paused for '+reason if reason else 'Collection calendar allows today')
+          PYTHON
   collect:
+    needs: calendar
+    if: needs.calendar.outputs.allowed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:

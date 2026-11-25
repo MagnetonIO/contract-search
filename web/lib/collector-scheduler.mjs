@@ -1,13 +1,16 @@
+import {schedulePause} from './schedule-pause.mjs';
 import { readJson, writeJson, ConflictError } from './store.ts';
 import { collectionHealth } from './collection-status.mjs';
 
 export function collectorWindow(now = new Date()) {
+  if(schedulePause(now))return false;
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(p => [p.type,p.value]));
   const minute = Number(parts.hour)*60+Number(parts.minute);
   return !['Sat','Sun'].includes(parts.weekday) && minute >= 487 && minute < 660;
 }
 const defaultStore = { read: key => readJson(key,null), write: writeJson, conflict: e => e instanceof ConflictError };
 export async function ensureCollection({ now = new Date(), manual = false, token = process.env.COLLECTOR_GITHUB_TOKEN, store = defaultStore, fetchImpl = fetch } = {}) {
+  const pause=schedulePause(now);if(pause)return pause;
   if (!manual && !collectorWindow(now)) return { status: 'outside_collection_window' };
   const snapshot = (await store.read('leads.json')).value;
   const expected = collectionHealth(snapshot || {collected_at:''},null,now).expected_at;

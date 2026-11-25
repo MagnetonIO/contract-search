@@ -1,3 +1,4 @@
+import {schedulePause} from './schedule-pause.mjs';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
 // UTC cron slots cover both Chicago offsets. Never turn a delayed trigger into
@@ -9,7 +10,7 @@ export function digestWindow(now = new Date()) {
   }).formatToParts(now).map(part => [part.type, part.value]));
   const minute = Number(parts.hour) * 60 + Number(parts.minute);
   const weekday = !['Sat', 'Sun'].includes(parts.weekday);
-  return { day: `${parts.year}-${parts.month}-${parts.day}`, weekday, allowed: weekday && minute >= 9 * 60 + 17 && minute < 11 * 60 };
+  return { day: `${parts.year}-${parts.month}-${parts.day}`, weekday, pause_reason:schedulePause(now)?.reason||null, allowed: !schedulePause(now) && weekday && minute >= 9 * 60 + 17 && minute < 11 * 60 };
 }
 
 export function cronAuthorized(header, secret) {

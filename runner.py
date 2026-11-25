@@ -28,6 +28,11 @@ from credentials import load_token as token_from_local
 from credentials import load_secret
 
 UTC = timezone.utc
+def schedule_pause_reason(now):
+    calendar = json.loads((Path(__file__).resolve().parent / 'web/lib/schedule-pauses.json').read_text())
+    day = str(now.astimezone(ZoneInfo(calendar['timezone'])).date())
+    return calendar['dates'].get(day)
+
 API = 'https://api.apify.com/v2'
 TERMINAL = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'}
 SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|devsecops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'
@@ -639,6 +644,10 @@ def main(argv=None):
     if args.source and (args.mode != 'smoke' or args.source not in {s['name'] for s in config['actors']+config['feeds']}):
         p.error('--source must name a configured actor and requires smoke mode')
     now = datetime.now(UTC)
+    pause = schedule_pause_reason(now)
+    if pause:
+        print('Contract search paused for '+pause+'; no sources or spending started.')
+        return 0
     day = str(now.astimezone(ZoneInfo('America/Chicago')).date())
     state = State(args.state)
     state.seed()

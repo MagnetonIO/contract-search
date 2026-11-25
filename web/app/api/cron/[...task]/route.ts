@@ -1,3 +1,4 @@
+import {schedulePause} from '../../../../lib/schedule-pause.mjs';
 import { cronAuthorized } from '../../../../lib/digest-schedule.mjs';
 import { start } from 'workflow/api';
 import { applicationCycle } from '../../../../workflows/applications';
@@ -17,6 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ task: s
   if (!['digest', 'digest-backup', 'digest-final', 'application-report', 'application-report-backup', 'applications', 'collect', 'collect-backup', 'collect-watch', 'collect-watch-backup', 'collect-final', 'collect-final-backup'].includes(task)) return new Response('Not found', { status: 404 });
   if (!cronAuthorized(request.headers.get('authorization'), process.env.CRON_SECRET)) return new Response('Unauthorized', { status: 401 });
   try {
+    const pause=schedulePause();if(pause)return Response.json(pause,{headers:{'Cache-Control':'private, no-store'}});
     if(task.startsWith('application-report'))return Response.json(await sendDailyApplicationReport(),{headers:{'Cache-Control':'private, no-store'}});
     if(task==='applications'){const state=await automationSettings();if(!state.policy.enabled||!applicationWindow())return Response.json({status:'paused_or_outside_window'});const run=await start(applicationCycle,[],{deploymentId:'latest'});return Response.json({status:'started',run_id:run.runId});}
     const result = task.startsWith('collect') ? await ensureCollection() : await sendDailyDigest();

@@ -1,3 +1,4 @@
+import {schedulePause} from './schedule-pause.mjs';
 import {sourceExpired} from './shared.mjs';
 import {blockedApplicationSource} from './source-policy.mjs';
 import {createHash} from 'node:crypto';
@@ -15,11 +16,13 @@ export function dailySubmissionQuota(attempts,policy=DEFAULT_AUTOMATION_POLICY,n
  return {day,limit,confirmed,remaining:Math.max(0,limit-confirmed),in_flight};
 }
 export function applicationWindow(now=new Date()) {
+ if(schedulePause(now))return false;
  const p=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'America/Chicago',weekday:'short',hour:'numeric',minute:'numeric',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
  const endHour=p.weekday==='Fri'?15:18;
  return !['Sat','Sun'].includes(p.weekday)&&Number(p.hour)*60+Number(p.minute)>=510&&Number(p.hour)<endHour;
 }
 export function applicationRunAllowed(state,now=new Date()) {
+ if(schedulePause(now))return false;
  if(applicationWindow(now))return true;
  const run=state?.run,start=Date.parse(run?.started_at||''),end=Date.parse(run?.manual_expires_at||'');
  return run?.active===true&&run.mode==='manual'&&Number.isFinite(start)&&Number.isFinite(end)&&start<=now.getTime()&&end>now.getTime()&&end<=start+2*3600000;

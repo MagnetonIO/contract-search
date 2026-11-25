@@ -1,3 +1,4 @@
+import {schedulePause} from './schedule-pause.mjs';
 import {readJson,writeJson,ConflictError} from './store.ts';
 import {readSnapshot} from './snapshot.mjs';
 import {chicagoDay} from './automation-policy.mjs';
@@ -11,7 +12,7 @@ const valid=value=>Number.isFinite(Date.parse(value||''));
 export function applicationReportWindow(now=new Date()){
  const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(now).map(p=>[p.type,p.value]));
  const weekday=!['Sat','Sun'].includes(p.weekday),end=(p.weekday==='Fri'?15:18)*60,minute=Number(p.hour)*60+Number(p.minute);
- return {day:chicagoDay(now),weekday,allowed:weekday&&minute>=end+10&&minute<end+60};
+ return {day:chicagoDay(now),weekday,pause_reason:schedulePause(now)?.reason||null,allowed:!schedulePause(now)&&weekday&&minute>=end+10&&minute<end+60};
 }
 function category(a){
  if(a.status==='submitted')return valid(a.confirmed_at)&&a.receipt?'confirmed':'unconfirmed';
@@ -60,6 +61,7 @@ export function applicationReportPayload({leads=[],attempts={},now=new Date(),mo
 async function loadReportData(){const [snapshot,attempts]=await Promise.all([readSnapshot(),readJson('application-attempts.json',{})]);return {leads:snapshot.value?.leads||[],attempts:attempts.value};}
 export async function sendDailyApplicationReport({now=new Date(),apiKey=process.env.RESEND_API_KEY,store=defaultStore,load=loadReportData,send=sendMail,mode='daily'}={}){
  const window=applicationReportWindow(now);
+ if(window.pause_reason)return {status:'scheduled_pause',day:window.day,reason:window.pause_reason};
  if(!window.weekday)return {status:'weekend',day:window.day};
  if(mode!=='so-far'&&!window.allowed)return {status:'outside_report_window',day:window.day};
  if(!apiKey)throw Error('Application report email is not configured.');
