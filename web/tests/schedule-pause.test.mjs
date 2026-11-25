@@ -12,8 +12,8 @@ const holiday=new Date('2026-11-26T15:30:00Z');
 const forbidden=()=>{throw Error('Paused day must not access state, providers or email');};
 test('Thanksgiving pause spans exactly the Chicago local day and expires automatically',()=>{
  assert.equal(schedulePause(new Date('2026-11-26T05:59:59Z')),null);
- assert.deepEqual(schedulePause(new Date('2026-11-26T06:00:00Z')),{status:'scheduled_pause',day:'2026-11-26',reason:'Thanksgiving'});
- assert.equal(schedulePause(new Date('2026-11-27T05:59:59Z')).reason,'Thanksgiving');
+ assert.deepEqual(schedulePause(new Date('2026-11-26T06:00:00Z')),{status:'scheduled_pause',day:'2026-11-26',reason:'Thanksgiving Day'});
+ assert.equal(schedulePause(new Date('2026-11-27T05:59:59Z')).reason,'Thanksgiving Day');
  assert.equal(schedulePause(new Date('2026-11-27T06:00:00Z')),null);
 });
 test('paused collection and emails return before any data reads, dispatches or sends',async()=>{
@@ -36,4 +36,24 @@ test('Friday resumes ordinary windows and collection health skips the holiday sl
  const health=collectionHealth({collected_at:'2026-11-25T14:15:00Z'},null,holiday);
  assert.equal(health.status,'paused');assert.equal(health.expected_at,'2026-11-25T14:07:00.000Z');assert.equal(health.next_at,'2026-11-27T14:07:00.000Z');
  assert.match(health.title,/Thanksgiving/);
+});
+
+test('all eleven observed dates match OPM for 2026 and 2027 in the JS runtime',async()=>{
+ const {readFile}=await import('node:fs/promises');const {federalHolidays}=await import('../lib/schedule-pause.mjs');
+ const fixture=JSON.parse(await readFile(new URL('../../tests/federal-holiday-fixtures.json',import.meta.url)));
+ for(const [year,dates] of Object.entries(fixture.observed)){
+  assert.deepEqual(federalHolidays(Number(year)).map(h=>h.observed),dates);
+  for(const date of dates){const now=new Date(date+'T16:00:00Z');assert.ok(schedulePause(now),date);assert.equal(applicationWindow(now),false);assert.equal(collectorWindow(now),false);assert.equal(digestWindow(now).allowed,false);assert.equal(applicationReportWindow(now).allowed,false);}
+ }
+});
+test('weekend actual holidays, observed dates and cross-year New Year closure all stop work',()=>{
+ for(const day of ['2026-07-03','2026-07-04','2027-06-18','2027-06-19','2027-07-04','2027-07-05','2027-12-24','2027-12-25','2027-12-31','2028-01-01'])assert.ok(schedulePause(new Date(day+'T16:00:00Z')),day);
+ assert.equal(schedulePause(new Date('2027-12-31T05:59:59Z')),null);
+ assert.equal(schedulePause(new Date('2027-12-31T06:00:00Z')).reason,"New Year's Day");
+ assert.equal(schedulePause(new Date('2028-01-02T06:00:00Z')),null);
+});
+test('future years need no annual dated list and the next check skips a holiday weekend',async()=>{
+ const {federalHolidays}=await import('../lib/schedule-pause.mjs');const {nextApplicationCheck}=await import('../lib/automation-audit.mjs');
+ assert.equal(federalHolidays(2035).length,11);assert.equal(schedulePause(new Date('2035-11-22T16:00:00Z')).reason,'Thanksgiving Day');
+ assert.equal(nextApplicationCheck(new Date('2027-12-24T00:01:00Z')),'2027-12-27T14:30:00.000Z');
 });

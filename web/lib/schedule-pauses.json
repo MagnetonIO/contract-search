@@ -1,6 +1,18 @@
 {
   "timezone": "America/Chicago",
-  "dates": {
-    "2026-11-26": "Thanksgiving"
-  }
+  "source": "https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/",
+  "rules": [
+    {"name": "New Year's Day", "month": 1, "day": 1},
+    {"name": "Birthday of Martin Luther King, Jr.", "month": 1, "iso_weekday": 1, "occurrence": 3},
+    {"name": "Washington's Birthday", "month": 2, "iso_weekday": 1, "occurrence": 3},
+    {"name": "Memorial Day", "month": 5, "iso_weekday": 1, "occurrence": -1},
+    {"name": "Juneteenth National Independence Day", "month": 6, "day": 19, "start_year": 2021},
+    {"name": "Independence Day", "month": 7, "day": 4},
+    {"name": "Labor Day", "month": 9, "iso_weekday": 1, "occurrence": 1},
+    {"name": "Columbus Day", "month": 10, "iso_weekday": 1, "occurrence": 2},
+    {"name": "Veterans Day", "month": 11, "day": 11},
+    {"name": "Thanksgiving Day", "month": 11, "iso_weekday": 4, "occurrence": 4},
+    {"name": "Christmas Day", "month": 12, "day": 25}
+  ],
+  "dates": {}
 }

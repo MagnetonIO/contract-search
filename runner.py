@@ -26,13 +26,9 @@ import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 from credentials import load_token as token_from_local
 from credentials import load_secret
+from schedule_calendar import schedule_pause_reason
 
 UTC = timezone.utc
-def schedule_pause_reason(now):
-    calendar = json.loads((Path(__file__).resolve().parent / 'web/lib/schedule-pauses.json').read_text())
-    day = str(now.astimezone(ZoneInfo(calendar['timezone'])).date())
-    return calendar['dates'].get(day)
-
 API = 'https://api.apify.com/v2'
 TERMINAL = {'SUCCEEDED', 'FAILED', 'ABORTED', 'TIMED-OUT'}
 SKILLS = r'\b(?:software|architect|cloud|artificial intelligence|aws|gcp|kubernetes|golang|typescript|react|next\.?js|python|java|rust|data engineer|devops|devsecops|sre|platform engineer|machine learning|ai engineer|ai agent)\b'

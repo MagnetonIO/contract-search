@@ -38,13 +38,10 @@ jobs:
         name: Respect Chicago holiday pauses
         run: |
           python3 - <<'PYTHON'
-          import json, os
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-          from pathlib import Path
-          calendar = json.loads(Path('web/lib/schedule-pauses.json').read_text())
-          day = str(datetime.now(ZoneInfo(calendar['timezone'])).date())
-          reason = calendar['dates'].get(day)
+          import os
+          from datetime import datetime, timezone
+          from schedule_calendar import schedule_pause_reason
+          reason = schedule_pause_reason(datetime.now(timezone.utc))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               output.write('allowed='+str(not bool(reason)).lower()+'\n')
           print('Paused for '+reason if reason else 'Collection calendar allows today')
